@@ -1939,8 +1939,8 @@ function gasGet(action, extraParams = {}) {
     // 60-second timeout
     const timer = setTimeout(() => {
       cleanup();
-      reject(new Error('Request timed out after 60s — Apps Script may still be running'));
-    }, 60000);
+      reject(new Error('Timed out — Apps Script cold start can be slow. Try again.'));
+    }, 30000);
 
     function cleanup() {
       clearTimeout(timer);
@@ -2160,9 +2160,16 @@ function toast(msg, isErr=false) {
   // Auto-pull from Sheets on first load if localStorage is empty and URL is saved
   const existing = loadMatches();
   if (savedUrl && existing.length === 0) {
-    setSyncStatus('No local data — auto-pulling from Sheets…');
+    setSyncStatus('No local data — loading from Sheets…');
+    // Switch to export tab so status message is visible
+    setTimeout(() => { switchPanel('export'); }, 100);
     setTimeout(async () => {
       try {
+        // Warm up Apps Script with a lightweight stats call first
+        setSyncStatus('Connecting to Sheet…');
+        await gasGet('stats');
+        // Now do the full pull
+        setSyncStatus('Pulling matches…');
         const data = await gasGet('pull');
         if (Array.isArray(data.matches) && data.matches.length > 0) {
           const incoming = data.matches.map(m => ({
@@ -2172,15 +2179,18 @@ function toast(msg, isErr=false) {
           saveMatches(incoming);
           renderDashboard();
           populateSharedFilterOptions();
-          setSyncStatus('✓ Auto-pulled ' + incoming.length + ' matches from Sheet.', 'var(--green)');
-          toast('Auto-pulled ' + incoming.length + ' matches');
+          setSyncStatus('✓ Loaded ' + incoming.length + ' matches from Sheet.', 'var(--green)');
+          toast('Loaded ' + incoming.length + ' matches');
+          setTimeout(() => switchPanel('dashboard'), 1000);
         } else {
           setSyncStatus('Sheet appears empty — add matches to get started.', 'var(--text3)');
+          switchPanel('dashboard');
         }
       } catch(e) {
-        setSyncStatus('Auto-pull failed: ' + e.message + ' — use Pull from Sheets manually.', 'var(--red)');
+        setSyncStatus('✗ Auto-load failed: ' + e.message, 'var(--red)');
+        switchPanel('dashboard');
       }
-    }, 800);
+    }, 400);
   }
 })();
 </script>
