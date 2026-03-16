@@ -1,0 +1,2301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Wrestling Match Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,900;1,700&family=Barlow:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #0a0a0c;
+  --bg2: #111116;
+  --bg3: #18181f;
+  --bg4: #1f1f28;
+  --border: #2a2a35;
+  --border2: #38384a;
+  --text: #e8e8f0;
+  --text2: #9090a8;
+  --text3: #5a5a72;
+  --accent: #e8c840;
+  --accent2: #c8a820;
+  --red: #ff3a5c;
+  --teal: #00d4d4;
+  --teal-bg: #d1f7f7;
+  --teal-text: #ff1493;
+  --blue-hi: #9fc5e8;
+  --blue-lo: #e6efff;
+  --blue-lo-text: #1a2a4a;
+  --blue-hi-text: #0a1a3a;
+  --green: #4ade80;
+  --shadow: 0 4px 24px rgba(0,0,0,0.6);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Barlow', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+header {
+  background: var(--bg2);
+  border-bottom: 2px solid var(--accent);
+  padding: 0 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 56px;
+}
+
+.header-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 1.5rem;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.header-title span { color: var(--text2); font-weight: 400; }
+
+nav {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+nav button {
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+nav button:hover { border-color: var(--accent); color: var(--accent); }
+nav button.active { background: var(--accent); border-color: var(--accent); color: #000; }
+
+/* ── MAIN LAYOUT ── */
+main { padding: 20px; max-width: 1400px; margin: 0 auto; }
+
+/* ── PANELS ── */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── STATS BAR ── */
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px 16px;
+  text-align: center;
+}
+
+.stat-num {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-top: 4px;
+}
+
+/* ── SECTION HEADER ── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.section-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 1.3rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.section-title .tag {
+  font-size: 0.75rem;
+  background: var(--accent);
+  color: #000;
+  padding: 2px 8px;
+  border-radius: 3px;
+  margin-left: 8px;
+  font-weight: 700;
+}
+
+/* ── FILTER BAR ── */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.filter-bar input,
+.filter-bar select {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: 'Barlow', sans-serif;
+  font-size: 0.85rem;
+  padding: 7px 12px;
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.filter-bar input:focus,
+.filter-bar select:focus { border-color: var(--accent); }
+
+.filter-bar input { flex: 1; min-width: 160px; }
+
+/* ── TABLE ── */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+thead tr {
+  background: var(--bg3);
+  border-bottom: 2px solid var(--border2);
+}
+
+th {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text2);
+  padding: 10px 12px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+#th-rating { min-width: 90px; }
+
+th:hover { color: var(--accent); }
+th.sort-asc::after { content: " ▲"; color: var(--accent); }
+th.sort-desc::after { content: " ▼"; color: var(--accent); }
+
+td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: rgba(255,255,255,0.03); }
+
+/* Row color states */
+tr.row-best-10plus td { background: rgba(0,212,212,0.12) !important; }
+tr.row-best-10plus td .match-name { color: var(--teal-text) !important; }
+tr.row-watch-hi td { background: rgba(159,197,232,0.15) !important; }
+tr.row-watch-lo td { background: rgba(230,239,255,0.07) !important; }
+
+.promo-badge {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  padding: 2px 7px;
+  border-radius: 3px;
+  color: var(--accent);
+}
+
+.match-name {
+  font-weight: 600;
+  color: var(--text);
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.match-name a { color: inherit; text-decoration: none; }
+.match-name a:hover { color: var(--accent); text-decoration: underline; }
+
+.event-name {
+  color: var(--text2);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-name a { color: inherit; text-decoration: none; }
+.event-name a:hover { color: var(--accent); }
+
+.score-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--green);
+}
+
+.rating-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: var(--accent);
+}
+.rating-high {
+  color: #60aaff;
+}
+
+.rating-cell, .tenplus-cell {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  display: inline-block;
+  min-width: 36px;
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+.rating-cell {
+  min-width: 80px;
+}
+.rating-cell:hover, .tenplus-cell:hover {
+  border-color: var(--accent);
+  background: rgba(232,200,64,0.08);
+}
+.rating-empty {
+  color: var(--text3);
+  font-size: 0.8rem;
+}
+.rating-inline-input {
+  background: var(--bg4);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 0.95rem;
+  width: 80px;
+  min-width: 80px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  outline: none;
+  text-align: center;
+  box-sizing: border-box;
+  display: block;
+  -moz-appearance: textfield;
+}
+.rating-inline-input::-webkit-outer-spin-button,
+.rating-inline-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.flag-10plus {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 0.7rem;
+  background: var(--teal);
+  color: #000;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.champ-badge {
+  font-size: 0.72rem;
+  background: rgba(232,200,64,0.15);
+  border: 1px solid rgba(232,200,64,0.4);
+  color: var(--accent);
+  padding: 2px 7px;
+  border-radius: 3px;
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+}
+
+.winner-val { color: var(--text2); font-size: 0.8rem; }
+.winner-cell {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  display: inline-block;
+  min-width: 40px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.winner-cell:hover {
+  border-color: var(--text3);
+  background: rgba(255,255,255,0.04);
+}
+.winner-inline-input {
+  background: var(--bg4);
+  border: 1px solid var(--text2);
+  color: var(--text);
+  font-family: 'Barlow', sans-serif;
+  font-size: 0.82rem;
+  width: 140px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  outline: none;
+}
+
+td .row-actions { display: flex; gap: 6px; }
+td .row-actions button {
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--text3);
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'Barlow', sans-serif;
+}
+td .row-actions button:hover { border-color: var(--accent); color: var(--accent); }
+td .row-actions button.del:hover { border-color: var(--red); color: var(--red); }
+
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--text3);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ── FORM PANEL ── */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group.full { grid-column: 1 / -1; }
+
+label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text2);
+}
+
+label .required { color: var(--red); margin-left: 3px; }
+label .hint { color: var(--text3); font-weight: 400; font-size: 0.72rem; text-transform: none; letter-spacing: 0; margin-left: 6px; }
+
+input[type="text"],
+input[type="date"],
+input[type="number"],
+input[type="url"],
+select,
+textarea {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: 'Barlow', sans-serif;
+  font-size: 0.88rem;
+  padding: 9px 12px;
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+input::placeholder, textarea::placeholder { color: var(--text3); }
+
+textarea { resize: vertical; min-height: 70px; }
+
+.inline-row { display: flex; gap: 10px; align-items: flex-end; }
+.inline-row > * { flex: 1; }
+
+.fetch-btn {
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 9px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.fetch-btn:hover { border-color: var(--accent); color: var(--accent); }
+.fetch-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.fetch-status {
+  font-size: 0.78rem;
+  color: var(--text3);
+  font-style: italic;
+  margin-top: 4px;
+  min-height: 18px;
+}
+.fetch-status.ok { color: var(--green); }
+.fetch-status.err { color: var(--red); }
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--teal);
+  cursor: pointer;
+}
+
+.checkbox-row label {
+  font-size: 0.88rem;
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: 'Barlow', sans-serif;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 10px 24px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-primary { background: var(--accent); color: #000; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-secondary { background: var(--bg4); border: 1px solid var(--border2); color: var(--text2); }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.btn-danger { background: transparent; border: 1px solid var(--red); color: var(--red); }
+.btn-danger:hover { background: var(--red); color: #fff; }
+
+/* ── PROMOTION MANAGER ── */
+.promo-manager {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.promo-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.promo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 12px;
+  gap: 10px;
+}
+
+.promo-item-name { font-size: 0.85rem; color: var(--text); flex: 1; }
+.promo-item-abbr {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--accent);
+  min-width: 50px;
+  text-align: right;
+}
+.promo-item-del {
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 2px;
+  transition: color 0.15s;
+}
+.promo-item-del:hover { color: var(--red); }
+
+.add-promo-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.add-promo-row input { flex: 1; min-width: 160px; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-top: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 28px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow);
+}
+
+.modal-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 1.3rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 20px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-left: 4px solid var(--accent);
+  color: var(--text);
+  font-size: 0.88rem;
+  padding: 12px 20px;
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  z-index: 999;
+  transform: translateY(80px);
+  opacity: 0;
+  transition: all 0.3s;
+  max-width: 320px;
+}
+
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.err { border-left-color: var(--red); }
+
+/* ── EXPORT PANEL ── */
+.export-section {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.export-section h3 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text2);
+  margin-bottom: 14px;
+}
+
+.sheets-url-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.sheets-url-row input { flex: 1; min-width: 200px; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ── FILTER CHIPS / ACTIVE INDICATOR ── */
+.filter-bar select.active-filter {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.filter-bar input.active-filter {
+  border-color: var(--accent);
+}
+.filter-active-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(232,200,64,0.12);
+  border: 1px solid rgba(232,200,64,0.4);
+  color: var(--accent);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.filter-active-badge button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: .85rem;
+  line-height: 1;
+  padding: 0;
+  margin-left: 2px;
+}
+.filter-active-badge button:hover { color: var(--red); }
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+  min-height: 0;
+}
+
+.title-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: .8rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text2);
+  user-select: none;
+}
+.title-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.title-toggle.on { border-color: var(--accent); background: rgba(232,200,64,.1); color: var(--accent); }
+.title-toggle .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--border2);
+  transition: background .15s;
+}
+.title-toggle.on .dot { background: var(--accent); }
+
+.clear-filters-btn {
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--text3);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: .75rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.clear-filters-btn:hover { border-color: var(--red); color: var(--red); }
+
+/* ── MOBILE ── */
+@media (max-width: 640px) {
+  header { flex-wrap: wrap; height: auto; padding: 10px 14px; gap: 8px; }
+  .header-title { font-size: 1.2rem; }
+  nav button { font-size: 0.75rem; padding: 5px 10px; }
+  main { padding: 12px; }
+  .form-grid { padding: 16px; gap: 12px; }
+  td, th { padding: 7px 8px; }
+  .modal { padding: 18px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-title">Wrestling <span>Match Tracker</span></div>
+  <nav>
+    <button class="active" onclick="switchPanel('dashboard')">Dashboard</button>
+    <button onclick="switchPanel('add')">+ Add Match</button>
+    <button onclick="switchPanel('best')">Best</button>
+    <button onclick="switchPanel('watch')">Watch</button>
+    <button onclick="switchPanel('all')">All Matches</button>
+    <button onclick="switchPanel('promotions')">Promotions</button>
+    <button onclick="switchPanel('export')">Export</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- DASHBOARD -->
+  <div id="panel-dashboard" class="panel active">
+    <div class="stats-bar" id="stats-bar"></div>
+    <div class="section-header">
+      <div class="section-title">Recent Entries <span class="tag" id="recent-count">0</span></div>
+    </div>
+    <div class="filter-bar" style="margin-bottom:10px;">
+      <input type="text" id="dash-search" placeholder="Search matches…" oninput="renderDashboard()" style="max-width:260px;"/>
+      <select id="dash-year" onchange="renderDashboard()"><option value="">All Years</option></select>
+      <select id="dash-promo" onchange="renderDashboard()"><option value="">All Promotions</option></select>
+      <button class="clear-filters-btn" onclick="clearFilters('dash')">✕ Clear</button>
+    </div>
+    <div class="filter-chips" id="dash-chips"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr id="recent-head"></tr></thead>
+        <tbody id="recent-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ADD / EDIT MATCH -->
+  <div id="panel-add" class="panel">
+    <div class="section-header">
+      <div class="section-title" id="form-title">Add New Match</div>
+    </div>
+    <div class="form-grid" id="match-form">
+      <!-- Row 1: Match URL + fetch -->
+      <div class="form-group full">
+        <label>Match URL <span class="required">*</span> <span class="hint">(cagematch.net match link)</span></label>
+        <div class="inline-row">
+          <input type="url" id="f-url" placeholder="https://www.cagematch.net/?id=111&nr=..."/>
+          <button class="fetch-btn" id="fetch-btn" onclick="fetchMatchData()">⊗ Auto-Fill</button>
+        </div>
+        <div class="fetch-status" id="fetch-status"></div>
+      </div>
+
+      <!-- Match Name -->
+      <div class="form-group full">
+        <label>Match / Wrestlers <span class="required">*</span></label>
+        <input type="text" id="f-name" placeholder="e.g. Jon Moxley vs. Konosuke Takeshita"/>
+      </div>
+
+      <!-- Promotion + Event -->
+      <div class="form-group">
+        <label>Promotion (full name) <span class="required">*</span></label>
+        <select id="f-promo-full" onchange="onPromoChange()">
+          <option value="">— Select —</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Promotion Abbreviation</label>
+        <input type="text" id="f-promo-abbr" placeholder="Auto-filled" readonly style="opacity:0.6"/>
+      </div>
+
+      <div class="form-group full">
+        <label>Event Name <span class="hint">(auto-filled or override)</span></label>
+        <input type="text" id="f-event" placeholder="e.g. AEW Revolution 2026"/>
+      </div>
+
+      <!-- Date + Match Type -->
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="f-date"/>
+      </div>
+
+      <div class="form-group">
+        <label>Match Type <span class="hint">(auto-filled or override)</span></label>
+        <input type="text" id="f-matchtype" placeholder="e.g. No Time Limit"/>
+      </div>
+
+      <!-- Championship -->
+      <div class="form-group full">
+        <label>Championship <span class="hint">(auto-filled or override — omit "Title")</span></label>
+        <input type="text" id="f-champ" placeholder="e.g. AEW Continental"/>
+      </div>
+
+      <!-- Winner -->
+      <div class="form-group full">
+        <label>Winner <span class="hint">(manual entry)</span></label>
+        <input type="text" id="f-winner" placeholder="e.g. Jon Moxley"/>
+      </div>
+
+      <!-- Rating + 10+ -->
+      <div class="form-group">
+        <label>Rating (Col I) <span class="hint">(1–10 numeric)</span></label>
+        <input type="number" id="f-rating" min="0" max="10" step="0.25" placeholder="e.g. 9.5"/>
+      </div>
+
+      <div class="form-group" style="justify-content:flex-end;">
+        <label>&nbsp;</label>
+        <div class="checkbox-row">
+          <input type="checkbox" id="f-10plus"/>
+          <label for="f-10plus">★ 10+ (exceptional match)</label>
+        </div>
+      </div>
+
+      <!-- Score + Value -->
+      <div class="form-group">
+        <label>Score (Col K)</label>
+        <input type="number" id="f-score" min="0" max="10" step="0.01" placeholder="e.g. 8.81"/>
+      </div>
+
+      <div class="form-group">
+        <label>Value / Star Rating (Col L)</label>
+        <input type="number" id="f-value" min="0" max="10" step="0.25" placeholder="e.g. 4.75"/>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="saveMatch()">Save Match</button>
+        <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
+        <button class="btn btn-danger" id="delete-btn" style="display:none" onclick="deleteEditing()">Delete Match</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BEST -->
+  <div id="panel-best" class="panel">
+    <div class="section-header">
+      <div class="section-title">Best Matches <span class="tag" id="best-count">0</span></div>
+    </div>
+    <div class="filter-bar">
+      <input type="text" id="shared-search" placeholder="Search matches, events, winners…" oninput="applySharedFilters()"/>
+      <select id="shared-year" onchange="applySharedFilters()"><option value="">All Years</option></select>
+      <select id="shared-promo" onchange="applySharedFilters()"><option value="">All Promotions</option></select>
+      <select id="shared-champ" onchange="applySharedFilters()"><option value="">All Championships</option></select>
+      <div class="title-toggle" id="title-toggle" onclick="toggleTitleOnly()">
+        <span class="dot"></span>Title Matches Only
+      </div>
+      <button class="clear-filters-btn" onclick="clearSharedFilters()">✕ Clear</button>
+    </div>
+    <div class="filter-chips" id="shared-chips"></div>
+    <div class="table-wrap"><table><thead><tr id="best-head"></tr></thead><tbody id="best-body"></tbody></table></div>
+  </div>
+
+  <!-- WATCH -->
+  <div id="panel-watch" class="panel">
+    <div class="section-header">
+      <div class="section-title">Watch List <span class="tag" id="watch-count">0</span></div>
+    </div>
+    <div class="filter-bar">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);padding:8px 4px;white-space:nowrap;">Filters shared ↑</div>
+    </div>
+    <div class="table-wrap"><table><thead><tr id="watch-head"></tr></thead><tbody id="watch-body"></tbody></table></div>
+  </div>
+
+  <!-- ALL -->
+  <div id="panel-all" class="panel">
+    <div class="section-header">
+      <div class="section-title">All Matches <span class="tag" id="all-count">0</span></div>
+    </div>
+    <div class="filter-bar">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);padding:8px 4px;white-space:nowrap;">Filters shared ↑</div>
+    </div>
+    <div class="table-wrap"><table><thead><tr id="all-head"></tr></thead><tbody id="all-body"></tbody></table></div>
+  </div>
+
+  <!-- PROMOTIONS -->
+  <div id="panel-promotions" class="panel">
+    <div class="section-header">
+      <div class="section-title">Promotion Manager</div>
+    </div>
+    <div class="promo-manager">
+      <div class="promo-list" id="promo-list"></div>
+      <div class="add-promo-row">
+        <input type="text" id="new-promo-name" placeholder="Full promotion name"/>
+        <input type="text" id="new-promo-abbr" placeholder="Abbreviation" style="max-width:140px"/>
+        <button class="btn btn-primary" onclick="addPromotion()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPORT -->
+  <div id="panel-export" class="panel">
+    <div class="section-header">
+      <div class="section-title">Export & Sync</div>
+    </div>
+    <div class="export-section">
+      <h3>Export to CSV</h3>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Download all matches as a CSV file for import into Google Sheets.</p>
+      <button class="btn btn-primary" onclick="exportCSV()">⬇ Download CSV</button>
+    </div>
+    <div class="export-section">
+      <h3>Import from CSV</h3>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Load a previously exported CSV back into the dashboard.</p>
+      <input type="file" id="import-file" accept=".csv" style="color:var(--text2);margin-bottom:10px;display:block"/>
+      <button class="btn btn-secondary" onclick="importCSV()">⬆ Import CSV</button>
+    </div>
+    <div class="export-section">
+      <h3>Google Apps Script Sync</h3>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:10px;">
+        Paste your Google Apps Script Web App URL below to sync directly with your 2026 Google Sheet.
+      </p>
+      <details style="margin-bottom:14px;">
+        <summary style="cursor:pointer;font-size:.8rem;color:var(--text3);font-family:'Barlow Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;">Setup Instructions &#9658;</summary>
+        <ol style="margin-top:10px;padding-left:18px;color:var(--text2);font-size:.8rem;line-height:2;">
+          <li>Open your Google Sheet &#8594; <strong style="color:var(--text)">Extensions &#8594; Apps Script</strong></li>
+          <li>Replace all content in <strong style="color:var(--text)">Code.gs</strong> with the provided <strong style="color:var(--accent)">WebApp_Code.gs</strong> file</li>
+          <li>Click <strong style="color:var(--text)">Deploy &#8594; New Deployment</strong></li>
+          <li>Type: <strong style="color:var(--text)">Web App</strong> | Execute as: <strong style="color:var(--text)">Me</strong> | Who has access: <strong style="color:var(--text)">Anyone</strong></li>
+          <li>Click <strong style="color:var(--text)">Deploy</strong> &#8594; copy the Web App URL &#8594; paste below</li>
+          <li>Future script edits: <strong style="color:var(--text)">Deploy &#8594; Manage Deployments &#8594; Edit &#8594; New version</strong></li>
+        </ol>
+      </details>
+      <div class="sheets-url-row">
+        <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/..."/>
+        <button class="btn btn-secondary" onclick="saveSheetURL()">Save URL</button>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+        <button class="btn btn-primary" onclick="pullFromSheets()">&#8595; Pull from Sheets</button>
+        <button class="btn btn-secondary" onclick="pullPromos()">&#8595; Pull Promotions</button>
+        <button class="btn btn-secondary" onclick="pushToSheets()">&#8593; Push All to Sheets</button>
+        <button class="btn btn-secondary" onclick="runBestOnSheet()">&#9654; Run Best/Watch on Sheet</button>
+        <button class="btn btn-secondary" onclick="testConnection()" style="border-color:var(--teal);color:var(--teal)">&#10003; Test Connection</button>
+      </div>
+      <div id="debug-output" style="display:none;margin-top:8px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto;"></div>
+      <div id="sync-status" style="margin-top:6px;font-size:.82rem;color:var(--text3);line-height:1.8;min-height:20px;"></div>
+    </div>
+    <div class="export-section">
+      <h3>&#9889; Import Top Matches from Cagematch</h3>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">
+        Runs inside Google Apps Script (server-side) — bypasses all CORS restrictions.
+        Fetches cagematch&#39;s matchguide list, filters by rating, and appends only
+        <strong style="color:var(--text)">new matches</strong> (duplicates are skipped automatically).
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:flex-end;">
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);">Year <span style="color:var(--red);">*</span></label>
+          <input type="text" id="import-year" placeholder="e.g. 2026" maxlength="4"
+            style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;font-weight:700;letter-spacing:.08em;padding:9px 12px;border-radius:4px;outline:none;width:100px;text-align:center;"
+            oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,4)"/>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);">Min Rating</label>
+          <select id="import-min-rating" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.88rem;padding:9px 12px;border-radius:4px;outline:none;min-width:110px;">
+            <option value="8.0">8.0+</option>
+            <option value="8.5">8.5+</option>
+            <option value="9.0">9.0+</option>
+            <option value="9.5">9.5+</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;justify-content:flex-end;">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:.75rem;letter-spacing:.06em;color:var(--text3);padding-bottom:10px;">Tab named after year<br>is created automatically</span>
+        </div>
+        <button class="btn btn-primary" onclick="runCagematchImport()" id="import-run-btn">&#9889; Run Import</button>
+      </div>
+      <div id="import-status" style="font-size:.82rem;color:var(--text3);line-height:1.8;min-height:20px;background:var(--bg3);border-radius:4px;padding:10px 14px;display:none;"></div>
+      <p style="color:var(--text3);font-size:.78rem;margin-top:10px;">
+        &#9432; Requires your Apps Script Web App URL to be saved above. Import runs on Google&#39;s servers
+        — may take 20–60 seconds for large result sets. After import, use <strong>&#8595; Pull from Sheets</strong> to sync to this dashboard.
+      </p>
+    </div>
+
+    <div class="export-section">
+      <h3 style="color:var(--red)">Danger Zone</h3>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Clear all locally stored match data. This cannot be undone.</p>
+      <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
+    </div>
+  </div>
+
+</main>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-title">Edit Match</div>
+    <div id="modal-form-area"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveModalMatch()">Save</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="deleteModalMatch()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   DATA LAYER
+   ============================================================ */
+const STORAGE_KEY = 'matches_2026';
+const PROMO_KEY   = 'promotions_2026';
+
+const DEFAULT_PROMOS = [
+  ["All Elite Wrestling","AEW"],
+  ["World Wrestling Entertainment","WWE"],
+  ["New Japan Pro Wrestling","NJPW"],
+  ["Impact Wrestling","IMPACT"],
+  ["Ring of Honor","ROH"],
+  ["Game Changer Wrestling","GCW"],
+  ["Pro Wrestling Guerrilla","PWG"],
+  ["Major League Wrestling","MLW"],
+  ["National Wrestling Alliance","NWA"],
+  ["Combat Zone Wrestling","CZW"],
+  ["House of Glory","HOG"],
+  ["Beyond Wrestling","Beyond"],
+  ["Tokyo Joshi Pro-Wrestling","TJPW"],
+  ["Sendai Girls' Pro Wrestling","Sendai Girls"],
+  ["SEAdLINNNG","SEAdLINNNG"],
+  ["Sareee-ISM","Sareee-ISM"],
+  ["Consejo Mundial de Lucha Libre","CMLL"],
+  ["Revolution Pro Wrestling","RevPro"],
+  ["Pro Wrestling Australia","PWA"],
+  ["Pro Wrestling NOAH","NOAH"],
+  ["Maple Leaf Pro Wrestling","MLP"],
+  ["Marvelous That's Women Pro Wrestling","Marvelous"],
+  ["Dream Star Fighting Marigold","Marigold"],
+  ["Wrestling In Japan - Freelance Shows","Freelance JP"],
+  ["DEADLOCK Pro-Wrestling","DPW"],
+  ["Dragongate Japan Pro-Wrestling","DG"],
+  ["DDT Pro Wrestling","DDT"],
+  ["All Japan Pro Wrestling","AJPW"],
+  ["ChocoPro","ChocoPro"],
+  ["World Wonder Ring Stardom","Stardom"],
+  ["Westside Xtreme Wrestling","wXw"],
+  ["Pro-Wrestling: EVE","EVE"]
+];
+
+function loadMatches() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveMatches(arr) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+}
+
+function loadPromos() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PROMO_KEY));
+    return stored || DEFAULT_PROMOS;
+  } catch { return DEFAULT_PROMOS; }
+}
+
+function savePromos(arr) {
+  localStorage.setItem(PROMO_KEY, JSON.stringify(arr));
+}
+
+/* ============================================================
+   CLASSIFY ROW  (mirrors run2026TopMatches logic)
+   ============================================================ */
+function classifyMatch(m) {
+  const valI = parseFloat(m.rating) || '';
+  const valJ = m.tenPlus ? '10+' : '';
+  const valK = parseFloat(m.score) || '';
+  const valL = parseFloat(m.value) || '';
+
+  const qualifiesBest =
+    (typeof valI === 'number' && valI >= 9) ||
+    (typeof valJ === 'string' && valJ.includes('10+'));
+
+  const qualifiesWatch =
+    (valI === '' || valI === null || isNaN(valI)) &&
+    (
+      (typeof valK === 'number' && valK >= 8.75) ||
+      (typeof valL === 'number' && valL >= 4.75)
+    );
+
+  if (qualifiesBest && m.tenPlus) return 'best-10plus';
+  if (qualifiesBest) return 'best';
+  if (qualifiesWatch) return 'watch';
+  return 'none';
+}
+
+function rowColorClass(m) {
+  const cls = classifyMatch(m);
+  const valK = parseFloat(m.score) || '';
+  const valL = parseFloat(m.value) || '';
+  if (cls === 'best-10plus') return 'row-best-10plus';
+  if (cls === 'watch') {
+    if (typeof valK === 'number' && valK >= 9.25) return 'row-watch-hi';
+    return 'row-watch-lo';
+  }
+  return '';
+}
+
+/* ============================================================
+   NAV
+   ============================================================ */
+function switchPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  document.querySelector(`nav button[onclick="switchPanel('${id}')"]`).classList.add('active');
+
+  if (id === 'dashboard') renderDashboard();
+  if (id === 'best')  { populateSharedFilterOptions(); updateFilterHighlights(); updateSharedChips(); renderBest(); }
+  if (id === 'watch') { populateSharedFilterOptions(); renderWatch(); }
+  if (id === 'all')   { populateSharedFilterOptions(); renderAll(); }
+  if (id === 'promotions') renderPromos();
+  if (id === 'add') { populatePromoDropdowns(); setEditingId(null); }
+}
+
+/* ============================================================
+   TABLE HELPERS
+   ============================================================ */
+const COLS = [
+  { key:'matchUrl', label:'Match', render: m => m.matchUrl
+      ? `<div class="match-name"><a href="${m.matchUrl}" target="_blank">${esc(m.name||m.matchUrl)}</a></div>`
+      : `<div class="match-name">${esc(m.name||'—')}</div>` },
+  { key:'promoAbbr', label:'Promo', render: m => m.promoAbbr ? `<span class="promo-badge">${esc(m.promoAbbr)}</span>` : '—' },
+  { key:'event', label:'Event', render: m => `<div class="event-name">${esc(m.event||'—')}</div>` },
+  { key:'date', label:'Date', render: m => m.date ? fmtDate(m.date) : '—' },
+  { key:'matchType', label:'Type', render: m => esc(m.matchType||'—') },
+  { key:'championship', label:'Championship', render: m => m.championship ? `<span class="champ-badge">🏆 ${esc(m.championship)}</span>` : '—' },
+  { key:'winner', label:'Winner', render: m =>
+    `<span class="winner-cell" onclick="inlineEditWinner(event,'${m.id}')" title="Click to enter winner">` +
+    (m.winner ? `<span class="winner-val">${esc(m.winner)}</span>` : `<span class="rating-empty">—</span>`) +
+    `</span>` },
+  { key:'rating', label:'Rating', render: m => {
+    const rv = parseFloat(m.rating);
+    const cls = (!m.rating || isNaN(rv)) ? '' : (rv >= 9 ? 'rating-val rating-high' : 'rating-val');
+    return `<span class="rating-cell" onclick="inlineEditRating(event,'${m.id}')" title="Click to edit">` +
+      (m.rating ? `<span class="${cls}">${m.rating}</span>` : `<span class="rating-empty">—</span>`) +
+      `</span>`;
+  }},
+  { key:'tenPlus', label:'10+', render: m =>
+    `<span class="tenplus-cell" onclick="inlineToggle10plus(event,'${m.id}')" title="Click to toggle 10+">` +
+    (m.tenPlus ? `<span class="flag-10plus">10+</span>` : `<span class="rating-empty">—</span>`) +
+    `</span>` },
+  { key:'score', label:'Score', render: m => m.score ? `<span class="score-val">${m.score}</span>` : '—' },
+  { key:'value', label:'Value', render: m => m.value || '—' },
+];
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  const parts = d.split('-');
+  if (parts.length === 3) return `${parts[1]}/${parts[2]}/${parts[0]}`;
+  return d;
+}
+
+function buildHead(trEl) {
+  trEl.innerHTML = COLS.map(c => {
+    let cls = '';
+    if (c.key === sortKey) cls = sortDir === 1 ? ' sort-asc' : ' sort-desc';
+    return `<th onclick="sortBy('${c.key}')" id="th-${c.key}" class="${cls}">${c.label}</th>`;
+  }).join('') + '<th>Actions</th>';
+}
+
+let sortKey = 'date', sortDir = -1;
+function sortBy(k) {
+  if (sortKey === k) sortDir *= -1;
+  else { sortKey = k; sortDir = -1; }
+  renderDashboard(); renderBest(); renderWatch(); renderAll();
+  updateSortIndicators();
+}
+
+function updateSortIndicators() {
+  document.querySelectorAll('th[id^="th-"]').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    const key = th.id.replace('th-', '');
+    if (key === sortKey) {
+      th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+    }
+  });
+}
+
+function sortMatches(arr) {
+  return [...arr].sort((a,b) => {
+    let va = a[sortKey]||'', vb = b[sortKey]||'';
+    if (!isNaN(parseFloat(va)) && !isNaN(parseFloat(vb))) {
+      va = parseFloat(va); vb = parseFloat(vb);
+    }
+    if (va < vb) return -sortDir;
+    if (va > vb) return sortDir;
+    return 0;
+  });
+}
+
+function buildRows(arr, tbody, showActions=true) {
+  if (!arr.length) {
+    tbody.innerHTML = `<tr><td colspan="${COLS.length+1}" class="empty-state">No matches found</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = arr.map(m => {
+    const cls = rowColorClass(m);
+    const cells = COLS.map(c => `<td>${c.render(m)}</td>`).join('');
+    const actions = showActions
+      ? `<td><div class="row-actions">
+           <button onclick="editMatch('${m.id}')">Edit</button>
+           <button class="del" onclick="confirmDelete('${m.id}')">Del</button>
+         </div></td>`
+      : '<td></td>';
+    return `<tr class="${cls}" data-id="${m.id}">${cells}${actions}</tr>`;
+  }).join('');
+}
+
+/* ============================================================
+   SHARED FILTER STATE  (persists across Best / Watch / All tabs)
+   ============================================================ */
+const sharedFilters = {
+  search: '',
+  year: '',
+  promo: '',
+  champ: '',
+  titleOnly: false
+};
+
+function getYearFromDate(d) {
+  if (!d) return '';
+  if (d.includes('-')) return d.split('-')[0];
+  if (d.includes('/')) return d.split('/')[2] || '';
+  return '';
+}
+
+function filterMatches(arr, overrides) {
+  const f = Object.assign({}, sharedFilters, overrides || {});
+  const q = (f.search || '').toLowerCase().trim();
+  return arr.filter(m => {
+    // search
+    if (q && ![m.name, m.event, m.championship, m.winner, m.matchType, m.promoAbbr, m.promoFull]
+        .some(v => (v||'').toLowerCase().includes(q))) return false;
+    // year
+    if (f.year && getYearFromDate(m.date) !== f.year) return false;
+    // promo
+    if (f.promo && m.promoAbbr !== f.promo && m.promoFull !== f.promo) return false;
+    // champ dropdown
+    if (f.champ && (m.championship||'').toLowerCase() !== f.champ.toLowerCase()) return false;
+    // title-only toggle
+    if (f.titleOnly && !m.championship) return false;
+    return true;
+  });
+}
+
+function applySharedFilters() {
+  sharedFilters.search = (document.getElementById('shared-search')||{value:''}).value || '';
+  sharedFilters.year   = (document.getElementById('shared-year')||{value:''}).value || '';
+  sharedFilters.promo  = (document.getElementById('shared-promo')||{value:''}).value || '';
+  sharedFilters.champ  = (document.getElementById('shared-champ')||{value:''}).value || '';
+  renderBest();
+  renderWatch();
+  renderAll();
+  updateSharedChips();
+  updateFilterHighlights();
+}
+
+function toggleTitleOnly() {
+  sharedFilters.titleOnly = !sharedFilters.titleOnly;
+  const tog = document.getElementById('title-toggle');
+  if (tog) tog.classList.toggle('on', sharedFilters.titleOnly);
+  applySharedFilters();
+}
+
+function clearSharedFilters() {
+  sharedFilters.search = '';
+  sharedFilters.year   = '';
+  sharedFilters.promo  = '';
+  sharedFilters.champ  = '';
+  sharedFilters.titleOnly = false;
+  const ids = ['shared-search','shared-year','shared-promo','shared-champ'];
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const tog = document.getElementById('title-toggle');
+  if (tog) tog.classList.remove('on');
+  renderBest(); renderWatch(); renderAll();
+  updateSharedChips();
+  updateFilterHighlights();
+}
+
+function clearFilters(prefix) {
+  const s = document.getElementById(prefix+'-search');
+  const y = document.getElementById(prefix+'-year');
+  const p = document.getElementById(prefix+'-promo');
+  if (s) s.value = '';
+  if (y) y.value = '';
+  if (p) p.value = '';
+  const chips = document.getElementById(prefix+'-chips');
+  if (chips) chips.innerHTML = '';
+  if (prefix === 'dash') renderDashboard();
+}
+
+function updateSharedChips() {
+  const chips = document.getElementById('shared-chips');
+  if (!chips) return;
+  const parts = [];
+  if (sharedFilters.search) parts.push(['Search', '"' + sharedFilters.search + '"', () => { sharedFilters.search=''; document.getElementById('shared-search').value=''; applySharedFilters(); }]);
+  if (sharedFilters.year)   parts.push(['Year',  sharedFilters.year,  () => { sharedFilters.year=''; document.getElementById('shared-year').value=''; applySharedFilters(); }]);
+  if (sharedFilters.promo)  parts.push(['Promo', sharedFilters.promo, () => { sharedFilters.promo=''; document.getElementById('shared-promo').value=''; applySharedFilters(); }]);
+  if (sharedFilters.champ)  parts.push(['Champ', sharedFilters.champ, () => { sharedFilters.champ=''; document.getElementById('shared-champ').value=''; applySharedFilters(); }]);
+  if (sharedFilters.titleOnly) parts.push(['Title Matches Only', '', () => { sharedFilters.titleOnly=false; document.getElementById('title-toggle').classList.remove('on'); applySharedFilters(); }]);
+
+  chips.innerHTML = parts.map((p, i) =>
+    `<span class="filter-active-badge">${p[0]}: ${p[1]}<button onclick="(${p[2].toString()})()" title="Remove filter">✕</button></span>`
+  ).join('');
+}
+
+function updateFilterHighlights() {
+  ['shared-search','shared-year','shared-promo','shared-champ'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('active-filter', !!el.value);
+  });
+}
+
+function populateSharedFilterOptions() {
+  const matches = loadMatches();
+  const promos  = loadPromos();
+
+  // ── Years (from match dates) ──
+  const years = [...new Set(matches.map(m => getYearFromDate(m.date)).filter(Boolean))].sort().reverse();
+
+  // ── Promotions (from actual match data, mapped to full names) ──
+  const promoSet = [...new Set(matches.map(m => m.promoAbbr).filter(Boolean))].sort();
+
+  // ── Championships ──
+  const champSet = [...new Set(matches.map(m => m.championship).filter(Boolean))].sort();
+
+  function fillSelect(id, blankLabel, options) {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;  // preserve current selection
+    sel.innerHTML = `<option value="">${blankLabel}</option>` + options;
+    // Restore selection if it still exists in new options
+    if (cur && [...sel.options].some(o => o.value === cur)) {
+      sel.value = cur;
+    }
+  }
+
+  const yearOpts  = years.map(y => `<option value="${y}">${y}</option>`).join('');
+  const promoOpts = promoSet.map(abbr => {
+    const full = (promos.find(p => p[1] === abbr) || [])[0] || abbr;
+    return `<option value="${esc(abbr)}">${esc(full)} (${esc(abbr)})</option>`;
+  }).join('');
+  const champOpts = champSet.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+
+  fillSelect('shared-year',  'All Years',        yearOpts);
+  fillSelect('shared-promo', 'All Promotions',   promoOpts);
+  fillSelect('shared-champ', 'All Championships', champOpts);
+  fillSelect('dash-year',    'All Years',        yearOpts);
+  fillSelect('dash-promo',   'All Promotions',   promoOpts);
+}
+
+function populatePromoFilter(selectEl) {
+  // legacy — no-op, replaced by populateSharedFilterOptions
+}
+
+/* ============================================================
+   RENDERS
+   ============================================================ */
+function renderDashboard() {
+  const matches = loadMatches();
+  const best    = matches.filter(m => classifyMatch(m).startsWith('best'));
+  const watch   = matches.filter(m => classifyMatch(m) === 'watch');
+  const tenplus = matches.filter(m => m.tenPlus);
+
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${matches.length}</div><div class="stat-label">Total Matches</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--teal)">${best.length}</div><div class="stat-label">Best</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--blue-hi)">${watch.length}</div><div class="stat-label">Watch</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--teal-text)">${tenplus.length}</div><div class="stat-label">10+ Matches</div></div>
+  `;
+
+  populateSharedFilterOptions();
+
+  // Dashboard has its own local search/year/promo
+  const dashSearch = (document.getElementById('dash-search')||{value:''}).value || '';
+  const dashYear   = (document.getElementById('dash-year')||{value:''}).value || '';
+  const dashPromo  = (document.getElementById('dash-promo')||{value:''}).value || '';
+
+  let recent = sortMatches(matches);
+  if (dashSearch || dashYear || dashPromo) {
+    recent = filterMatches(recent, { search: dashSearch, year: dashYear, promo: dashPromo, champ: '', titleOnly: false });
+  }
+  recent = recent.slice(0, 20);
+
+  document.getElementById('recent-count').textContent = recent.length;
+  buildHead(document.getElementById('recent-head'));
+  buildRows(recent, document.getElementById('recent-body'));
+
+  // dashboard chips
+  const dashChips = document.getElementById('dash-chips');
+  if (dashChips) {
+    const parts = [];
+    if (dashSearch) parts.push(`<span class="filter-active-badge">Search: "${esc(dashSearch)}"</span>`);
+    if (dashYear)   parts.push(`<span class="filter-active-badge">Year: ${esc(dashYear)}</span>`);
+    if (dashPromo)  parts.push(`<span class="filter-active-badge">Promo: ${esc(dashPromo)}</span>`);
+    dashChips.innerHTML = parts.join('');
+  }
+}
+
+function renderBest() {
+  populateSharedFilterOptions();
+  const matches = loadMatches();
+  const best = filterMatches(sortMatches(matches.filter(m => classifyMatch(m).startsWith('best'))));
+  document.getElementById('best-count').textContent = best.length;
+  buildHead(document.getElementById('best-head'));
+  buildRows(best, document.getElementById('best-body'));
+}
+
+function renderWatch() {
+  const matches = loadMatches();
+  const watch = filterMatches(sortMatches(matches.filter(m => classifyMatch(m) === 'watch')));
+  document.getElementById('watch-count').textContent = watch.length;
+  buildHead(document.getElementById('watch-head'));
+  buildRows(watch, document.getElementById('watch-body'));
+}
+
+function renderAll() {
+  const matches = loadMatches();
+  const filtered = filterMatches(sortMatches(matches));
+  document.getElementById('all-count').textContent = filtered.length;
+  buildHead(document.getElementById('all-head'));
+  buildRows(filtered, document.getElementById('all-body'));
+}
+
+function renderPromos() {
+  const promos = loadPromos();
+  const list = document.getElementById('promo-list');
+  list.innerHTML = promos.map((p,i) => `
+    <div class="promo-item">
+      <span class="promo-item-name">${esc(p[0])}</span>
+      <span class="promo-item-abbr">${esc(p[1])}</span>
+      <button class="promo-item-del" onclick="deletePromo(${i})" title="Delete">✕</button>
+    </div>
+  `).join('');
+}
+
+/* ============================================================
+   PROMOTION MANAGER
+   ============================================================ */
+function populatePromoDropdowns() {
+  const promos = loadPromos();
+  const sel = document.getElementById('f-promo-full');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Select —</option>' +
+    promos.map(p => `<option value="${esc(p[0])}">${esc(p[0])}</option>`).join('');
+  sel.value = cur;
+}
+
+function onPromoChange() {
+  const promos = loadPromos();
+  const full = document.getElementById('f-promo-full').value;
+  const match = promos.find(p => p[0] === full);
+  document.getElementById('f-promo-abbr').value = match ? match[1] : '';
+}
+
+function addPromotion() {
+  const name = document.getElementById('new-promo-name').value.trim();
+  const abbr = document.getElementById('new-promo-abbr').value.trim();
+  if (!name || !abbr) { toast('Enter both name and abbreviation', true); return; }
+  const promos = loadPromos();
+  if (promos.find(p => p[0].toLowerCase() === name.toLowerCase())) {
+    toast('Promotion already exists', true); return;
+  }
+  promos.push([name, abbr]);
+  savePromos(promos);
+  document.getElementById('new-promo-name').value = '';
+  document.getElementById('new-promo-abbr').value = '';
+  renderPromos();
+  toast('Promotion added');
+}
+
+function deletePromo(idx) {
+  const promos = loadPromos();
+  promos.splice(idx, 1);
+  savePromos(promos);
+  renderPromos();
+  toast('Promotion removed');
+}
+
+/* ============================================================
+   AUTO-FETCH from cagematch
+   ============================================================ */
+async function fetchMatchData() {
+  const url = document.getElementById('f-url').value.trim();
+  if (!url) { setFetchStatus('Enter a cagematch.net match URL first', 'err'); return; }
+
+  const btn = document.getElementById('fetch-btn');
+  btn.disabled = true;
+  btn.textContent = '⧗ Fetching…';
+  setFetchStatus('Fetching via Google Apps Script…');
+
+  try {
+    const data = await gasGet('fetchMatch', { url });
+    if (!data.ok) throw new Error(data.error || 'Unexpected response from Apps Script');
+
+    // ── Fill form fields ──
+    if (data.name)   document.getElementById('f-name').value  = data.name;
+    if (data.event)  document.getElementById('f-event').value = data.event;
+    if (data.date)   document.getElementById('f-date').value  = data.date;
+    if (data.matchType)    document.getElementById('f-matchtype').value = data.matchType;
+    if (data.championship) document.getElementById('f-champ').value    = data.championship;
+    if (data.score)        document.getElementById('f-score').value    = data.score;
+
+    // ── Promotion: match full name to dropdown ──
+    if (data.promoFull || data.promoAbbr) {
+      populatePromoDropdowns();
+      const sel = document.getElementById('f-promo-full');
+      let matched = false;
+      for (const opt of sel.options) {
+        if (data.promoFull && opt.value.toLowerCase() === data.promoFull.toLowerCase()) {
+          sel.value = opt.value; onPromoChange(); matched = true; break;
+        }
+      }
+      // Fallback: match by abbreviation
+      if (!matched && data.promoAbbr) {
+        const promos = loadPromos();
+        const p = promos.find(x => x[1].toLowerCase() === data.promoAbbr.toLowerCase());
+        if (p) { sel.value = p[0]; onPromoChange(); }
+        else { document.getElementById('f-promo-abbr').value = data.promoAbbr; }
+      }
+    }
+
+    // ── Build status summary ──
+    const filled = [
+      data.name         && 'wrestlers',
+      data.promoFull    && 'promotion',
+      data.event        && 'event',
+      data.date         && 'date',
+      data.matchType    && 'match type',
+      data.championship && 'championship',
+      data.score        && 'score',
+    ].filter(Boolean);
+
+    setFetchStatus('✓ Auto-filled: ' + filled.join(', '), 'ok');
+
+  } catch(e) {
+    const msg = e.message.includes('No Web App URL')
+      ? 'Set your Apps Script Web App URL in Export → Sync first.'
+      : 'Auto-fill failed: ' + e.message;
+    setFetchStatus('✗ ' + msg, 'err');
+  }
+
+  btn.disabled    = false;
+  btn.textContent = '⧗ Auto-Fill';
+}
+
+
+function setFetchStatus(msg, type) {
+  const el = document.getElementById('fetch-status');
+  el.textContent = msg;
+  el.className = 'fetch-status' + (type ? ' ' + type : '');
+}
+
+/* ============================================================
+   FORM / SAVE
+   ============================================================ */
+let editingId = null;
+function setEditingId(id) {
+  editingId = id;
+  document.getElementById('form-title').textContent = id ? 'Edit Match' : 'Add New Match';
+  document.getElementById('delete-btn').style.display = id ? 'inline-block' : 'none';
+}
+
+function getFormData() {
+  return {
+    id: editingId || ('m_' + Date.now() + '_' + Math.random().toString(36).slice(2,7)),
+    matchUrl: document.getElementById('f-url').value.trim(),
+    name: document.getElementById('f-name').value.trim(),
+    promoFull: document.getElementById('f-promo-full').value,
+    promoAbbr: document.getElementById('f-promo-abbr').value.trim(),
+    event: document.getElementById('f-event').value.trim(),
+    date: document.getElementById('f-date').value,
+    matchType: document.getElementById('f-matchtype').value.trim(),
+    championship: document.getElementById('f-champ').value.trim(),
+    winner: document.getElementById('f-winner').value.trim(),
+    rating: document.getElementById('f-rating').value,
+    tenPlus: document.getElementById('f-10plus').checked,
+    score: document.getElementById('f-score').value,
+    value: document.getElementById('f-value').value,
+  };
+}
+
+function fillForm(m) {
+  document.getElementById('f-url').value = m.matchUrl||'';
+  document.getElementById('f-name').value = m.name||'';
+  populatePromoDropdowns();
+  document.getElementById('f-promo-full').value = m.promoFull||'';
+  document.getElementById('f-promo-abbr').value = m.promoAbbr||'';
+  document.getElementById('f-event').value = m.event||'';
+  document.getElementById('f-date').value = m.date||'';
+  document.getElementById('f-matchtype').value = m.matchType||'';
+  document.getElementById('f-champ').value = m.championship||'';
+  document.getElementById('f-winner').value = m.winner||'';
+  document.getElementById('f-rating').value = m.rating||'';
+  document.getElementById('f-10plus').checked = !!m.tenPlus;
+  document.getElementById('f-score').value = m.score||'';
+  document.getElementById('f-value').value = m.value||'';
+  setFetchStatus('');
+}
+
+function clearForm() {
+  ['f-url','f-name','f-event','f-matchtype','f-champ','f-winner','f-rating','f-score','f-value','f-date','f-promo-abbr'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f-promo-full').value = '';
+  document.getElementById('f-10plus').checked = false;
+  setFetchStatus('');
+  setEditingId(null);
+}
+
+function saveMatch() {
+  const data = getFormData();
+  if (!data.name) { toast('Match name is required', true); return; }
+
+  const matches = loadMatches();
+  const idx = matches.findIndex(m => m.id === editingId);
+  if (idx >= 0) matches[idx] = data;
+  else matches.unshift(data);
+
+  saveMatches(matches);
+  toast(editingId ? 'Match updated' : 'Match saved');
+  clearForm();
+  switchPanel('dashboard');
+}
+
+function editMatch(id) {
+  const m = loadMatches().find(m => m.id === id);
+  if (!m) return;
+  switchPanel('add');
+  setTimeout(() => { fillForm(m); setEditingId(id); }, 50);
+}
+
+function deleteEditing() {
+  if (!editingId) return;
+  if (!confirm('Delete this match?')) return;
+  const matches = loadMatches().filter(m => m.id !== editingId);
+  saveMatches(matches);
+  toast('Match deleted');
+  clearForm();
+  switchPanel('dashboard');
+}
+
+function confirmDelete(id) {
+  if (!confirm('Delete this match?')) return;
+  saveMatches(loadMatches().filter(m => m.id !== id));
+  toast('Match deleted');
+  renderDashboard(); renderBest(); renderWatch(); renderAll();
+}
+
+/* ============================================================
+   MODAL (for inline edit from tables)
+   ============================================================ */
+let modalEditId = null;
+function closeModal() {
+  document.getElementById('edit-modal').classList.remove('open');
+  modalEditId = null;
+}
+function saveModalMatch() { closeModal(); }
+function deleteModalMatch() { closeModal(); }
+
+/* ============================================================
+   EXPORT / IMPORT
+   ============================================================ */
+function exportCSV() {
+  const matches = loadMatches();
+  if (!matches.length) { toast('No matches to export', true); return; }
+  const headers = ['ID','MatchURL','Name','PromoFull','PromoAbbr','Event','Date','MatchType','Championship','Winner','Rating','10Plus','Score','Value'];
+  const rows = matches.map(m => [
+    m.id, m.matchUrl, m.name, m.promoFull, m.promoAbbr, m.event, m.date,
+    m.matchType, m.championship, m.winner, m.rating, m.tenPlus?'10+':'', m.score, m.value
+  ].map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(','));
+
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '2026_matches.csv';
+  a.click();
+  toast('CSV downloaded');
+}
+
+function importCSV() {
+  const file = document.getElementById('import-file').files[0];
+  if (!file) { toast('Select a CSV file first', true); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const lines = e.target.result.split('\n').filter(l => l.trim());
+      const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim());
+      const matches = lines.slice(1).map(line => {
+        const vals = line.match(/(".*?"|[^,]+)(?=,|$)/g)||[];
+        const clean = vals.map(v => v.replace(/^"|"$/g,'').replace(/""/g,'"'));
+        const obj = {};
+        headers.forEach((h,i) => obj[h] = clean[i]||'');
+        return {
+          id: obj.ID||('m_'+Date.now()+Math.random()),
+          matchUrl: obj.MatchURL, name: obj.Name, promoFull: obj.PromoFull,
+          promoAbbr: obj.PromoAbbr, event: obj.Event, date: obj.Date,
+          matchType: obj.MatchType, championship: obj.Championship, winner: obj.Winner,
+          rating: obj.Rating, tenPlus: obj['10Plus']==='10+', score: obj.Score, value: obj.Value
+        };
+      });
+      saveMatches(matches);
+      toast(`Imported ${matches.length} matches`);
+      renderDashboard();
+    } catch(err) {
+      toast('Import failed — check CSV format', true);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function saveSheetURL() {
+  const url = document.getElementById('sheets-url').value.trim();
+  if (!url) { toast('Enter a URL first', true); return; }
+  localStorage.setItem('sheets_url_2026', url);
+  toast('Sheets URL saved');
+}
+
+function setSyncStatus(msg, color) {
+  const el = document.getElementById('sync-status');
+  el.textContent = msg;
+  el.style.color = color || 'var(--text3)';
+}
+
+function getSheetURL() {
+  const url = localStorage.getItem('sheets_url_2026');
+  if (!url) { toast('Set your Sheets Web App URL first', true); return null; }
+  return url;
+}
+
+/* PULL: sheet → dashboard (full replace) */
+/* ─── CORE FETCH HELPER ───
+   Google Apps Script Web Apps:
+   - GET requests: fetch works normally, follow redirects
+   - POST requests: must use no-cors (response is opaque/unreadable)
+   - Solution: convert all write actions to GET with params encoded in URL
+   ─────────────────────────────────────────────────────────────────────── */
+async function testConnection() {
+  const url = getSheetURL();
+  const dbg = document.getElementById('debug-output');
+  dbg.style.display = 'block';
+  if (!url) {
+    dbg.textContent = 'ERROR: No Web App URL saved. Paste it above and click Save URL.';
+    return;
+  }
+  const lines = ['Testing connection...', 'Saved URL: ' + url, ''];
+  const flush = () => { dbg.textContent = lines.join('\n'); };
+  flush();
+  try {
+    const testUrl = url + '?action=stats';
+    lines.push('Fetching: ' + testUrl);
+    flush();
+    const res = await fetch(testUrl, { method: 'GET', redirect: 'follow' });
+    lines.push('HTTP Status: ' + res.status);
+    lines.push('Response type: ' + res.type);
+    lines.push('Final URL: ' + res.url);
+    flush();
+    const text = await res.text();
+    lines.push('');
+    lines.push('Raw response (' + text.length + ' chars):');
+    lines.push(text.substring(0, 500));
+    flush();
+    try {
+      const json = JSON.parse(text);
+      lines.push('');
+      lines.push('JSON parsed OK: ' + JSON.stringify(json));
+      flush();
+      setSyncStatus('Connection works! ' + JSON.stringify(json), 'var(--green)');
+    } catch(e) {
+      lines.push('JSON parse FAILED: ' + e.message);
+      lines.push('Check: Web App not deployed correctly or wrong URL');
+      flush();
+      setSyncStatus('Connection failed - see debug output', 'var(--red)');
+    }
+  } catch(err) {
+    lines.push('NETWORK ERROR: ' + err.message);
+    lines.push('Check: 1) URL correct  2) Deployed as Anyone  3) Script authorised');
+    flush();
+    setSyncStatus('Network error - see debug output', 'var(--red)');
+  }
+}
+
+async function gasGet(action, extraParams = {}) {
+  const baseUrl = getSheetURL();
+  if (!baseUrl) throw new Error('No Web App URL set — paste it in Export → Sync and click Save URL');
+
+  // Build URL — Apps Script exec URLs must not have existing query params
+  const params = new URLSearchParams({ action, ...extraParams });
+  const fullUrl = baseUrl + '?' + params.toString();
+
+  console.log('[gasGet] Calling:', fullUrl);
+
+  let res;
+  try {
+    res = await fetch(fullUrl, { method: 'GET', redirect: 'follow' });
+  } catch(networkErr) {
+    throw new Error('Network error (CORS or offline): ' + networkErr.message);
+  }
+
+  console.log('[gasGet] Status:', res.status, 'Type:', res.type, 'URL:', res.url);
+
+  if (!res.ok) throw new Error('HTTP ' + res.status + ' from Apps Script');
+
+  let text;
+  try {
+    text = await res.text();
+    console.log('[gasGet] Raw response:', text.substring(0, 300));
+  } catch(e) {
+    throw new Error('Could not read response body');
+  }
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch(e) {
+    throw new Error('Response was not JSON. Got: ' + text.substring(0, 100));
+  }
+
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+
+async function gasPost(body) {
+  const baseUrl = getSheetURL();
+  if (!baseUrl) throw new Error('No Web App URL set');
+  // POST via no-cors — response is opaque but the request fires
+  await fetch(baseUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' }, // text/plain avoids preflight
+    body: JSON.stringify(body),
+    mode: 'no-cors',
+    redirect: 'follow'
+  });
+  // Can't read no-cors response — return optimistic success
+  return { status: 'sent' };
+}
+
+async function pullFromSheets() {
+  const url = getSheetURL(); if (!url) return;
+  setSyncStatus('Pulling matches from Sheet…');
+  try {
+    const data = await gasGet('pull');
+    if (!Array.isArray(data.matches)) throw new Error('Unexpected response — check your Web App is deployed correctly');
+    const local = loadMatches().filter(m => !m.id.startsWith('sheet_'));
+    const incoming = data.matches.map(m => ({
+      ...m,
+      id: m.id || ('sheet_' + Date.now() + '_' + Math.random().toString(36).slice(2,5))
+    }));
+    saveMatches([...incoming, ...local]);
+    renderDashboard();
+    populateSharedFilterOptions();
+    setSyncStatus(
+      '✓ Pulled ' + incoming.length + ' matches from Sheet. (' + local.length + ' local-only preserved)',
+      'var(--green)'
+    );
+    toast('Pulled ' + incoming.length + ' matches');
+  } catch(e) {
+    setSyncStatus('✗ Pull failed: ' + e.message, 'var(--red)');
+    toast('Pull failed', true);
+  }
+}
+
+async function pullPromos() {
+  const url = getSheetURL(); if (!url) return;
+  setSyncStatus('Pulling promotions…');
+  try {
+    const data = await gasGet('pullPromos');
+    if (!Array.isArray(data.promos)) throw new Error('No promos in response');
+    savePromos(data.promos);
+    populatePromoDropdowns();
+    populateSharedFilterOptions();
+    renderPromos();
+    setSyncStatus('✓ Pulled ' + data.promos.length + ' promotions from Sheet.', 'var(--green)');
+    toast('Promotions updated');
+  } catch(e) {
+    setSyncStatus('✗ Promo pull failed: ' + e.message, 'var(--red)');
+    toast('Promo pull failed', true);
+  }
+}
+
+async function pushToSheets() {
+  const url = getSheetURL(); if (!url) return;
+  const matches = loadMatches();
+  if (!matches.length) { toast('No matches to push', true); return; }
+  if (!confirm('Push ' + matches.length + ' matches to Google Sheet? This will overwrite existing data rows.')) return;
+  setSyncStatus('Pushing ' + matches.length + ' matches…');
+  try {
+    await gasPost({ action: 'push', matches });
+    setSyncStatus('✓ Push sent — check your Sheet to confirm rows were written.', 'var(--accent)');
+    toast('Push sent to Sheet');
+  } catch(e) {
+    setSyncStatus('✗ Push failed: ' + e.message, 'var(--red)');
+    toast('Push failed', true);
+  }
+}
+
+async function runBestOnSheet() {
+  const url = getSheetURL(); if (!url) return;
+  setSyncStatus('Triggering Best/Watch sort on Sheet…');
+  try {
+    await gasPost({ action: 'runBest' });
+    setSyncStatus('✓ Request sent — check your Sheet for updated Best/Watch tabs.', 'var(--accent)');
+    toast('Best/Watch triggered');
+  } catch(e) {
+    setSyncStatus('✗ Failed: ' + e.message, 'var(--red)');
+    toast('Failed', true);
+  }
+}
+
+function clearAllData() {
+  if (!confirm('Delete ALL match data? This cannot be undone.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  toast('All data cleared');
+  renderDashboard();
+}
+
+/* ============================================================
+   INLINE RATING EDIT
+   ============================================================ */
+function inlineEditRating(e, id) {
+  e.stopPropagation();
+  const cell = e.currentTarget;
+  const matches = loadMatches();
+  const m = matches.find(x => x.id === id);
+  if (!m) return;
+
+  // Replace cell contents with a small input
+  const cur = m.rating || '';
+  cell.innerHTML = `<input class="rating-inline-input" type="number" min="0" max="10" step="0.25"
+    value="${cur}" placeholder="0–10" id="inline-rating-${id}"/>`;
+
+  const inp = cell.querySelector('input');
+  inp.focus();
+  inp.select();
+
+  function commit() {
+    const val = inp.value.trim();
+    const num = parseFloat(val);
+    m.rating = (!val || isNaN(num)) ? '' : String(num);
+    // 10+ is NEVER auto-set from rating value — always manual via the 10+ column
+    saveMatches(matches);
+    renderDashboard();
+    renderBest();
+    renderWatch();
+    renderAll();
+    populateSharedFilterOptions();
+  }
+
+  inp.addEventListener('blur', commit);
+  inp.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter')  { inp.blur(); }
+    if (ev.key === 'Escape') {
+      m.rating = cur; // revert
+      inp.removeEventListener('blur', commit);
+      renderDashboard(); renderBest(); renderWatch(); renderAll();
+    }
+  });
+}
+
+function inlineToggle10plus(e, id) {
+  e.stopPropagation();
+  const matches = loadMatches();
+  const m = matches.find(x => x.id === id);
+  if (!m) return;
+  m.tenPlus = !m.tenPlus;
+  saveMatches(matches);
+  renderDashboard(); renderBest(); renderWatch(); renderAll();
+  toast(m.tenPlus ? '10+ set' : '10+ removed');
+}
+
+function inlineEditWinner(e, id) {
+  e.stopPropagation();
+  const cell = e.currentTarget;
+  const matches = loadMatches();
+  const m = matches.find(x => x.id === id);
+  if (!m) return;
+  const cur = m.winner || '';
+  cell.innerHTML = `<input class="winner-inline-input" type="text" value="${esc(cur)}" placeholder="Winner name" id="inline-winner-${id}"/>`;
+  const inp = cell.querySelector('input');
+  inp.focus();
+  inp.select();
+  function commit() {
+    m.winner = inp.value.trim();
+    saveMatches(matches);
+    renderDashboard(); renderBest(); renderWatch(); renderAll();
+  }
+  inp.addEventListener('blur', commit);
+  inp.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter')  { inp.blur(); }
+    if (ev.key === 'Escape') { m.winner = cur; inp.removeEventListener('blur', commit); renderDashboard(); renderBest(); renderWatch(); renderAll(); }
+  });
+}
+
+/* ============================================================
+   CAGEMATCH IMPORT (triggers Apps Script server-side fetch)
+   ============================================================ */
+async function runCagematchImport() {
+  const url = getSheetURL();
+  if (!url) return;
+
+  const year      = (document.getElementById('import-year').value || '').trim();
+  const minRating = document.getElementById('import-min-rating').value;
+
+  if (!year || year.length !== 4 || isNaN(parseInt(year))) {
+    toast('Enter a valid 4-digit year (e.g. 2026)', true);
+    document.getElementById('import-year').focus();
+    return;
+  }
+
+  const statusEl = document.getElementById('import-status');
+  const btn      = document.getElementById('import-run-btn');
+
+  statusEl.style.display = 'block';
+  statusEl.style.color   = 'var(--text3)';
+  statusEl.innerHTML     = `<span style="color:var(--accent)">&#9889;</span> Importing <strong style="color:var(--text)">${year}</strong> matches with rating &ge; ${minRating} from cagematch&hellip;<br>
+    <span style="color:var(--text3);font-size:.78rem;">Running on Google&rsquo;s servers &mdash; may take 20&ndash;60 seconds. Please wait.</span>`;
+  btn.disabled    = true;
+  btn.textContent = 'Running…';
+
+  try {
+    const data = await gasGet('importTop', { year, minRating });
+
+    const imported   = data.imported   || 0;
+    const duplicates = data.duplicates || 0;
+    const total      = data.total      || 0;
+
+    statusEl.style.color = imported > 0 ? 'var(--green)' : 'var(--accent)';
+    statusEl.innerHTML = `
+      <strong style="color:var(--text)">${data.message || 'Import complete.'}</strong><br>
+      <span style="color:var(--text2)">
+        &#10003; ${imported} new match${imported !== 1 ? 'es' : ''} written to <em>${year}</em> tab
+        &nbsp;|&nbsp;
+        &#8251; ${duplicates} duplicate${duplicates !== 1 ? 's' : ''} skipped
+        &nbsp;|&nbsp;
+        ${total} total found with rating &ge; ${minRating}
+      </span><br>
+      <span style="color:var(--text3);font-size:.78rem;">
+        Now click <strong style="color:var(--accent)">&#8595; Pull from Sheets</strong> above to sync into this dashboard.
+      </span>
+    `;
+
+    if (imported > 0) toast(imported + ' new matches imported → ' + year + ' tab');
+    else toast('No new matches — ' + duplicates + ' duplicates skipped');
+
+  } catch(e) {
+    statusEl.style.color = 'var(--red)';
+    statusEl.innerHTML   = '<strong>Import failed:</strong> ' + esc(e.message)
+      + '<br><span style="color:var(--text3);font-size:.78rem;">Check your Web App URL is saved and the script is deployed correctly.</span>';
+    toast('Import failed', true);
+  }
+
+  btn.disabled    = false;
+  btn.textContent = '⚡ Run Import';
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+let toastTimer;
+function toast(msg, isErr=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (isErr ? ' err' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+(function init() {
+  // Load sheets URL if saved
+  const savedUrl = localStorage.getItem('sheets_url_2026');
+  if (savedUrl) document.getElementById('sheets-url').value = savedUrl;
+
+  // ── INJECT TEST MATCHES (AEW WrestleDream 2025) ──
+  // Always loads on open so you can see the dashboard in action.
+  // Remove this block once pulling real data from your Sheet.
+  (function loadTestMatches() {
+    const testMatches = [
+      {
+        id: 'test_1_wrestledream25',
+        matchUrl: 'https://www.cagematch.net/?id=111&nr=125166',
+        name: 'Jack Perry & Luchasaurus vs. Matt Jackson & Nick Jackson',
+        promoFull: 'All Elite Wrestling',
+        promoAbbr: 'AEW',
+        event: 'AEW WrestleDream 2025',
+        date: '2025-10-18',
+        matchType: 'Tag Team',
+        championship: '',
+        winner: '',
+        rating: '',
+        tenPlus: false,
+        score: '8.56',
+        value: '',
+        _sheetName: '2025'
+      },
+      {
+        id: 'test_2_wrestledream25',
+        matchUrl: 'https://www.cagematch.net/?id=111&nr=125167',
+        name: 'Bishop Kaun, Ricochet & Toa Liona vs. Bobby Lashley, MVP & Shelton Benjamin',
+        promoFull: 'All Elite Wrestling',
+        promoAbbr: 'AEW',
+        event: 'AEW WrestleDream 2025',
+        date: '2025-10-18',
+        matchType: 'Tornado Six Man Tag',
+        championship: '',
+        winner: '',
+        rating: '',
+        tenPlus: false,
+        score: '8.30',
+        value: '',
+        _sheetName: '2025'
+      },
+      {
+        id: 'test_3_wrestledream25',
+        matchUrl: 'https://www.cagematch.net/?id=111&nr=127417',
+        name: 'Kyle Fletcher vs. Mark Briscoe',
+        promoFull: 'All Elite Wrestling',
+        promoAbbr: 'AEW',
+        event: 'AEW WrestleDream 2025',
+        date: '2025-10-18',
+        matchType: 'No DQ',
+        championship: 'AEW TNT',
+        winner: 'Mark Briscoe',
+        rating: '',
+        tenPlus: false,
+        score: '7.12',
+        value: '',
+        _sheetName: '2025'
+      },
+      {
+        id: 'test_4_wrestledream25',
+        matchUrl: 'https://www.cagematch.net/?id=111&nr=125171',
+        name: 'Kris Statlander vs. Toni Storm',
+        promoFull: 'All Elite Wrestling',
+        promoAbbr: 'AEW',
+        event: 'AEW WrestleDream 2025',
+        date: '2025-10-18',
+        matchType: '',
+        championship: 'AEW TBS',
+        winner: '',
+        rating: '',
+        tenPlus: false,
+        score: '7.14',
+        value: '',
+        _sheetName: '2025'
+      },
+      {
+        id: 'test_5_wrestledream25',
+        matchUrl: 'https://www.cagematch.net/?id=111&nr=107237',
+        name: 'Mercedes Mone vs. Mina Shirakawa',
+        promoFull: 'All Elite Wrestling',
+        promoAbbr: 'AEW',
+        event: 'AEW WrestleDream 2025',
+        date: '2025-10-18',
+        matchType: '',
+        championship: "AEW TBS / ROH Interim Women's TV",
+        winner: '',
+        rating: '',
+        tenPlus: false,
+        score: '8.93',
+        value: '',
+        _sheetName: '2025'
+      },
+      {
+        id: 'test_6_wrestledream25',
+        matchUrl: 'https://www.cagematch.net/?id=111&nr=125175',
+        name: 'Bandido & Brody King vs. Kazuchika Okada & Konosuke Takeshita',
+        promoFull: 'All Elite Wrestling',
+        promoAbbr: 'AEW',
+        event: 'AEW WrestleDream 2025',
+        date: '2025-10-18',
+        matchType: 'Tag Team',
+        championship: 'AEW Tag Team',
+        winner: '',
+        rating: '',
+        tenPlus: false,
+        score: '7.51',
+        value: '',
+        _sheetName: '2025'
+      }
+    ];
+
+    saveMatches(testMatches); // uses STORAGE_KEY
+  })();
+
+  populatePromoDropdowns();
+  populateSharedFilterOptions();
+  renderDashboard();
+})();
+</script>
+</body>
+</html>
