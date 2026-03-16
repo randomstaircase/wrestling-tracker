@@ -2153,9 +2153,35 @@ function toast(msg, isErr=false) {
   const savedUrl = localStorage.getItem('sheets_url_2026');
   if (savedUrl) document.getElementById('sheets-url').value = savedUrl;
 
-    populatePromoDropdowns();
+  populatePromoDropdowns();
   populateSharedFilterOptions();
   renderDashboard();
+
+  // Auto-pull from Sheets on first load if localStorage is empty and URL is saved
+  const existing = loadMatches();
+  if (savedUrl && existing.length === 0) {
+    setSyncStatus('No local data — auto-pulling from Sheets…');
+    setTimeout(async () => {
+      try {
+        const data = await gasGet('pull');
+        if (Array.isArray(data.matches) && data.matches.length > 0) {
+          const incoming = data.matches.map(m => ({
+            ...m,
+            id: m.id || ('sheet_' + Date.now() + '_' + Math.random().toString(36).slice(2,5))
+          }));
+          saveMatches(incoming);
+          renderDashboard();
+          populateSharedFilterOptions();
+          setSyncStatus('✓ Auto-pulled ' + incoming.length + ' matches from Sheet.', 'var(--green)');
+          toast('Auto-pulled ' + incoming.length + ' matches');
+        } else {
+          setSyncStatus('Sheet appears empty — add matches to get started.', 'var(--text3)');
+        }
+      } catch(e) {
+        setSyncStatus('Auto-pull failed: ' + e.message + ' — use Pull from Sheets manually.', 'var(--red)');
+      }
+    }, 800);
+  }
 })();
 </script>
 </body>
