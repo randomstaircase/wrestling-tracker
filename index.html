@@ -1038,37 +1038,30 @@ textarea { resize: vertical; min-height: 70px; }
       <div id="sync-status" style="margin-top:6px;font-size:.82rem;color:var(--text3);line-height:1.8;min-height:20px;"></div>
     </div>
     <div class="export-section">
-      <h3>&#9889; Import Top Matches from Cagematch</h3>
+      <h3>&#9889; Batch URL Import</h3>
       <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">
-        Runs inside Google Apps Script (server-side) — bypasses all CORS restrictions.
-        Fetches cagematch&#39;s matchguide list, filters by rating, and appends only
-        <strong style="color:var(--text)">new matches</strong> (duplicates are skipped automatically).
+        Paste cagematch match URLs below (one per line). The script fetches each match
+        server-side and fills in event, promotion, date, match type, championship and CM score.
+        Duplicates are skipped automatically. <strong style="color:var(--text)">Rating and Winner are always manual.</strong>
       </p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:flex-end;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end;">
         <div style="display:flex;flex-direction:column;gap:6px;">
-          <label style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);">Year <span style="color:var(--red);">*</span></label>
+          <label style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);">Year <span style="color:var(--red)">*</span></label>
           <input type="text" id="import-year" placeholder="e.g. 2026" maxlength="4"
             style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;font-weight:700;letter-spacing:.08em;padding:9px 12px;border-radius:4px;outline:none;width:100px;text-align:center;"
             oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,4)"/>
         </div>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <label style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);">Min Rating</label>
-          <select id="import-min-rating" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.88rem;padding:9px 12px;border-radius:4px;outline:none;min-width:110px;">
-            <option value="8.0">8.0+</option>
-            <option value="8.5">8.5+</option>
-            <option value="9.0">9.0+</option>
-            <option value="9.5">9.5+</option>
-          </select>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px;justify-content:flex-end;">
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:.75rem;letter-spacing:.06em;color:var(--text3);padding-bottom:10px;">Tab named after year<br>is created automatically</span>
-        </div>
-        <button class="btn btn-primary" onclick="runCagematchImport()" id="import-run-btn">&#9889; Run Import</button>
+        <button class="btn btn-primary" onclick="runBatchImport()" id="import-run-btn">&#9889; Import URLs</button>
       </div>
-      <div id="import-status" style="font-size:.82rem;color:var(--text3);line-height:1.8;min-height:20px;background:var(--bg3);border-radius:4px;padding:10px 14px;display:none;"></div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+        <label style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);">Match URLs <span style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;margin-left:6px;">one per line</span></label>
+        <textarea id="import-urls" rows="6" placeholder="https://www.cagematch.net/?id=111&nr=134917&#10;https://www.cagematch.net/?id=111&nr=130229&#10;https://www.cagematch.net/?id=111&nr=125166"
+          style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:10px 12px;border-radius:4px;outline:none;resize:vertical;min-height:120px;line-height:1.6;"></textarea>
+      </div>
+      <div id="import-status" style="display:none;margin-top:8px;background:var(--bg3);border-radius:4px;padding:10px 14px;font-size:.82rem;line-height:1.8;"></div>
       <p style="color:var(--text3);font-size:.78rem;margin-top:10px;">
-        &#9432; Requires your Apps Script Web App URL to be saved above. Import runs on Google&#39;s servers
-        — may take 20–60 seconds for large result sets. After import, use <strong>&#8595; Pull from Sheets</strong> to sync to this dashboard.
+        &#9432; Requires your Web App URL above. Runs on Google&#39;s servers.
+        After import, click <strong style="color:var(--accent)">&#8595; Pull from Sheets</strong> to sync to the dashboard.
       </p>
     </div>
 
@@ -1605,7 +1598,8 @@ async function fetchMatchData() {
     if (data.date)   document.getElementById('f-date').value  = data.date;
     if (data.matchType)    document.getElementById('f-matchtype').value = data.matchType;
     if (data.championship) document.getElementById('f-champ').value    = data.championship;
-    if (data.score)        document.getElementById('f-score').value    = data.score;
+    if (data.score)  document.getElementById('f-score').value = data.score;
+    if (data.value)  document.getElementById('f-value').value = data.value;
 
     // ── Promotion: match full name to dropdown ──
     if (data.promoFull || data.promoAbbr) {
@@ -2109,64 +2103,75 @@ function inlineEditWinner(e, id) {
 /* ============================================================
    CAGEMATCH IMPORT (triggers Apps Script server-side fetch)
    ============================================================ */
-async function runCagematchImport() {
-  const url = getSheetURL();
-  if (!url) return;
-
-  const year      = (document.getElementById('import-year').value || '').trim();
-  const minRating = document.getElementById('import-min-rating').value;
-
+async function runBatchImport() {
+  const year = (document.getElementById('import-year').value || '').trim();
   if (!year || year.length !== 4 || isNaN(parseInt(year))) {
-    toast('Enter a valid 4-digit year (e.g. 2026)', true);
+    toast('Enter a valid 4-digit year', true);
     document.getElementById('import-year').focus();
+    return;
+  }
+
+  const rawUrls = document.getElementById('import-urls').value.trim();
+  if (!rawUrls) {
+    toast('Paste at least one URL', true);
+    document.getElementById('import-urls').focus();
+    return;
+  }
+
+  // Parse URLs — one per line, filter blanks and non-cagematch URLs
+  const urls = rawUrls.split('\n')
+    .map(u => u.trim())
+    .filter(u => u.length > 0 && u.includes('cagematch.net'));
+
+  if (!urls.length) {
+    toast('No valid cagematch URLs found', true);
     return;
   }
 
   const statusEl = document.getElementById('import-status');
   const btn      = document.getElementById('import-run-btn');
-
   statusEl.style.display = 'block';
-  statusEl.style.color   = 'var(--text3)';
-  statusEl.innerHTML     = `<span style="color:var(--accent)">&#9889;</span> Importing <strong style="color:var(--text)">${year}</strong> matches with rating &ge; ${minRating} from cagematch&hellip;<br>
-    <span style="color:var(--text3);font-size:.78rem;">Running on Google&rsquo;s servers &mdash; may take 20&ndash;60 seconds. Please wait.</span>`;
+  statusEl.style.color   = 'var(--text2)';
+  statusEl.innerHTML     = '⚡ Importing ' + urls.length + ' URL' + (urls.length !== 1 ? 's' : '') +
+                           ' into <strong>' + year + '</strong> sheet…<br>' +
+                           '<span style="color:var(--text3);font-size:.78rem;">Running on Google’s servers — fetching each match page. Please wait.</span>';
   btn.disabled    = true;
   btn.textContent = 'Running…';
 
   try {
-    const data = await gasGet('importTop', { year, minRating });
+    // Pipe-separate URLs to pass as single param
+    const data = await gasGet('batchImport', {
+      year: year,
+      urls: urls.join('|')
+    });
 
     const imported   = data.imported   || 0;
     const duplicates = data.duplicates || 0;
-    const total      = data.total      || 0;
+    const errors     = data.errors     || 0;
 
     statusEl.style.color = imported > 0 ? 'var(--green)' : 'var(--accent)';
-    statusEl.innerHTML = `
-      <strong style="color:var(--text)">${data.message || 'Import complete.'}</strong><br>
-      <span style="color:var(--text2)">
-        &#10003; ${imported} new match${imported !== 1 ? 'es' : ''} written to <em>${year}</em> tab
-        &nbsp;|&nbsp;
-        &#8251; ${duplicates} duplicate${duplicates !== 1 ? 's' : ''} skipped
-        &nbsp;|&nbsp;
-        ${total} total found with rating &ge; ${minRating}
-      </span><br>
-      <span style="color:var(--text3);font-size:.78rem;">
-        Now click <strong style="color:var(--accent)">&#8595; Pull from Sheets</strong> above to sync into this dashboard.
-      </span>
-    `;
+    statusEl.innerHTML =
+      '<strong style="color:var(--text)">' + (data.message || 'Import complete.') + '</strong><br>' +
+      '<span style="color:var(--text2)">' +
+      '✓ ' + imported   + ' new match' + (imported   !== 1 ? 'es' : '') + ' written to <em>' + year + '</em> sheet' +
+      (duplicates ? ' &nbsp;|&nbsp; ⦸ ' + duplicates + ' duplicate' + (duplicates !== 1 ? 's' : '') + ' skipped' : '') +
+      (errors     ? ' &nbsp;|&nbsp; ✗ ' + errors     + ' failed to fetch' : '') +
+      '</span><br>' +
+      '<span style="color:var(--text3);font-size:.78rem;">Click <strong style="color:var(--accent)">↓ Pull from Sheets</strong> above to sync into the dashboard.</span>';
 
-    if (imported > 0) toast(imported + ' new matches imported → ' + year + ' tab');
-    else toast('No new matches — ' + duplicates + ' duplicates skipped');
+    if (imported > 0) toast(imported + ' match' + (imported !== 1 ? 'es' : '') + ' imported → ' + year);
+    else toast('No new matches — ' + duplicates + ' duplicate' + (duplicates !== 1 ? 's' : '') + ' skipped');
 
   } catch(e) {
     statusEl.style.color = 'var(--red)';
-    statusEl.innerHTML   = '<strong>Import failed:</strong> ' + esc(e.message)
-      + '<br><span style="color:var(--text3);font-size:.78rem;">Check your Web App URL is saved and the script is deployed correctly.</span>';
+    statusEl.innerHTML   = '<strong>✗ Import failed:</strong> ' + esc(e.message);
     toast('Import failed', true);
   }
 
   btn.disabled    = false;
-  btn.textContent = '⚡ Run Import';
+  btn.textContent = '⚡ Import URLs';
 }
+
 
 /* ============================================================
    TOAST
