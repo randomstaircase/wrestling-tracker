@@ -1066,6 +1066,7 @@ textarea { resize: vertical; min-height: 70px; }
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
         <button class="btn btn-primary" onclick="pullFromSheets()">&#8595; Pull from Sheets</button>
+        <button class="btn btn-secondary" onclick="pullFromSheetsYear()" style="font-size:.78rem;padding:8px 14px;" title="Pull only a specific year — faster on mobile">&#8595; Pull Year Only</button>
         <button class="btn btn-secondary" onclick="pullPromos()">&#8595; Pull Promotions</button>
         <button class="btn btn-secondary" onclick="pushToSheets()">&#8593; Push All to Sheets</button>
         <button class="btn btn-secondary" onclick="testConnection()" style="border-color:var(--teal);color:var(--teal)">&#10003; Test Connection</button>
@@ -1939,8 +1940,8 @@ function gasGet(action, extraParams = {}) {
     // 60-second timeout
     const timer = setTimeout(() => {
       cleanup();
-      reject(new Error('Timed out — Apps Script cold start can be slow. Try again.'));
-    }, 30000);
+      reject(new Error('Timed out — Apps Script may be slow to start. Wait 10s and try Pull from Sheets again.'));
+    }, 90000);
 
     function cleanup() {
       clearTimeout(timer);
@@ -2010,6 +2011,36 @@ async function pullFromSheets() {
       '✓ Pulled ' + incoming.length + ' matches from Sheet. (' + local.length + ' local-only preserved)',
       'var(--green)'
     );
+    toast('Pulled ' + incoming.length + ' matches');
+  } catch(e) {
+    setSyncStatus('✗ Pull failed: ' + e.message, 'var(--red)');
+    toast('Pull failed', true);
+  }
+}
+
+async function pullFromSheetsYear() {
+  const year = prompt('Enter year to pull (e.g. 2026):');
+  if (!year || !/^\d{4}$/.test(year.trim())) {
+    toast('Enter a valid 4-digit year', true);
+    return;
+  }
+  const url = getSheetURL(); if (!url) return;
+  setSyncStatus('Pulling ' + year + ' matches from Sheet…');
+  try {
+    const data = await gasGet('pull', { sheet: year.trim() });
+    if (!Array.isArray(data.matches)) throw new Error('Unexpected response');
+    const incoming = data.matches.map(m => ({
+      ...m,
+      id: m.id || ('sheet_' + Date.now() + '_' + Math.random().toString(36).slice(2,5))
+    }));
+    // Merge: replace existing sheet matches for this year, keep others
+    const others = loadMatches().filter(m =>
+      m._sheetName !== year.trim() && !m.id.startsWith('sheet_' + year.trim())
+    );
+    saveMatches([...incoming, ...others]);
+    renderDashboard();
+    populateSharedFilterOptions();
+    setSyncStatus('✓ Pulled ' + incoming.length + ' matches for ' + year + '.', 'var(--green)');
     toast('Pulled ' + incoming.length + ' matches');
   } catch(e) {
     setSyncStatus('✗ Pull failed: ' + e.message, 'var(--red)');
