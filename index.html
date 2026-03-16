@@ -1922,44 +1922,51 @@ async function testConnection() {
   }
 }
 
-async function gasGet(action, extraParams = {}) {
+// JSONP helper — bypasses CORS entirely by loading response as a <script> tag.
+// Apps Script natively supports ?callback=fnName JSONP responses.
+function gasGet(action, extraParams = {}) {
   const baseUrl = getSheetURL();
   if (!baseUrl) throw new Error('No Web App URL set — paste it in Export → Sync and click Save URL');
 
-  // Build URL — Apps Script exec URLs must not have existing query params
-  const params = new URLSearchParams({ action, ...extraParams });
+  const params  = new URLSearchParams({ action, ...extraParams });
   const fullUrl = baseUrl + '?' + params.toString();
+  console.log('[gasGet] JSONP calling:', fullUrl);
 
-  console.log('[gasGet] Calling:', fullUrl);
+  return new Promise((resolve, reject) => {
+    // Unique callback name
+    const cbName = '_gasCb_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
 
-  let res;
-  try {
-    res = await fetch(fullUrl, { method: 'GET', redirect: 'follow' });
-  } catch(networkErr) {
-    throw new Error('Network error (CORS or offline): ' + networkErr.message);
-  }
+    // 60-second timeout
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('Request timed out after 60s — Apps Script may still be running'));
+    }, 60000);
 
-  console.log('[gasGet] Status:', res.status, 'Type:', res.type, 'URL:', res.url);
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cbName];
+      const el = document.getElementById(cbName);
+      if (el) el.remove();
+    }
 
-  if (!res.ok) throw new Error('HTTP ' + res.status + ' from Apps Script');
+    // Apps Script will call this function with the JSON data
+    window[cbName] = function(data) {
+      cleanup();
+      console.log('[gasGet] JSONP response received for action=' + action);
+      if (data && data.error) reject(new Error(data.error));
+      else resolve(data);
+    };
 
-  let text;
-  try {
-    text = await res.text();
-    console.log('[gasGet] Raw response:', text.substring(0, 300));
-  } catch(e) {
-    throw new Error('Could not read response body');
-  }
-
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch(e) {
-    throw new Error('Response was not JSON. Got: ' + text.substring(0, 100));
-  }
-
-  if (data.error) throw new Error(data.error);
-  return data;
+    // Inject <script> tag — no CORS, follows redirects automatically
+    const script = document.createElement('script');
+    script.id  = cbName;
+    script.src = fullUrl + '&callback=' + cbName;
+    script.onerror = function() {
+      cleanup();
+      reject(new Error('Failed to load script — check your Web App URL is correct and deployed as Anyone'));
+    };
+    document.head.appendChild(script);
+  });
 }
 
 async function gasPost(body) {
@@ -2113,6 +2120,18 @@ async function runBatchImport() {
   btn.textContent = '⚡ Import URLs';
 }
 
+
+/* ============================================================
+   CLEAR ALL DATA
+   ============================================================ */
+function clearAllData() {
+  if (!confirm('Delete ALL match data from this dashboard? This cannot be undone.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  saveMatches([]);
+  renderDashboard();
+  populateSharedFilterOptions();
+  toast('All data cleared');
+}
 
 /* ============================================================
    TOAST
