@@ -816,6 +816,58 @@ textarea { resize: vertical; min-height: 70px; }
   </nav>
 </header>
 
+<!-- PERSISTENT FILTER BAR — always visible, shared across Best/Watch/All -->
+<div id="persistent-filters" style="display:none;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 20px;position:sticky;top:56px;z-index:90;">
+  <div style="max-width:1400px;margin:0 auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    <input type="text" id="shared-search" placeholder="Search matches, events, winners…"
+      oninput="applySharedFilters()"
+      style="flex:1;min-width:180px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;transition:border-color .15s;"/>
+    <select id="shared-year" onchange="applySharedFilters()"
+      style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;">
+      <option value="">All Years</option>
+    </select>
+    <select id="shared-promo" onchange="applySharedFilters()"
+      style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;">
+      <option value="">All Promotions</option>
+    </select>
+    <select id="shared-champ" onchange="applySharedFilters()"
+      style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;">
+      <option value="">All Championships</option>
+    </select>
+    <div class="title-toggle" id="title-toggle" onclick="toggleTitleOnly()">
+      <span class="dot"></span>Title Only
+    </div>
+    <button class="clear-filters-btn" onclick="clearSharedFilters()">✕ Clear</button>
+  </div>
+  <div class="filter-chips" id="shared-chips" style="max-width:1400px;margin:6px auto 0;"></div>
+</div>
+
+<!-- PERSISTENT FILTER BAR — always visible, shared across Best/Watch/All -->
+<div id="persistent-filters" style="display:none;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 20px;position:sticky;top:56px;z-index:90;">
+  <div style="max-width:1400px;margin:0 auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    <input type="text" id="shared-search" placeholder="Search matches, events, winners&hellip;"
+      oninput="applySharedFilters()"
+      style="flex:1;min-width:180px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;"/>
+    <select id="shared-year" onchange="applySharedFilters()"
+      style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;">
+      <option value="">All Years</option>
+    </select>
+    <select id="shared-promo" onchange="applySharedFilters()"
+      style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;">
+      <option value="">All Promotions</option>
+    </select>
+    <select id="shared-champ" onchange="applySharedFilters()"
+      style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;">
+      <option value="">All Championships</option>
+    </select>
+    <div class="title-toggle" id="title-toggle" onclick="toggleTitleOnly()">
+      <span class="dot"></span>Title Only
+    </div>
+    <button class="clear-filters-btn" onclick="clearSharedFilters()">&times; Clear</button>
+  </div>
+  <div class="filter-chips" id="shared-chips" style="max-width:1400px;margin:6px auto 0;"></div>
+</div>
+
 <main>
 
   <!-- DASHBOARD -->
@@ -940,17 +992,6 @@ textarea { resize: vertical; min-height: 70px; }
     <div class="section-header">
       <div class="section-title">Best Matches <span class="tag" id="best-count">0</span></div>
     </div>
-    <div class="filter-bar">
-      <input type="text" id="shared-search" placeholder="Search matches, events, winners…" oninput="applySharedFilters()"/>
-      <select id="shared-year" onchange="applySharedFilters()"><option value="">All Years</option></select>
-      <select id="shared-promo" onchange="applySharedFilters()"><option value="">All Promotions</option></select>
-      <select id="shared-champ" onchange="applySharedFilters()"><option value="">All Championships</option></select>
-      <div class="title-toggle" id="title-toggle" onclick="toggleTitleOnly()">
-        <span class="dot"></span>Title Matches Only
-      </div>
-      <button class="clear-filters-btn" onclick="clearSharedFilters()">✕ Clear</button>
-    </div>
-    <div class="filter-chips" id="shared-chips"></div>
     <div class="table-wrap"><table><thead><tr id="best-head"></tr></thead><tbody id="best-body"></tbody></table></div>
   </div>
 
@@ -959,9 +1000,6 @@ textarea { resize: vertical; min-height: 70px; }
     <div class="section-header">
       <div class="section-title">Watch List <span class="tag" id="watch-count">0</span></div>
     </div>
-    <div class="filter-bar">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);padding:8px 4px;white-space:nowrap;">Filters shared ↑</div>
-    </div>
     <div class="table-wrap"><table><thead><tr id="watch-head"></tr></thead><tbody id="watch-body"></tbody></table></div>
   </div>
 
@@ -969,9 +1007,6 @@ textarea { resize: vertical; min-height: 70px; }
   <div id="panel-all" class="panel">
     <div class="section-header">
       <div class="section-title">All Matches <span class="tag" id="all-count">0</span></div>
-    </div>
-    <div class="filter-bar">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);padding:8px 4px;white-space:nowrap;">Filters shared ↑</div>
     </div>
     <div class="table-wrap"><table><thead><tr id="all-head"></tr></thead><tbody id="all-body"></tbody></table></div>
   </div>
@@ -1031,7 +1066,6 @@ textarea { resize: vertical; min-height: 70px; }
         <button class="btn btn-primary" onclick="pullFromSheets()">&#8595; Pull from Sheets</button>
         <button class="btn btn-secondary" onclick="pullPromos()">&#8595; Pull Promotions</button>
         <button class="btn btn-secondary" onclick="pushToSheets()">&#8593; Push All to Sheets</button>
-        <button class="btn btn-secondary" onclick="runBestOnSheet()">&#9654; Run Best/Watch on Sheet</button>
         <button class="btn btn-secondary" onclick="testConnection()" style="border-color:var(--teal);color:var(--teal)">&#10003; Test Connection</button>
       </div>
       <div id="debug-output" style="display:none;margin-top:8px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto;"></div>
@@ -1198,10 +1232,15 @@ function switchPanel(id) {
   document.getElementById('panel-' + id).classList.add('active');
   document.querySelector(`nav button[onclick="switchPanel('${id}')"]`).classList.add('active');
 
+  // Show persistent filter bar only on Best, Watch, All tabs
+  const filterPanels = ['best', 'watch', 'all'];
+  const pf = document.getElementById('persistent-filters');
+  if (pf) pf.style.display = filterPanels.includes(id) ? 'block' : 'none';
+
   if (id === 'dashboard') renderDashboard();
   if (id === 'best')  { populateSharedFilterOptions(); updateFilterHighlights(); updateSharedChips(); renderBest(); }
-  if (id === 'watch') { populateSharedFilterOptions(); renderWatch(); }
-  if (id === 'all')   { populateSharedFilterOptions(); renderAll(); }
+  if (id === 'watch') { populateSharedFilterOptions(); updateFilterHighlights(); updateSharedChips(); renderWatch(); }
+  if (id === 'all')   { populateSharedFilterOptions(); updateFilterHighlights(); updateSharedChips(); renderAll(); }
   if (id === 'promotions') renderPromos();
   if (id === 'add') { populatePromoDropdowns(); setEditingId(null); }
 }
@@ -2003,106 +2042,6 @@ async function pushToSheets() {
   }
 }
 
-async function runBestOnSheet() {
-  const url = getSheetURL(); if (!url) return;
-  setSyncStatus('Triggering Best/Watch sort on Sheet…');
-  try {
-    await gasPost({ action: 'runBest' });
-    setSyncStatus('✓ Request sent — check your Sheet for updated Best/Watch tabs.', 'var(--accent)');
-    toast('Best/Watch triggered');
-  } catch(e) {
-    setSyncStatus('✗ Failed: ' + e.message, 'var(--red)');
-    toast('Failed', true);
-  }
-}
-
-function clearAllData() {
-  if (!confirm('Delete ALL match data? This cannot be undone.')) return;
-  localStorage.removeItem(STORAGE_KEY);
-  toast('All data cleared');
-  renderDashboard();
-}
-
-/* ============================================================
-   INLINE RATING EDIT
-   ============================================================ */
-function inlineEditRating(e, id) {
-  e.stopPropagation();
-  const cell = e.currentTarget;
-  const matches = loadMatches();
-  const m = matches.find(x => x.id === id);
-  if (!m) return;
-
-  // Replace cell contents with a small input
-  const cur = m.rating || '';
-  cell.innerHTML = `<input class="rating-inline-input" type="number" min="0" max="10" step="0.25"
-    value="${cur}" placeholder="0–10" id="inline-rating-${id}"/>`;
-
-  const inp = cell.querySelector('input');
-  inp.focus();
-  inp.select();
-
-  function commit() {
-    const val = inp.value.trim();
-    const num = parseFloat(val);
-    m.rating = (!val || isNaN(num)) ? '' : String(num);
-    // 10+ is NEVER auto-set from rating value — always manual via the 10+ column
-    saveMatches(matches);
-    renderDashboard();
-    renderBest();
-    renderWatch();
-    renderAll();
-    populateSharedFilterOptions();
-  }
-
-  inp.addEventListener('blur', commit);
-  inp.addEventListener('keydown', ev => {
-    if (ev.key === 'Enter')  { inp.blur(); }
-    if (ev.key === 'Escape') {
-      m.rating = cur; // revert
-      inp.removeEventListener('blur', commit);
-      renderDashboard(); renderBest(); renderWatch(); renderAll();
-    }
-  });
-}
-
-function inlineToggle10plus(e, id) {
-  e.stopPropagation();
-  const matches = loadMatches();
-  const m = matches.find(x => x.id === id);
-  if (!m) return;
-  m.tenPlus = !m.tenPlus;
-  saveMatches(matches);
-  renderDashboard(); renderBest(); renderWatch(); renderAll();
-  toast(m.tenPlus ? '10+ set' : '10+ removed');
-}
-
-function inlineEditWinner(e, id) {
-  e.stopPropagation();
-  const cell = e.currentTarget;
-  const matches = loadMatches();
-  const m = matches.find(x => x.id === id);
-  if (!m) return;
-  const cur = m.winner || '';
-  cell.innerHTML = `<input class="winner-inline-input" type="text" value="${esc(cur)}" placeholder="Winner name" id="inline-winner-${id}"/>`;
-  const inp = cell.querySelector('input');
-  inp.focus();
-  inp.select();
-  function commit() {
-    m.winner = inp.value.trim();
-    saveMatches(matches);
-    renderDashboard(); renderBest(); renderWatch(); renderAll();
-  }
-  inp.addEventListener('blur', commit);
-  inp.addEventListener('keydown', ev => {
-    if (ev.key === 'Enter')  { inp.blur(); }
-    if (ev.key === 'Escape') { m.winner = cur; inp.removeEventListener('blur', commit); renderDashboard(); renderBest(); renderWatch(); renderAll(); }
-  });
-}
-
-/* ============================================================
-   CAGEMATCH IMPORT (triggers Apps Script server-side fetch)
-   ============================================================ */
 async function runBatchImport() {
   const year = (document.getElementById('import-year').value || '').trim();
   if (!year || year.length !== 4 || isNaN(parseInt(year))) {
