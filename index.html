@@ -918,12 +918,12 @@ textarea { resize: vertical; min-height: 70px; }
 
       <!-- Score + Value -->
       <div class="form-group">
-        <label>Score (Col K)</label>
+        <label>CM Score</label>
         <input type="number" id="f-score" min="0" max="10" step="0.01" placeholder="e.g. 8.81"/>
       </div>
 
       <div class="form-group">
-        <label>Value / Star Rating (Col L)</label>
+        <label>WON Rating (Col K)</label>
         <input type="number" id="f-value" min="0" max="10" step="0.25" placeholder="e.g. 4.75"/>
       </div>
 
@@ -1240,8 +1240,8 @@ const COLS = [
     `<span class="tenplus-cell" onclick="inlineToggle10plus(event,'${m.id}')" title="Click to toggle 10+">` +
     (m.tenPlus ? `<span class="flag-10plus">10+</span>` : `<span class="rating-empty">—</span>`) +
     `</span>` },
-  { key:'score', label:'Score', render: m => m.score ? `<span class="score-val">${m.score}</span>` : '—' },
-  { key:'value', label:'Value', render: m => m.value || '—' },
+  { key:'score', label:'CM', render: m => m.score ? `<span class="score-val">${m.score}</span>` : '—' },
+  { key:'value', label:'WON', render: m => m.value || '—' },
 ];
 
 function esc(s) {
@@ -1948,11 +1948,19 @@ async function pullFromSheets() {
   try {
     const data = await gasGet('pull');
     if (!Array.isArray(data.matches)) throw new Error('Unexpected response — check your Web App is deployed correctly');
-    const local = loadMatches().filter(m => !m.id.startsWith('sheet_'));
     const incoming = data.matches.map(m => ({
       ...m,
       id: m.id || ('sheet_' + Date.now() + '_' + Math.random().toString(36).slice(2,5))
     }));
+    // Keep local-only matches (not from sheet) that aren't duplicates of incoming
+    const incomingUrls = new Set(incoming.map(m => m.matchUrl).filter(Boolean));
+    const incomingNames = new Set(incoming.map(m => m.name).filter(Boolean));
+    const local = loadMatches().filter(m =>
+      !m.id.startsWith('sheet_') &&
+      !m.id.startsWith('test_') &&
+      !incomingUrls.has(m.matchUrl) &&
+      !incomingNames.has(m.name)
+    );
     saveMatches([...incoming, ...local]);
     renderDashboard();
     populateSharedFilterOptions();
@@ -2180,119 +2188,7 @@ function toast(msg, isErr=false) {
   const savedUrl = localStorage.getItem('sheets_url_2026');
   if (savedUrl) document.getElementById('sheets-url').value = savedUrl;
 
-  // ── INJECT TEST MATCHES (AEW WrestleDream 2025) ──
-  // Always loads on open so you can see the dashboard in action.
-  // Remove this block once pulling real data from your Sheet.
-  (function loadTestMatches() {
-    const testMatches = [
-      {
-        id: 'test_1_wrestledream25',
-        matchUrl: 'https://www.cagematch.net/?id=111&nr=125166',
-        name: 'Jack Perry & Luchasaurus vs. Matt Jackson & Nick Jackson',
-        promoFull: 'All Elite Wrestling',
-        promoAbbr: 'AEW',
-        event: 'AEW WrestleDream 2025',
-        date: '2025-10-18',
-        matchType: 'Tag Team',
-        championship: '',
-        winner: '',
-        rating: '',
-        tenPlus: false,
-        score: '8.56',
-        value: '',
-        _sheetName: '2025'
-      },
-      {
-        id: 'test_2_wrestledream25',
-        matchUrl: 'https://www.cagematch.net/?id=111&nr=125167',
-        name: 'Bishop Kaun, Ricochet & Toa Liona vs. Bobby Lashley, MVP & Shelton Benjamin',
-        promoFull: 'All Elite Wrestling',
-        promoAbbr: 'AEW',
-        event: 'AEW WrestleDream 2025',
-        date: '2025-10-18',
-        matchType: 'Tornado Six Man Tag',
-        championship: '',
-        winner: '',
-        rating: '',
-        tenPlus: false,
-        score: '8.30',
-        value: '',
-        _sheetName: '2025'
-      },
-      {
-        id: 'test_3_wrestledream25',
-        matchUrl: 'https://www.cagematch.net/?id=111&nr=127417',
-        name: 'Kyle Fletcher vs. Mark Briscoe',
-        promoFull: 'All Elite Wrestling',
-        promoAbbr: 'AEW',
-        event: 'AEW WrestleDream 2025',
-        date: '2025-10-18',
-        matchType: 'No DQ',
-        championship: 'AEW TNT',
-        winner: 'Mark Briscoe',
-        rating: '',
-        tenPlus: false,
-        score: '7.12',
-        value: '',
-        _sheetName: '2025'
-      },
-      {
-        id: 'test_4_wrestledream25',
-        matchUrl: 'https://www.cagematch.net/?id=111&nr=125171',
-        name: 'Kris Statlander vs. Toni Storm',
-        promoFull: 'All Elite Wrestling',
-        promoAbbr: 'AEW',
-        event: 'AEW WrestleDream 2025',
-        date: '2025-10-18',
-        matchType: '',
-        championship: 'AEW TBS',
-        winner: '',
-        rating: '',
-        tenPlus: false,
-        score: '7.14',
-        value: '',
-        _sheetName: '2025'
-      },
-      {
-        id: 'test_5_wrestledream25',
-        matchUrl: 'https://www.cagematch.net/?id=111&nr=107237',
-        name: 'Mercedes Mone vs. Mina Shirakawa',
-        promoFull: 'All Elite Wrestling',
-        promoAbbr: 'AEW',
-        event: 'AEW WrestleDream 2025',
-        date: '2025-10-18',
-        matchType: '',
-        championship: "AEW TBS / ROH Interim Women's TV",
-        winner: '',
-        rating: '',
-        tenPlus: false,
-        score: '8.93',
-        value: '',
-        _sheetName: '2025'
-      },
-      {
-        id: 'test_6_wrestledream25',
-        matchUrl: 'https://www.cagematch.net/?id=111&nr=125175',
-        name: 'Bandido & Brody King vs. Kazuchika Okada & Konosuke Takeshita',
-        promoFull: 'All Elite Wrestling',
-        promoAbbr: 'AEW',
-        event: 'AEW WrestleDream 2025',
-        date: '2025-10-18',
-        matchType: 'Tag Team',
-        championship: 'AEW Tag Team',
-        winner: '',
-        rating: '',
-        tenPlus: false,
-        score: '7.51',
-        value: '',
-        _sheetName: '2025'
-      }
-    ];
-
-    saveMatches(testMatches); // uses STORAGE_KEY
-  })();
-
-  populatePromoDropdowns();
+    populatePromoDropdowns();
   populateSharedFilterOptions();
   renderDashboard();
 })();
