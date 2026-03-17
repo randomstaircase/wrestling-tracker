@@ -175,7 +175,8 @@ textarea{resize:vertical;min-height:70px}
     <button class="active" onclick="switchPanel('dashboard')">Dashboard</button>
     <button onclick="switchPanel('add')">+ Add Match</button>
     <button onclick="switchPanel('best')">Best</button>
-    <button onclick="switchPanel('watch')">Watch</button>
+    <button onclick="switchPanel('watch')">To Watch</button>
+    <button onclick="switchPanel('rewatch')">Rewatch</button>
     <button onclick="switchPanel('all')">All Matches</button>
     <button onclick="switchPanel('promotions')">Promotions</button>
     <button onclick="switchPanel('export')">Export</button>
@@ -241,6 +242,7 @@ textarea{resize:vertical;min-height:70px}
         <div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px 0;">
           <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="f-10plus" style="width:18px;height:18px;accent-color:var(--teal);cursor:pointer;"/><label for="f-10plus" style="font-family:'Barlow',sans-serif;font-size:.88rem;color:var(--text);cursor:pointer;text-transform:none;letter-spacing:0;">&#9733; 10+</label></div>
           <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="f-saw-live" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer;"/><label for="f-saw-live" style="font-family:'Barlow',sans-serif;font-size:.88rem;color:var(--text);cursor:pointer;text-transform:none;letter-spacing:0;">&#127881; Saw Live</label></div>
+          <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="f-rewatch" style="width:18px;height:18px;accent-color:#a78bfa;cursor:pointer;"/><label for="f-rewatch" style="font-family:'Barlow',sans-serif;font-size:.88rem;color:var(--text);cursor:pointer;text-transform:none;letter-spacing:0;">&#128257; Rewatch</label></div>
         </div>
       </div>
       <div class="form-group"><label>CM Score</label><input type="number" id="f-score" min="0" max="10" step="0.01" placeholder="e.g. 8.81"/></div>
@@ -262,9 +264,16 @@ textarea{resize:vertical;min-height:70px}
 
   <!-- WATCH -->
   <div id="panel-watch" class="panel">
-    <div class="section-header"><div class="section-title">Watch List <span class="tag" id="watch-count">0</span></div></div>
+    <div class="section-header"><div class="section-title">To Watch <span class="tag" id="watch-count">0</span></div></div>
     <div id="watch-scroll-top"></div>
     <div class="table-wrap" id="watch-wrap"><table><thead><tr id="watch-head"></tr></thead><tbody id="watch-body"></tbody></table></div>
+  </div>
+
+  <!-- REWATCH -->
+  <div id="panel-rewatch" class="panel">
+    <div class="section-header"><div class="section-title">Rewatch <span class="tag" id="rewatch-count">0</span></div></div>
+    <div id="rewatch-scroll-top"></div>
+    <div class="table-wrap" id="rewatch-wrap"><table><thead><tr id="rewatch-head"></tr></thead><tbody id="rewatch-body"></tbody></table></div>
   </div>
 
   <!-- ALL -->
@@ -398,10 +407,12 @@ function loadPromos(){try{return JSON.parse(localStorage.getItem(PROMO_KEY))||DE
 function savePromos(arr){localStorage.setItem(PROMO_KEY,JSON.stringify(arr));}
 
 function classifyMatch(m){
-  const vI=parseFloat(m.rating)||'',vK=parseFloat(m.score)||'',vL=parseFloat(m.value)||'';
-  const best=(typeof vI==='number'&&vI>=9)||m.tenPlus;
-  // sawLive doesn't affect best/watch classification but is stored
-  const watch=(vI===''||isNaN(vI))&&((typeof vK==='number'&&vK>=8.75)||(typeof vL==='number'&&vL>=4.75));
+  const vI=parseFloat(m.rating);
+  const hasRating=!isNaN(vI)&&m.rating!==''&&m.rating!==null&&m.rating!==undefined;
+  const vK=parseFloat(m.score)||'',vL=parseFloat(m.value)||'';
+  const best=(hasRating&&vI>=9)||m.tenPlus;
+  // To Watch: no rating entered AND not flagged as rewatch
+  const watch=!hasRating&&!m.rewatch;
   if(best&&m.tenPlus)return'best-10plus';if(best)return'best';if(watch)return'watch';return'none';
 }
 function rowColorClass(m){
@@ -421,6 +432,7 @@ function switchPanel(id){
   if(id==='dashboard')renderDashboard();
   if(id==='best'){populateSharedFilterOptions();updateFilterHighlights();updateSharedChips();renderBest();}
   if(id==='watch'){populateSharedFilterOptions();updateFilterHighlights();updateSharedChips();renderWatch();}
+  if(id==='rewatch'){populateSharedFilterOptions();updateFilterHighlights();updateSharedChips();renderRewatch();}
   if(id==='all'){populateSharedFilterOptions();updateFilterHighlights();updateSharedChips();renderAll();}
   if(id==='promotions')renderPromos();
   if(id==='add'){populatePromoDropdowns();setEditingId(null);}
@@ -508,11 +520,12 @@ const COLS=[
     return`<span class="rating-cell" onclick="inlineEditRating(event,'${m.id}')" title="Click to edit">${m.rating?`<span class="${cls}">${m.rating}</span>`:'<span class="rating-empty">&mdash;</span>'}</span>`;
   }},
   {key:'tenPlus',label:'Flags',render:m=>{
-    const has10=m.tenPlus,hasLive=m.sawLive;
-    if(!has10&&!hasLive) return`<span class="flags-cell" onclick="inlineToggleFlagMenu(event,'${m.id}')" title="Click to toggle flags"><span class="rating-empty">&mdash;</span></span>`;
+    const has10=m.tenPlus,hasLive=m.sawLive,hasRw=m.rewatch;
+    if(!has10&&!hasLive&&!hasRw) return`<span class="flags-cell" onclick="inlineToggleFlagMenu(event,'${m.id}')" title="Click to toggle flags"><span class="rating-empty">&mdash;</span></span>`;
     return`<span class="flags-cell" onclick="inlineToggleFlagMenu(event,'${m.id}')" title="Click to toggle flags">`+
       (has10?`<span class="flag-pill" style="background:var(--teal);color:#000;">10+</span>`:`<span class="flag-pill off">10+</span>`)+
       (hasLive?`<span class="flag-pill" style="background:var(--accent);color:#000;">Live</span>`:`<span class="flag-pill off">Live</span>`)+
+      (hasRw?`<span class="flag-pill" style="background:#a78bfa;color:#000;">Rewatch</span>`:`<span class="flag-pill off">Rewatch</span>`)+
       `</span>`;
   }},
   {key:'score',label:'CM',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','score')" title="Click to edit">${m.score?`<span class="score-val">${m.score}</span>`:'<span class="rating-empty">&mdash;</span>'}</span>`},
@@ -527,7 +540,7 @@ function buildHead(trEl){
 }
 
 let sortKey='date',sortDir=-1;
-function sortBy(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=-1;}renderDashboard();renderBest();renderWatch();renderAll();updateSortIndicators();}
+function sortBy(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=-1;}renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();updateSortIndicators();}
 function updateSortIndicators(){document.querySelectorAll('th[id^="th-"]').forEach(th=>{th.classList.remove('sort-asc','sort-desc');if(th.id.replace('th-','')===sortKey)th.classList.add(sortDir===1?'sort-asc':'sort-desc');});}
 
 function normaliseSortVal(key,m){
@@ -613,10 +626,12 @@ function renderDashboard(){
   const best=matches.filter(m=>classifyMatch(m).startsWith('best'));
   const watch=matches.filter(m=>classifyMatch(m)==='watch');
   const tenplus=matches.filter(m=>m.tenPlus);
+  const rewatch=matches.filter(m=>m.rewatch);
   document.getElementById('stats-bar').innerHTML=`
     <div class="stat-card"><div class="stat-num">${matches.length}</div><div class="stat-label">Total Matches</div></div>
     <div class="stat-card"><div class="stat-num" style="color:var(--teal)">${best.length}</div><div class="stat-label">Best</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--blue-hi)">${watch.length}</div><div class="stat-label">Watch</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--blue-hi)">${watch.length}</div><div class="stat-label">To Watch</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--accent)">${rewatch.length}</div><div class="stat-label">Rewatch</div></div>
     <div class="stat-card"><div class="stat-num" style="color:var(--teal-text)">${tenplus.length}</div><div class="stat-label">10+ Matches</div></div>`;
   populateSharedFilterOptions();
   const ds=(document.getElementById('dash-search')||{value:''}).value||'';
@@ -645,6 +660,15 @@ function renderWatch(){
   buildHead(document.getElementById('watch-head'));buildRows(watch,document.getElementById('watch-body'));
   addTopScroll('watch-wrap','watch-scroll-top');
 }
+function renderRewatch(){
+  const matches=loadMatches();
+  const rw=filterMatches(sortMatches(matches.filter(m=>m.rewatch)));
+  document.getElementById('rewatch-count').textContent=rw.length;
+  buildHead(document.getElementById('rewatch-head'));
+  buildRows(rw,document.getElementById('rewatch-body'));
+  addTopScroll('rewatch-wrap','rewatch-scroll-top');
+}
+
 function renderAll(){
   const filtered=filterMatches(sortMatches(loadMatches()));
   document.getElementById('all-count').textContent=filtered.length;
@@ -690,9 +714,9 @@ function setFetchStatus(msg,type){const el=document.getElementById('fetch-status
 
 let editingId=null;
 function setEditingId(id){editingId=id;document.getElementById('form-title').textContent=id?'Edit Match':'Add New Match';document.getElementById('delete-btn').style.display=id?'inline-block':'none';}
-function getFormData(){return{id:editingId||('m_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)),matchUrl:document.getElementById('f-url').value.trim(),name:document.getElementById('f-name').value.trim(),promoFull:document.getElementById('f-promo-full').value,promoAbbr:document.getElementById('f-promo-abbr').value.trim(),event:document.getElementById('f-event').value.trim(),date:document.getElementById('f-date').value,matchType:document.getElementById('f-matchtype').value.trim(),championship:document.getElementById('f-champ').value.trim(),winner:document.getElementById('f-winner').value.trim(),titleChange:document.getElementById('f-title-change').checked,rating:document.getElementById('f-rating').value,tenPlus:document.getElementById('f-10plus').checked,sawLive:document.getElementById('f-saw-live').checked,score:document.getElementById('f-score').value,value:document.getElementById('f-value').value};}
-function fillForm(m){document.getElementById('f-url').value=m.matchUrl||'';document.getElementById('f-name').value=m.name||'';populatePromoDropdowns();document.getElementById('f-promo-full').value=m.promoFull||'';document.getElementById('f-promo-abbr').value=m.promoAbbr||'';document.getElementById('f-event').value=m.event||'';document.getElementById('f-date').value=m.date||'';document.getElementById('f-matchtype').value=m.matchType||'';document.getElementById('f-champ').value=m.championship||'';document.getElementById('f-winner').value=m.winner||'';document.getElementById('f-title-change').checked=!!m.titleChange;document.getElementById('f-rating').value=m.rating||'';document.getElementById('f-10plus').checked=!!m.tenPlus;document.getElementById('f-saw-live').checked=!!m.sawLive;document.getElementById('f-score').value=m.score||'';document.getElementById('f-value').value=m.value||'';setFetchStatus('');}
-function clearForm(){['f-url','f-name','f-event','f-matchtype','f-champ','f-winner','f-rating','f-score','f-value','f-date','f-promo-abbr'].forEach(id=>document.getElementById(id).value='');document.getElementById('f-promo-full').value='';document.getElementById('f-10plus').checked=false;document.getElementById('f-saw-live').checked=false;document.getElementById('f-title-change').checked=false;setFetchStatus('');setEditingId(null);}
+function getFormData(){return{id:editingId||('m_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)),matchUrl:document.getElementById('f-url').value.trim(),name:document.getElementById('f-name').value.trim(),promoFull:document.getElementById('f-promo-full').value,promoAbbr:document.getElementById('f-promo-abbr').value.trim(),event:document.getElementById('f-event').value.trim(),date:document.getElementById('f-date').value,matchType:document.getElementById('f-matchtype').value.trim(),championship:document.getElementById('f-champ').value.trim(),winner:document.getElementById('f-winner').value.trim(),titleChange:document.getElementById('f-title-change').checked,rating:document.getElementById('f-rating').value,tenPlus:document.getElementById('f-10plus').checked,sawLive:document.getElementById('f-saw-live').checked,rewatch:document.getElementById('f-rewatch').checked,score:document.getElementById('f-score').value,value:document.getElementById('f-value').value};}
+function fillForm(m){document.getElementById('f-url').value=m.matchUrl||'';document.getElementById('f-name').value=m.name||'';populatePromoDropdowns();document.getElementById('f-promo-full').value=m.promoFull||'';document.getElementById('f-promo-abbr').value=m.promoAbbr||'';document.getElementById('f-event').value=m.event||'';document.getElementById('f-date').value=m.date||'';document.getElementById('f-matchtype').value=m.matchType||'';document.getElementById('f-champ').value=m.championship||'';document.getElementById('f-winner').value=m.winner||'';document.getElementById('f-title-change').checked=!!m.titleChange;document.getElementById('f-rating').value=m.rating||'';document.getElementById('f-10plus').checked=!!m.tenPlus;document.getElementById('f-saw-live').checked=!!m.sawLive;document.getElementById('f-rewatch').checked=!!m.rewatch;document.getElementById('f-score').value=m.score||'';document.getElementById('f-value').value=m.value||'';setFetchStatus('');}
+function clearForm(){['f-url','f-name','f-event','f-matchtype','f-champ','f-winner','f-rating','f-score','f-value','f-date','f-promo-abbr'].forEach(id=>document.getElementById(id).value='');document.getElementById('f-promo-full').value='';document.getElementById('f-10plus').checked=false;document.getElementById('f-saw-live').checked=false;document.getElementById('f-rewatch').checked=false;document.getElementById('f-title-change').checked=false;setFetchStatus('');setEditingId(null);}
 function saveMatch(){
   const data=getFormData();if(!data.name){toast('Match name is required',true);return;}
   if(data.date){const y=data.date.split('-')[0];if(y)data._sheetName=getTabName(parseInt(y));}
@@ -702,7 +726,7 @@ function saveMatch(){
 }
 function editMatch(id){const m=loadMatches().find(m=>m.id===id);if(!m)return;switchPanel('add');setTimeout(()=>{fillForm(m);setEditingId(id);},50);}
 function deleteEditing(){if(!editingId)return;if(!confirm('Delete this match?'))return;saveMatches(loadMatches().filter(m=>m.id!==editingId));toast('Match deleted');clearForm();switchPanel('dashboard');}
-function confirmDelete(id){if(!confirm('Delete this match?'))return;saveMatches(loadMatches().filter(m=>m.id!==id));toast('Match deleted');renderDashboard();renderBest();renderWatch();renderAll();}
+function confirmDelete(id){if(!confirm('Delete this match?'))return;saveMatches(loadMatches().filter(m=>m.id!==id));toast('Match deleted');renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();}
 
 let modalEditId=null;
 function closeModal(){document.getElementById('edit-modal').classList.remove('open');modalEditId=null;}
@@ -714,7 +738,7 @@ function inlineToggle10plus(e,id){
   if(e&&e.stopPropagation)e.stopPropagation();
   const matches=loadMatches();const m=matches.find(x=>x.id===id);if(!m)return;
   m.tenPlus=!m.tenPlus;saveMatches(matches);
-  renderDashboard();renderBest();renderWatch();renderAll();
+  renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();
   toast(m.tenPlus?'10+ set':'10+ removed');
 }
 
@@ -734,12 +758,13 @@ function inlineToggleFlagMenu(e,id){
     const btn=document.createElement('button');
     btn.textContent=label;
     btn.style.cssText=`font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:3px;cursor:pointer;border:none;background:${active?color:'var(--bg4)'};color:${active?'#000':'var(--text3)'};border:1px solid ${active?color:'var(--border2)'};transition:all .15s;`;
-    btn.addEventListener('click',ev=>{ev.stopPropagation();onToggle();popup.remove();saveMatches(matches);renderDashboard();renderBest();renderWatch();renderAll();});
+    btn.addEventListener('click',ev=>{ev.stopPropagation();onToggle();popup.remove();saveMatches(matches);renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();});
     return btn;
   }
 
   popup.appendChild(makeBtn('10+',m.tenPlus,'var(--teal)',()=>{m.tenPlus=!m.tenPlus;}));
   popup.appendChild(makeBtn('Live',m.sawLive,'var(--accent)',()=>{m.sawLive=!m.sawLive;}));
+  popup.appendChild(makeBtn('Rewatch',m.rewatch,'#a78bfa',()=>{m.rewatch=!m.rewatch;}));
 
   // Position popup near the cell
   const rect=cell.getBoundingClientRect();
@@ -766,12 +791,12 @@ function inlineEditRating(e,id){
     const v=inp.value.trim();
     m.rating=v;
     saveMatches(matches);
-    renderDashboard();renderBest();renderWatch();renderAll();
+    renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();
   }
   inp.addEventListener('blur',commit);
   inp.addEventListener('keydown',ev=>{
     if(ev.key==='Enter')inp.blur();
-    if(ev.key==='Escape'){m.rating=cur;inp.removeEventListener('blur',commit);renderDashboard();renderBest();renderWatch();renderAll();}
+    if(ev.key==='Escape'){m.rating=cur;inp.removeEventListener('blur',commit);renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();}
   });
 }
 function inlineEditField(e,id,field){
@@ -785,9 +810,9 @@ function inlineEditField(e,id,field){
   inp.className=isNum?'rating-inline-input':'inline-text-input';
   if(isDate)inp.style.cssText='background:var(--bg4);border:1px solid var(--text2);color:var(--text);padding:3px 6px;border-radius:3px;outline:none;font-size:.82rem;';
   cell.innerHTML='';cell.appendChild(inp);inp.focus();if(inp.select)inp.select();
-  function commit(){m[field]=inp.value.trim();saveMatches(matches);renderDashboard();renderBest();renderWatch();renderAll();}
+  function commit(){m[field]=inp.value.trim();saveMatches(matches);renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();}
   inp.addEventListener('blur',commit);
-  inp.addEventListener('keydown',ev=>{if(ev.key==='Enter')inp.blur();if(ev.key==='Escape'){m[field]=cur;inp.removeEventListener('blur',commit);renderDashboard();renderBest();renderWatch();renderAll();}});
+  inp.addEventListener('keydown',ev=>{if(ev.key==='Enter')inp.blur();if(ev.key==='Escape'){m[field]=cur;inp.removeEventListener('blur',commit);renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();}});
 }
 function inlineEditWinner(e,id){
   e.stopPropagation();const cell=e.currentTarget;const matches=loadMatches();const m=matches.find(x=>x.id===id);if(!m)return;
@@ -796,7 +821,7 @@ function inlineEditWinner(e,id){
     `<label style="font-size:.75rem;color:var(--accent);cursor:pointer;white-space:nowrap;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase;display:inline-flex;align-items:center;gap:4px;"><input type="checkbox" id="inline-tc-${id}" ${curTc?'checked':''} style="accent-color:var(--accent);"/>Title Change</label>`+
     `<button onclick="commitWinner('${id}')" style="margin-left:6px;background:var(--accent);border:none;color:#000;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;padding:3px 8px;border-radius:3px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;">Save</button>`;
   const inp=cell.querySelector('input[type="text"]');inp.focus();inp.select();
-  inp.addEventListener('keydown',ev=>{if(ev.key==='Enter')commitWinner(id);if(ev.key==='Escape'){m.winner=cur;m.titleChange=curTc;renderDashboard();renderBest();renderWatch();renderAll();}});
+  inp.addEventListener('keydown',ev=>{if(ev.key==='Enter')commitWinner(id);if(ev.key==='Escape'){m.winner=cur;m.titleChange=curTc;renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();}});
   function outsideClick(ev){if(!cell.contains(ev.target)){document.removeEventListener('click',outsideClick);commitWinner(id);}}
   setTimeout(()=>document.addEventListener('click',outsideClick),10);
 }
@@ -804,7 +829,7 @@ function commitWinner(id){
   const inp=document.getElementById('inline-winner-'+id);const tcBox=document.getElementById('inline-tc-'+id);if(!inp)return;
   const matches=loadMatches();const m=matches.find(x=>x.id===id);
   if(m){m.winner=inp.value.trim();m.titleChange=tcBox?tcBox.checked:false;saveMatches(matches);}
-  renderDashboard();renderBest();renderWatch();renderAll();
+  renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();
 }
 
 /* EXPORT / IMPORT */
