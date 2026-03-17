@@ -821,32 +821,6 @@ textarea { resize: vertical; min-height: 70px; }
 <!-- PERSISTENT FILTER BAR — always visible, shared across Best/Watch/All -->
 <div id="persistent-filters" style="display:none;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 20px;position:sticky;top:56px;z-index:90;">
   <div style="max-width:1400px;margin:0 auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-    <input type="text" id="shared-search" placeholder="Search matches, events, winners…"
-      oninput="applySharedFilters()"
-      style="flex:1;min-width:180px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;transition:border-color .15s;"/>
-    <select id="shared-year" onchange="applySharedFilters()"
-      style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;">
-      <option value="">All Years</option>
-    </select>
-    <select id="shared-promo" onchange="applySharedFilters()"
-      style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;">
-      <option value="">All Promotions</option>
-    </select>
-    <select id="shared-champ" onchange="applySharedFilters()"
-      style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;">
-      <option value="">All Championships</option>
-    </select>
-    <div class="title-toggle" id="title-toggle" onclick="toggleTitleOnly()">
-      <span class="dot"></span>Title Only
-    </div>
-    <button class="clear-filters-btn" onclick="clearSharedFilters()">✕ Clear</button>
-  </div>
-  <div class="filter-chips" id="shared-chips" style="max-width:1400px;margin:6px auto 0;"></div>
-</div>
-
-<!-- PERSISTENT FILTER BAR — always visible, shared across Best/Watch/All -->
-<div id="persistent-filters" style="display:none;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 20px;position:sticky;top:56px;z-index:90;">
-  <div style="max-width:1400px;margin:0 auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
     <input type="text" id="shared-search" placeholder="Search matches, events, winners&hellip;"
       oninput="applySharedFilters()"
       style="flex:1;min-width:180px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;"/>
