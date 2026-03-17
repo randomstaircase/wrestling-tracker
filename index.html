@@ -688,27 +688,42 @@ function clearSharedFilters(){
   document.querySelectorAll('.rating-pill[data-group="src"]').forEach(p=>p.classList.remove('active'));
   buildValPills('any');
   const tog=document.getElementById('title-toggle');if(tog)tog.classList.remove('on');
-  renderBest();renderWatch();renderAll();updateSharedChips();updateFilterHighlights();
+  renderBest();renderWatch();renderRewatch();renderAll();updateSharedChips();updateFilterHighlights();
 }
 function clearFilters(prefix){
   ['search','year','promo'].forEach(s=>{const el=document.getElementById(prefix+'-'+s);if(el)el.value='';});
   const chips=document.getElementById(prefix+'-chips');if(chips)chips.innerHTML='';
   if(prefix==='dash')renderDashboard();
 }
+function clearFilterChip(field){
+  if(field==='search'){sharedFilters.search='';const el=document.getElementById('shared-search');if(el)el.value='';}
+  else if(field==='year'){sharedFilters.year='';const el=document.getElementById('shared-year');if(el)el.value='';}
+  else if(field==='promo'){sharedFilters.promo='';const el=document.getElementById('shared-promo');if(el)el.value='';}
+  else if(field==='champ'){sharedFilters.champ='';const el=document.getElementById('shared-champ');if(el)el.value='';}
+  else if(field==='rating'){
+    sharedFilters.rating='';sharedFilters.ratingSrc='any';
+    document.querySelectorAll('.rating-pill[data-group="src"]').forEach(p=>p.classList.remove('active'));
+    buildValPills('any');
+  }
+  else if(field==='titleOnly'){sharedFilters.titleOnly=false;const tog=document.getElementById('title-toggle');if(tog)tog.classList.remove('on');}
+  renderBest();renderWatch();renderRewatch();renderAll();
+  updateSharedChips();updateFilterHighlights();
+}
+
 function updateSharedChips(){
   const chips=document.getElementById('shared-chips');if(!chips)return;
   const parts=[];
-  if(sharedFilters.search)parts.push(['Search','"'+sharedFilters.search+'"',()=>{sharedFilters.search='';document.getElementById('shared-search').value='';applySharedFilters();}]);
-  if(sharedFilters.year)parts.push(['Year',sharedFilters.year,()=>{sharedFilters.year='';document.getElementById('shared-year').value='';applySharedFilters();}]);
-  if(sharedFilters.promo)parts.push(['Promo',sharedFilters.promo,()=>{sharedFilters.promo='';document.getElementById('shared-promo').value='';applySharedFilters();}]);
-  if(sharedFilters.champ)parts.push(['Champ',sharedFilters.champ,()=>{sharedFilters.champ='';document.getElementById('shared-champ').value='';applySharedFilters();}]);
+  if(sharedFilters.search)parts.push(`<span class="filter-active-badge">Search: "${esc(sharedFilters.search)}"<button onclick="clearFilterChip('search')" title="Remove">&#10005;</button></span>`);
+  if(sharedFilters.year)parts.push(`<span class="filter-active-badge">Year: ${esc(sharedFilters.year)}<button onclick="clearFilterChip('year')" title="Remove">&#10005;</button></span>`);
+  if(sharedFilters.promo)parts.push(`<span class="filter-active-badge">Promo: ${esc(sharedFilters.promo)}<button onclick="clearFilterChip('promo')" title="Remove">&#10005;</button></span>`);
+  if(sharedFilters.champ)parts.push(`<span class="filter-active-badge">Champ: ${esc(sharedFilters.champ)}<button onclick="clearFilterChip('champ')" title="Remove">&#10005;</button></span>`);
   if(sharedFilters.rating){
     const srcLabel={any:'Any',mine:'My Rating',cm:'CM',won:'WON'}[sharedFilters.ratingSrc||'any']||'Any';
     const valLabel=sharedFilters.rating==='unrated'?'Unrated':sharedFilters.rating.startsWith('lt')?'<'+sharedFilters.rating.slice(2):sharedFilters.rating+'+';
-    parts.push(['Rating',srcLabel+' ≥ '+valLabel,()=>{sharedFilters.rating='';sharedFilters.ratingSrc='any';document.getElementById('shared-rating').value='';const rs=document.getElementById('shared-rating-src');if(rs)rs.value='any';applySharedFilters();}]);
+    parts.push(`<span class="filter-active-badge">Rating: ${srcLabel} ≥ ${valLabel}<button onclick="clearFilterChip('rating')" title="Remove">&#10005;</button></span>`);
   }
-  if(sharedFilters.titleOnly)parts.push(['Title Only','',()=>{sharedFilters.titleOnly=false;document.getElementById('title-toggle').classList.remove('on');applySharedFilters();}]);
-  chips.innerHTML=parts.map(p=>`<span class="filter-active-badge">${p[0]}: ${p[1]}<button onclick="(${p[2].toString()})()" title="Remove">&#10005;</button></span>`).join('');
+  if(sharedFilters.titleOnly)parts.push(`<span class="filter-active-badge">Title Only<button onclick="clearFilterChip('titleOnly')" title="Remove">&#10005;</button></span>`);
+  chips.innerHTML=parts.join('');
 }
 function updateFilterHighlights(){['shared-search','shared-year','shared-promo','shared-champ'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.toggle('active-filter',!!el.value);});}
 
