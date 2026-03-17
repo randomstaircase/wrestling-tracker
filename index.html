@@ -165,6 +165,9 @@ textarea{resize:vertical;min-height:70px}
 .title-toggle.on .dot{background:var(--accent)}
 .clear-filters-btn{background:none;border:1px solid var(--border2);color:var(--text3);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;padding:6px 12px;border-radius:4px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .clear-filters-btn:hover{border-color:var(--red);color:var(--red)}
+.rating-pill{background:var(--bg4);border:1px solid var(--border2);color:var(--text3);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:3px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.rating-pill:hover{border-color:var(--accent);color:var(--accent)}
+.rating-pill.active{background:var(--accent);border-color:var(--accent);color:#000}
 @media(max-width:640px){header{flex-wrap:wrap;height:auto;padding:10px 14px;gap:8px}.header-title{font-size:1.2rem}nav button{font-size:.75rem;padding:5px 10px}main{padding:12px}.form-grid{padding:16px;gap:12px}td,th{padding:7px 8px}.modal{padding:18px}}
 </style>
 </head>
@@ -189,17 +192,15 @@ textarea{resize:vertical;min-height:70px}
     <select id="shared-year" onchange="applySharedFilters()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;"><option value="">All Years</option></select>
     <select id="shared-promo" onchange="applySharedFilters()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;"><option value="">All Promotions</option></select>
     <select id="shared-champ" onchange="applySharedFilters()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;"><option value="">All Championships</option></select>
-    <select id="shared-rating" onchange="applySharedFilters()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;">
-      <option value="">Any Rating</option>
-      <option value="unrated">Unrated</option>
-      <option value="6">6+</option>
-      <option value="7">7+</option>
-      <option value="7.5">7.5+</option>
-      <option value="8">8+</option>
-      <option value="8.5">8.5+</option>
-      <option value="9">9+</option>
-      <option value="9.5">9.5+</option>
-    </select>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <div id="rating-src-pills" style="display:flex;gap:4px;flex-wrap:wrap;">
+        <button class="rating-pill" data-group="src" data-val="any" onclick="ratingPillClick(this)">Any</button>
+        <button class="rating-pill" data-group="src" data-val="mine" onclick="ratingPillClick(this)">My Rating</button>
+        <button class="rating-pill" data-group="src" data-val="cm" onclick="ratingPillClick(this)">CM</button>
+        <button class="rating-pill" data-group="src" data-val="won" onclick="ratingPillClick(this)">WON</button>
+      </div>
+      <div id="rating-val-pills" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+    </div>
     <div class="title-toggle" id="title-toggle" onclick="toggleTitleOnly()"><span class="dot"></span>Title Only</div>
     <button class="clear-filters-btn" onclick="clearSharedFilters()">&times; Clear</button>
   </div>
@@ -571,7 +572,7 @@ function buildRows(arr,tbody,showActions=true){
   }).join('');
 }
 
-const sharedFilters={search:'',year:'',promo:'',champ:'',rating:'',titleOnly:false};
+const sharedFilters={search:'',year:'',promo:'',champ:'',rating:'',ratingSrc:'any',titleOnly:false};
 function getYearFromDate(d){if(!d)return'';if(d.includes('-'))return d.split('-')[0];if(d.includes('/'))return d.split('/')[2]||'';return'';}
 function getMatchTab(m){if(m._sheetName&&!/^\d{4}$/.test(m._sheetName))return m._sheetName;const y=getYearFromDate(m.date);if(!y)return m._sheetName||'';return getTabName(parseInt(y));}
 
@@ -586,11 +587,89 @@ function filterMatches(arr,overrides){
     if(f.titleOnly&&!m.championship)return false;
     // rating filter
     if(f.rating){
-      if(f.rating==='unrated'){if(m.rating&&m.rating!=='')return false;}
-      else{const rv=parseFloat(m.rating);if(isNaN(rv)||rv<parseFloat(f.rating))return false;}
+      const src=f.ratingSrc||'any';
+      const myR=parseFloat(m.rating);
+      const cmR=parseFloat(m.score);
+      const wonR=parseFloat(m.value);
+      function getVal(s){return s==='mine'?myR:s==='cm'?cmR:s==='won'?wonR:NaN;}
+      function anyMeetsThreshold(t,above){
+        const vals=[myR,cmR,wonR].filter(v=>!isNaN(v));
+        return above?vals.some(v=>v>=t):vals.some(v=>v<t);
+      }
+      if(f.rating==='unrated'){
+        if(m.rating&&m.rating!=='')return false;
+      } else if(f.rating.startsWith('lt')){
+        // Less-than filter e.g. lt8 or lt4.5
+        const ltThreshold=parseFloat(f.rating.slice(2));
+        if(!isNaN(ltThreshold)){
+          if(src==='any'){
+            const hasAny=[myR,cmR,wonR].some(v=>!isNaN(v));
+            if(!hasAny)return false;
+            if(anyMeetsThreshold(ltThreshold,true))return false;
+          } else {
+            const v=getVal(src);
+            if(isNaN(v)||v>=ltThreshold)return false;
+          }
+        }
+      } else {
+        const threshold=parseFloat(f.rating);
+        if(!isNaN(threshold)){
+          if(src==='any'){if(!anyMeetsThreshold(threshold,true))return false;}
+          else{const v=getVal(src);if(isNaN(v)||v<threshold)return false;}
+        }
+      }
     }
     return true;
   });
+}
+
+const RATING_PILLS_NORMAL=[
+  {val:'unrated',label:'Unrated'},
+  {val:'lt8',label:'&lt;8'},
+  {val:'8',label:'8+'},
+  {val:'8.5',label:'8.5+'},
+  {val:'9',label:'9+'},
+  {val:'9.5',label:'9.5+'},
+];
+const RATING_PILLS_WON=[
+  {val:'unrated',label:'Unrated'},
+  {val:'lt4.5',label:'&lt;4.5'},
+  {val:'4.5',label:'4.5+'},
+  {val:'4.75',label:'4.75+'},
+  {val:'5',label:'5+'},
+];
+
+function buildValPills(src){
+  const container=document.getElementById('rating-val-pills');
+  if(!container)return;
+  const set=src==='won'?RATING_PILLS_WON:RATING_PILLS_NORMAL;
+  container.innerHTML=set.map(p=>
+    `<button class="rating-pill${sharedFilters.rating===p.val?' active':''}" data-group="val" data-val="${p.val}" onclick="ratingPillClick(this)">${p.label}</button>`
+  ).join('');
+}
+
+function ratingPillClick(btn){
+  const group=btn.dataset.group;
+  const val=btn.dataset.val;
+  const pills=document.querySelectorAll(`.rating-pill[data-group="${group}"]`);
+  const wasActive=btn.classList.contains('active');
+  pills.forEach(p=>p.classList.remove('active'));
+  if(!wasActive){
+    btn.classList.add('active');
+    if(group==='src'){
+      sharedFilters.ratingSrc=val;
+      // Reset threshold when switching source — incompatible values
+      sharedFilters.rating='';
+      buildValPills(val);
+    } else {
+      sharedFilters.rating=val;
+    }
+  } else {
+    if(group==='src'){sharedFilters.ratingSrc='any';buildValPills('any');}
+    else sharedFilters.rating='';
+  }
+  renderBest();renderWatch();renderRewatch();renderAll();
+  updateSharedChips();updateFilterHighlights();
 }
 
 function applySharedFilters(){
@@ -604,6 +683,10 @@ function toggleTitleOnly(){sharedFilters.titleOnly=!sharedFilters.titleOnly;cons
 function clearSharedFilters(){
   sharedFilters.search=sharedFilters.year=sharedFilters.promo=sharedFilters.champ='';sharedFilters.titleOnly=false;
   ['shared-search','shared-year','shared-promo','shared-champ','shared-rating'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  // Reset rating pills
+  sharedFilters.rating='';sharedFilters.ratingSrc='any';
+  document.querySelectorAll('.rating-pill[data-group="src"]').forEach(p=>p.classList.remove('active'));
+  buildValPills('any');
   const tog=document.getElementById('title-toggle');if(tog)tog.classList.remove('on');
   renderBest();renderWatch();renderAll();updateSharedChips();updateFilterHighlights();
 }
@@ -619,7 +702,11 @@ function updateSharedChips(){
   if(sharedFilters.year)parts.push(['Year',sharedFilters.year,()=>{sharedFilters.year='';document.getElementById('shared-year').value='';applySharedFilters();}]);
   if(sharedFilters.promo)parts.push(['Promo',sharedFilters.promo,()=>{sharedFilters.promo='';document.getElementById('shared-promo').value='';applySharedFilters();}]);
   if(sharedFilters.champ)parts.push(['Champ',sharedFilters.champ,()=>{sharedFilters.champ='';document.getElementById('shared-champ').value='';applySharedFilters();}]);
-  if(sharedFilters.rating)parts.push(['Rating',sharedFilters.rating==='unrated'?'Unrated':sharedFilters.rating+'+',()=>{sharedFilters.rating='';document.getElementById('shared-rating').value='';applySharedFilters();}]);
+  if(sharedFilters.rating){
+    const srcLabel={any:'Any',mine:'My Rating',cm:'CM',won:'WON'}[sharedFilters.ratingSrc||'any']||'Any';
+    const valLabel=sharedFilters.rating==='unrated'?'Unrated':sharedFilters.rating.startsWith('lt')?'<'+sharedFilters.rating.slice(2):sharedFilters.rating+'+';
+    parts.push(['Rating',srcLabel+' ≥ '+valLabel,()=>{sharedFilters.rating='';sharedFilters.ratingSrc='any';document.getElementById('shared-rating').value='';const rs=document.getElementById('shared-rating-src');if(rs)rs.value='any';applySharedFilters();}]);
+  }
   if(sharedFilters.titleOnly)parts.push(['Title Only','',()=>{sharedFilters.titleOnly=false;document.getElementById('title-toggle').classList.remove('on');applySharedFilters();}]);
   chips.innerHTML=parts.map(p=>`<span class="filter-active-badge">${p[0]}: ${p[1]}<button onclick="(${p[2].toString()})()" title="Remove">&#10005;</button></span>`).join('');
 }
@@ -955,6 +1042,7 @@ function toast(msg,isErr=false){const el=document.getElementById('toast');el.tex
   const savedUrl=localStorage.getItem('sheets_url_2026');
   if(savedUrl)document.getElementById('sheets-url').value=savedUrl;
   populatePromoDropdowns();populateSharedFilterOptions();renderDashboard();
+  buildValPills('any');
   const existing=loadMatches();
   if(savedUrl&&existing.length===0){
     setSyncStatus('No local data \u2014 loading from Sheets\u2026');
