@@ -924,10 +924,16 @@ textarea { resize: vertical; min-height: 70px; }
         <input type="text" id="f-champ" placeholder="e.g. AEW Continental"/>
       </div>
 
-      <!-- Winner -->
+      <!-- Winner + Title Change -->
       <div class="form-group full">
         <label>Winner <span class="hint">(manual entry)</span></label>
-        <input type="text" id="f-winner" placeholder="e.g. Jon Moxley"/>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+          <input type="text" id="f-winner" placeholder="e.g. Jon Moxley" style="flex:1;min-width:200px;"/>
+          <div class="checkbox-row" style="margin:0;">
+            <input type="checkbox" id="f-title-change"/>
+            <label for="f-title-change" style="color:var(--accent);font-weight:600;">Title Change</label>
+          </div>
+        </div>
       </div>
 
       <!-- Rating + 10+ -->
@@ -1249,10 +1255,12 @@ const COLS = [
   { key:'date', label:'Date', render: m => m.date ? fmtDate(m.date) : '—' },
   { key:'matchType', label:'Type', render: m => esc(m.matchType||'—') },
   { key:'championship', label:'Championship', render: m => m.championship ? `<span class="champ-badge">🏆 ${esc(m.championship)}</span>` : '—' },
-  { key:'winner', label:'Winner', render: m =>
-    `<span class="winner-cell" onclick="inlineEditWinner(event,'${m.id}')" title="Click to enter winner">` +
-    (m.winner ? `<span class="winner-val">${esc(m.winner)}</span>` : `<span class="rating-empty">—</span>`) +
-    `</span>` },
+  { key:'winner', label:'Winner', render: m => {
+    const winnerText = m.winner
+      ? `<span class="winner-val" style="${m.titleChange ? 'font-weight:700;color:var(--accent);' : ''}">${esc(m.winner)}${m.titleChange ? ' ★' : ''}</span>`
+      : `<span class="rating-empty">—</span>`;
+    return `<span class="winner-cell" onclick="inlineEditWinner(event,'${m.id}')" title="Click to enter winner">${winnerText}</span>`;
+  }},
   { key:'rating', label:'Rating', render: m => {
     const rv = parseFloat(m.rating);
     const cls = (!m.rating || isNaN(rv)) ? '' : (rv >= 9 ? 'rating-val rating-high' : 'rating-val');
@@ -1735,6 +1743,7 @@ function getFormData() {
     matchType: document.getElementById('f-matchtype').value.trim(),
     championship: document.getElementById('f-champ').value.trim(),
     winner: document.getElementById('f-winner').value.trim(),
+    titleChange: document.getElementById('f-title-change').checked,
     rating: document.getElementById('f-rating').value,
     tenPlus: document.getElementById('f-10plus').checked,
     score: document.getElementById('f-score').value,
@@ -1753,6 +1762,7 @@ function fillForm(m) {
   document.getElementById('f-matchtype').value = m.matchType||'';
   document.getElementById('f-champ').value = m.championship||'';
   document.getElementById('f-winner').value = m.winner||'';
+  document.getElementById('f-title-change').checked = !!m.titleChange;
   document.getElementById('f-rating').value = m.rating||'';
   document.getElementById('f-10plus').checked = !!m.tenPlus;
   document.getElementById('f-score').value = m.score||'';
@@ -1766,6 +1776,7 @@ function clearForm() {
   });
   document.getElementById('f-promo-full').value = '';
   document.getElementById('f-10plus').checked = false;
+  document.getElementById('f-title-change').checked = false;
   setFetchStatus('');
   setEditingId(null);
 }
@@ -2176,6 +2187,45 @@ async function runBatchImport() {
   btn.textContent = '⚡ Import URLs';
 }
 
+
+/* ============================================================
+   INLINE WINNER EDIT
+   ============================================================ */
+function inlineEditWinner(e, id) {
+  e.stopPropagation();
+  const cell = e.currentTarget;
+  const matches = loadMatches();
+  const m = matches.find(x => x.id === id);
+  if (!m) return;
+  const cur   = m.winner || '';
+  const curTc = !!m.titleChange;
+
+  cell.innerHTML =
+    `<input class="winner-inline-input" type="text" value="${esc(cur)}" placeholder="Winner name" id="inline-winner-${id}" style="margin-right:6px;"/>` +
+    `<label style="font-size:.75rem;color:var(--accent);cursor:pointer;white-space:nowrap;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase;display:inline-flex;align-items:center;gap:4px;">` +
+    `<input type="checkbox" id="inline-tc-${id}" ${curTc ? 'checked' : ''} style="accent-color:var(--accent);"/>Title Change</label>`;
+
+  const inp   = cell.querySelector('input[type="text"]');
+  const tcBox = cell.querySelector('input[type="checkbox"]');
+  inp.focus();
+  inp.select();
+
+  function commit() {
+    m.winner      = inp.value.trim();
+    m.titleChange = tcBox.checked;
+    saveMatches(matches);
+    renderDashboard(); renderBest(); renderWatch(); renderAll();
+  }
+
+  inp.addEventListener('blur', () => setTimeout(commit, 150));
+  inp.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter')  { inp.blur(); }
+    if (ev.key === 'Escape') {
+      m.winner = cur; m.titleChange = curTc;
+      renderDashboard(); renderBest(); renderWatch(); renderAll();
+    }
+  });
+}
 
 /* ============================================================
    CLEAR ALL DATA
