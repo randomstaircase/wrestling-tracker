@@ -38,7 +38,7 @@ main{padding:20px;max-width:1400px;margin:0 auto}
 .filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent)}
 .filter-bar input{flex:1;min-width:160px}
 /* top scroll mirror */
-.top-scroll-mirror{overflow-x:auto;overflow-y:hidden;height:10px;border-radius:6px 6px 0 0;border:1px solid var(--border);border-bottom:none;background:var(--bg3);margin-bottom:-1px;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg3)}
+.top-scroll-mirror{overflow-x:auto;overflow-y:hidden;height:12px;border-radius:0;border:none;border-top:1px solid var(--border);border-bottom:1px solid var(--border2);background:var(--bg3);margin-bottom:-1px;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg3);position:sticky;top:0;z-index:80;}
 .top-scroll-mirror::-webkit-scrollbar{height:10px}
 .top-scroll-mirror::-webkit-scrollbar-track{background:var(--bg3);border-radius:6px 6px 0 0}
 .top-scroll-mirror::-webkit-scrollbar-thumb{background:var(--accent);border-radius:5px;border:2px solid var(--bg3)}
@@ -427,17 +427,63 @@ function switchPanel(id){
 function addTopScroll(wrapId,containerId){
   const wrap=document.getElementById(wrapId),container=document.getElementById(containerId);
   if(!wrap||!container)return;
+
+  // Clean up previous listeners
+  if(wrap._scrollCleanup){wrap._scrollCleanup();wrap._scrollCleanup=null;}
+
   container.innerHTML='';
   const mirror=document.createElement('div');
   mirror.className='top-scroll-mirror';
+
   const inner=document.createElement('div');
-  inner.style.cssText='height:1px;';
+  inner.style.cssText='height:1px;display:block;';
   mirror.appendChild(inner);
   container.appendChild(mirror);
-  requestAnimationFrame(()=>{inner.style.width=wrap.scrollWidth+'px';});
+
+  // Keep inner width matching table scroll width
+  function syncWidth(){
+    inner.style.width=wrap.scrollWidth+'px';
+  }
+  requestAnimationFrame(syncWidth);
+
+  // Two-way scroll sync
   let syncing=false;
-  mirror.addEventListener('scroll',()=>{if(syncing)return;syncing=true;wrap.scrollLeft=mirror.scrollLeft;syncing=false;});
-  wrap.addEventListener('scroll',()=>{if(syncing)return;syncing=true;mirror.scrollLeft=wrap.scrollLeft;syncing=false;});
+  function onMirrorScroll(){if(syncing)return;syncing=true;wrap.scrollLeft=mirror.scrollLeft;syncing=false;}
+  function onWrapScroll(){if(syncing)return;syncing=true;mirror.scrollLeft=wrap.scrollLeft;syncing=false;}
+  mirror.addEventListener('scroll',onMirrorScroll);
+  wrap.addEventListener('scroll',onWrapScroll);
+
+  // Fixed-position sticky: pin mirror to top of viewport when table scrolled off
+  const header=document.querySelector('header');
+  const pf=document.getElementById('persistent-filters');
+
+  function onPageScroll(){
+    const wrapRect=wrap.getBoundingClientRect();
+    const headerH=header?header.offsetHeight:56;
+    const pfH=(pf&&pf.offsetParent&&pf.style.display!=='none')?pf.offsetHeight:0;
+    const stickyTop=headerH+pfH;
+    const mirrorH=mirror.offsetHeight||12;
+
+    if(wrapRect.top<stickyTop&&wrapRect.bottom>stickyTop+mirrorH+20){
+      // Table scrolled past top — fix mirror to viewport
+      mirror.style.cssText=`position:fixed;top:${stickyTop}px;left:${wrapRect.left}px;width:${wrapRect.width}px;height:12px;overflow-x:auto;overflow-y:hidden;background:var(--bg3);border-bottom:1px solid var(--border2);z-index:80;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg3);margin:0;border-radius:0;`;
+      inner.style.width=wrap.scrollWidth+'px';
+    } else {
+      // Restore to normal flow
+      mirror.style.cssText='';
+      mirror.className='top-scroll-mirror';
+      inner.style.width=wrap.scrollWidth+'px';
+    }
+  }
+
+  window.addEventListener('scroll',onPageScroll,{passive:true});
+  window.addEventListener('resize',()=>{syncWidth();onPageScroll();},{passive:true});
+
+  wrap._scrollCleanup=()=>{
+    window.removeEventListener('scroll',onPageScroll);
+    mirror.removeEventListener('scroll',onMirrorScroll);
+    wrap.removeEventListener('scroll',onWrapScroll);
+  };
 }
 
 const COLS=[
