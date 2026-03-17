@@ -1331,12 +1331,28 @@ function updateSortIndicators() {
   });
 }
 
+function normaliseSortVal(key, m) {
+  const v = m[key] || '';
+  // Date: convert any format to YYYY-MM-DD for correct string sort
+  if (key === 'date') {
+    if (!v) return '0000-00-00';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;  // already ISO
+    // MM/DD/YYYY → YYYY-MM-DD
+    const p = v.split('/');
+    if (p.length === 3 && p[2].length === 4)
+      return p[2] + '-' + p[0].padStart(2,'0') + '-' + p[1].padStart(2,'0');
+    return v;
+  }
+  // Numeric fields
+  const n = parseFloat(v);
+  if (!isNaN(n)) return n;
+  return v;
+}
+
 function sortMatches(arr) {
   return [...arr].sort((a,b) => {
-    let va = a[sortKey]||'', vb = b[sortKey]||'';
-    if (!isNaN(parseFloat(va)) && !isNaN(parseFloat(vb))) {
-      va = parseFloat(va); vb = parseFloat(vb);
-    }
+    const va = normaliseSortVal(sortKey, a);
+    const vb = normaliseSortVal(sortKey, b);
     if (va < vb) return -sortDir;
     if (va > vb) return sortDir;
     return 0;
