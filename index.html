@@ -1,959 +1,1234 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Wrestling Match Tracker</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,900;1,700&family=Barlow:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
-<style>
-:root {
-  --bg:#0a0a0c;--bg2:#111116;--bg3:#18181f;--bg4:#1f1f28;
-  --border:#2a2a35;--border2:#38384a;
-  --text:#e8e8f0;--text2:#9090a8;--text3:#5a5a72;
-  --accent:#e8c840;--accent2:#c8a820;--red:#ff3a5c;
-  --teal:#00d4d4;--teal-text:#ff1493;
-  --blue-hi:#9fc5e8;--blue-lo:#e6efff;--green:#4ade80;
-  --shadow:0 4px 24px rgba(0,0,0,0.6);
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
-header{background:var(--bg2);border-bottom:2px solid var(--accent);padding:0 20px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;gap:12px;height:56px}
-.header-title{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.5rem;letter-spacing:.06em;color:var(--accent);white-space:nowrap;text-transform:uppercase}
-.header-title span{color:var(--text2);font-weight:400}
-nav{display:flex;gap:4px;flex-wrap:wrap}
-nav button{background:transparent;border:1px solid var(--border2);color:var(--text2);font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:.85rem;letter-spacing:.08em;text-transform:uppercase;padding:6px 14px;border-radius:4px;cursor:pointer;transition:all .15s}
-nav button:hover{border-color:var(--accent);color:var(--accent)}
-nav button.active{background:var(--accent);border-color:var(--accent);color:#000}
-main{padding:20px;max-width:1800px;margin:0 auto}
-.panel{display:none}.panel.active{display:block}
-.stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px}
-.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:14px 16px;text-align:center}
-.stat-num{font-family:'Barlow Condensed',sans-serif;font-size:2rem;font-weight:900;color:var(--accent);line-height:1}
-.stat-label{font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-top:4px}
-.section-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
-.section-title{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.3rem;letter-spacing:.06em;text-transform:uppercase;color:var(--text)}
-.section-title .tag{font-size:.75rem;background:var(--accent);color:#000;padding:2px 8px;border-radius:3px;margin-left:8px;font-weight:700}
-.filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
-.filter-bar input,.filter-bar select{background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;transition:border-color .15s}
-.filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent)}
-.filter-bar input{flex:1;min-width:160px}
-/* top scroll mirror */
-.top-scroll-mirror{overflow-x:auto;overflow-y:hidden;height:12px;border-radius:0;border:none;border-top:1px solid var(--border);border-bottom:1px solid var(--border2);background:var(--bg3);margin-bottom:-1px;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg3);position:sticky;top:0;z-index:80;}
-.top-scroll-mirror::-webkit-scrollbar{height:10px}
-.top-scroll-mirror::-webkit-scrollbar-track{background:var(--bg3);border-radius:6px 6px 0 0}
-.top-scroll-mirror::-webkit-scrollbar-thumb{background:var(--accent);border-radius:5px;border:2px solid var(--bg3)}
-.table-wrap{overflow-x:auto;border-radius:0 0 6px 6px;border:1px solid var(--border);background:var(--bg2);scrollbar-width:thin;scrollbar-color:var(--border2) var(--bg3)}
-.table-wrap::-webkit-scrollbar{height:10px}
-.table-wrap::-webkit-scrollbar-track{background:var(--bg3)}
-.table-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:5px;border:2px solid var(--bg3)}
-.table-wrap::-webkit-scrollbar-thumb:hover{background:var(--accent)}
-table{width:100%;border-collapse:collapse;font-size:.82rem}
-thead tr{background:var(--bg3);border-bottom:2px solid var(--border2)}
-th{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);padding:10px 12px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none}
-#th-rating{min-width:90px}#th-winner{min-width:260px}
-th:hover{color:var(--accent)}
-th.sort-asc::after{content:" ▲";color:var(--accent)}
-th.sort-desc::after{content:" ▼";color:var(--accent)}
-td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap}
-tbody tr:last-child td{border-bottom:none}
-/* Allow wrapping on content-heavy columns */
-td:nth-child(1),td:nth-child(3),td:nth-child(6),td:nth-child(7){white-space:normal;min-width:120px}
-td:nth-child(1){min-width:160px}
-tbody tr:hover{background:rgba(255,255,255,.03)}
-tr.row-best-10plus td{background:rgba(0,212,212,.12)!important}
-tr.row-best-10plus td .match-name{color:var(--teal-text)!important}
-tr.row-watch-hi td{background:rgba(159,197,232,.15)!important}
-tr.row-watch-lo td{background:rgba(230,239,255,.07)!important}
-.promo-badge{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.06em;background:var(--bg4);border:1px solid var(--border2);padding:2px 7px;border-radius:3px;color:var(--accent)}
-.match-name{font-weight:600;color:var(--text);max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:normal;word-break:break-word;min-width:160px}
-.match-name a{color:inherit;text-decoration:none}
-.match-name a:hover{color:var(--accent);text-decoration:underline}
-.event-name{color:var(--text2);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:normal;word-break:break-word;min-width:120px}
-.score-val{font-family:'JetBrains Mono',monospace;font-size:.82rem;font-weight:600;color:var(--green)}
-.rating-val{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--accent)}
-.rating-high{color:#60aaff}
-.rating-cell,.tenplus-cell,.inline-field{cursor:pointer;padding:2px 4px;border-radius:3px;border:1px solid transparent;display:inline-block;transition:border-color .15s,background .15s}
-.rating-cell{min-width:80px;text-align:center}
-.tenplus-cell{min-width:36px;text-align:center}
-.rating-cell:hover,.tenplus-cell:hover,.inline-field:hover{border-color:var(--accent);background:rgba(232,200,64,.08)}
-.rating-empty{color:var(--text3);font-size:.8rem}
-.rating-inline-input{background:var(--bg4);border:1px solid var(--accent);color:var(--accent);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.95rem;width:80px;min-width:80px;padding:4px 6px;border-radius:3px;outline:none;text-align:center;box-sizing:border-box;display:block;-moz-appearance:textfield}
-.rating-inline-input::-webkit-outer-spin-button,.rating-inline-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-.inline-text-input{background:var(--bg4);border:1px solid var(--text2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.82rem;padding:3px 8px;border-radius:3px;outline:none;min-width:100px;max-width:260px}
-.flag-10plus{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.7rem;background:var(--teal);color:#000;padding:2px 6px;border-radius:3px}
-.flag-live{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.7rem;background:var(--accent);color:#000;padding:2px 6px;border-radius:3px}
-.flags-cell{cursor:pointer;padding:2px 4px;border-radius:3px;border:1px solid transparent;display:inline-flex;gap:4px;align-items:center;transition:border-color .15s,background .15s;min-width:36px}
-.flags-cell:hover{border-color:var(--accent);background:rgba(232,200,64,.08)}
-.flag-pill{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.7rem;padding:2px 6px;border-radius:3px}
-.flag-pill.off{background:var(--bg4);border:1px solid var(--border2);color:var(--text3)}
-.flag-live{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.7rem;background:var(--accent);color:#000;padding:2px 6px;border-radius:3px}
-.flags-cell{cursor:pointer;padding:2px 4px;border-radius:3px;border:1px solid transparent;display:inline-flex;gap:4px;align-items:center;transition:border-color .15s,background .15s;min-width:36px}
-.flags-cell:hover{border-color:var(--accent);background:rgba(232,200,64,.08)}
-.flag-pill{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.7rem;padding:2px 6px;border-radius:3px;cursor:pointer;transition:opacity .15s}
-.flag-pill:hover{opacity:.75}
-.flag-pill.off{background:var(--bg4);border:1px solid var(--border2);color:var(--text3)}
-.champ-badge{font-size:.72rem;background:rgba(232,200,64,.15);border:1px solid rgba(232,200,64,.4);color:var(--accent);padding:2px 7px;border-radius:3px;white-space:normal;max-width:200px;overflow:hidden;text-overflow:ellipsis;display:inline-block;word-break:break-word}
-.winner-val{color:var(--text2);font-size:.82rem;max-width:320px;overflow:hidden;text-overflow:ellipsis;display:inline-block;white-space:normal;word-break:break-word}
-.winner-cell{cursor:pointer;padding:2px 4px;border-radius:3px;border:1px solid transparent;display:inline-block;min-width:40px;max-width:260px;transition:border-color .15s,background .15s}
-.winner-cell:hover{border-color:var(--text3);background:rgba(255,255,255,.04)}
-.winner-inline-input{background:var(--bg4);border:1px solid var(--text2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.82rem;width:200px;padding:3px 8px;border-radius:3px;outline:none}
-td .row-actions{display:flex;gap:6px}
-td .row-actions button{background:none;border:1px solid var(--border2);color:var(--text3);font-size:.72rem;padding:3px 8px;border-radius:3px;cursor:pointer;transition:all .15s;font-family:'Barlow',sans-serif}
-td .row-actions button:hover{border-color:var(--accent);color:var(--accent)}
-td .row-actions button.del:hover{border-color:var(--red);color:var(--red)}
-.empty-state{text-align:center;padding:48px 20px;color:var(--text3);font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;letter-spacing:.08em;text-transform:uppercase}
-.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:24px;margin-bottom:20px}
-.form-group{display:flex;flex-direction:column;gap:6px}
-.form-group.full{grid-column:1/-1}
-label{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text2)}
-label .required{color:var(--red);margin-left:3px}
-label .hint{color:var(--text3);font-weight:400;font-size:.72rem;text-transform:none;letter-spacing:0;margin-left:6px}
-input[type="text"],input[type="date"],input[type="number"],input[type="url"],select,textarea{background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.88rem;padding:9px 12px;border-radius:4px;outline:none;transition:border-color .15s;width:100%}
-input:focus,select:focus,textarea:focus{border-color:var(--accent)}
-input::placeholder,textarea::placeholder{color:var(--text3)}
-textarea{resize:vertical;min-height:70px}
-.inline-row{display:flex;gap:10px;align-items:flex-end}
-.inline-row>*{flex:1}
-.fetch-btn{background:var(--bg4);border:1px solid var(--border2);color:var(--text2);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;padding:9px 14px;border-radius:4px;cursor:pointer;transition:all .15s;white-space:nowrap}
-.fetch-btn:hover{border-color:var(--accent);color:var(--accent)}
-.fetch-btn:disabled{opacity:.4;cursor:not-allowed}
-.fetch-status{font-size:.78rem;color:var(--text3);font-style:italic;margin-top:4px;min-height:18px}
-.fetch-status.ok{color:var(--green)}.fetch-status.err{color:var(--red)}
-.checkbox-row{display:flex;align-items:center;gap:10px;padding:10px 0}
-.checkbox-row input[type="checkbox"]{width:18px;height:18px;accent-color:var(--teal);cursor:pointer}
-.checkbox-row label{font-size:.88rem;text-transform:none;letter-spacing:0;font-family:'Barlow',sans-serif;color:var(--text);cursor:pointer}
-.form-actions{grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap}
-.btn{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.9rem;letter-spacing:.08em;text-transform:uppercase;padding:10px 24px;border-radius:4px;border:none;cursor:pointer;transition:all .15s}
-.btn-primary{background:var(--accent);color:#000}.btn-primary:hover{background:var(--accent2)}
-.btn-secondary{background:var(--bg4);border:1px solid var(--border2);color:var(--text2)}.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
-.btn-danger{background:transparent;border:1px solid var(--red);color:var(--red)}.btn-danger:hover{background:var(--red);color:#fff}
-.promo-manager{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:24px}
-.promo-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;margin-bottom:20px;max-height:360px;overflow-y:auto;padding-right:4px}
-.promo-item{display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:8px 12px;gap:10px}
-.promo-item-name{font-size:.85rem;color:var(--text);flex:1}
-.promo-item-abbr{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.8rem;color:var(--accent);min-width:50px;text-align:right}
-.promo-item-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:1rem;line-height:1;padding:0 2px;transition:color .15s}
-.promo-item-del:hover{color:var(--red)}
-.add-promo-row{display:flex;gap:10px;flex-wrap:wrap}
-.add-promo-row input{flex:1;min-width:160px}
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;padding:20px}
-.modal-overlay.open{display:flex}
-.modal{background:var(--bg2);border:1px solid var(--border2);border-top:3px solid var(--accent);border-radius:8px;padding:28px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow)}
-.modal-title{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.3rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:20px}
-.modal-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
-.toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border2);border-left:4px solid var(--accent);color:var(--text);font-size:.88rem;padding:12px 20px;border-radius:6px;box-shadow:var(--shadow);z-index:999;transform:translateY(80px);opacity:0;transition:all .3s;max-width:320px}
-.toast.show{transform:translateY(0);opacity:1}
-.toast.err{border-left-color:var(--red)}
-.export-section{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:24px;margin-bottom:20px}
-.export-section h3{font-family:'Barlow Condensed',sans-serif;font-size:1rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin-bottom:14px}
-.sheets-url-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-.sheets-url-row input{flex:1;min-width:200px}
-::-webkit-scrollbar{width:6px;height:8px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:var(--text3)}
-.filter-bar select.active-filter{border-color:var(--accent);color:var(--accent)}
-.filter-bar input.active-filter{border-color:var(--accent)}
-.filter-active-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(232,200,64,.12);border:1px solid rgba(232,200,64,.4);color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:20px;white-space:nowrap}
-.filter-active-badge button{background:none;border:none;color:var(--accent);cursor:pointer;font-size:.85rem;line-height:1;padding:0;margin-left:2px}
-.filter-active-badge button:hover{color:var(--red)}
-.filter-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:0}
-.title-toggle{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:6px 12px;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);user-select:none}
-.title-toggle:hover{border-color:var(--accent);color:var(--accent)}
-.title-toggle.on{border-color:var(--accent);background:rgba(232,200,64,.1);color:var(--accent)}
-.title-toggle .dot{width:8px;height:8px;border-radius:50%;background:var(--border2);transition:background .15s}
-.title-toggle.on .dot{background:var(--accent)}
-.clear-filters-btn{background:none;border:1px solid var(--border2);color:var(--text3);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;padding:6px 12px;border-radius:4px;cursor:pointer;transition:all .15s;white-space:nowrap}
-.clear-filters-btn:hover{border-color:var(--red);color:var(--red)}
-@media(max-width:640px){header{flex-wrap:wrap;height:auto;padding:10px 14px;gap:8px}.header-title{font-size:1.2rem}nav button{font-size:.75rem;padding:5px 10px}main{padding:12px}.form-grid{padding:16px;gap:12px}td,th{padding:7px 8px}.modal{padding:18px}}
-</style>
-</head>
-<body>
-<header>
-  <div class="header-title">Wrestling <span>Match Tracker</span></div>
-  <nav>
-    <button class="active" onclick="switchPanel('dashboard')">Dashboard</button>
-    <button onclick="switchPanel('add')">+ Add Match</button>
-    <button onclick="switchPanel('best')">Best</button>
-    <button onclick="switchPanel('watch')">To Watch</button>
-    <button onclick="switchPanel('rewatch')">Rewatch</button>
-    <button onclick="switchPanel('all')">All Matches</button>
-    <button onclick="switchPanel('promotions')">Promotions</button>
-    <button onclick="switchPanel('export')">Export</button>
-  </nav>
-</header>
+/**
+ * Wrestling Match Tracker — Google Apps Script Web App
+ * =====================================================
+ * SETUP INSTRUCTIONS:
+ *  1. Open your Google Sheet → Extensions → Apps Script
+ *  2. Replace ALL content in Code.gs with this file
+ *  3. Click "Deploy" → "New Deployment"
+ *  4. Type: Web App | Execute as: Me | Who has access: Anyone
+ *  5. Click Deploy → copy the Web App URL
+ *  6. Paste that URL into the dashboard's Export → Sync field
+ *
+ *  For future updates: Deploy → Manage Deployments → pencil → New version → Deploy
+ *
+ * SHEET TAB NAMING:
+ *  Each year's matches live in a tab named after that year (e.g. "2026", "2025").
+ *  The import function creates the tab automatically if it doesn't exist.
+ *  Pull (no filter) reads ALL year-named tabs at once.
+ *
+ * COLUMN STRUCTURE (same for every year tab):
+ *  Col A  — Match name (hyperlink to cagematch match page)
+ *  Col B  — Promotion abbreviation (bold, centered)
+ *  Col C  — Event name
+ *  Col D  — Date (MM/DD/YYYY)
+ *  Col E  — Match type
+ *  Col F  — Championship (without "Title")
+ *  Col G  — Winner
+ *  Col H  — Rating (numeric, e.g. 9.5)
+ *  Col I  — CM Score (cagematch matchguide score)
+ *  Col J  — WON (star rating, numeric)
+ *  Col K  — 10+ flag (TRUE/FALSE)
+ *  Col L  — Saw Live (TRUE/FALSE)
+ *  Col M  — Rewatch (TRUE/FALSE)
+ *
+ * OTHER REQUIRED TABS:
+ *  PromotionList  — Col A: full name, Col B: abbreviation
+ */
 
-<div id="persistent-filters" style="display:none;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 20px;position:sticky;top:56px;z-index:90;">
-  <div style="max-width:1800px;margin:0 auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-    <input type="text" id="shared-search" placeholder="Search matches, events, winners&hellip;" oninput="applySharedFilters()" style="flex:1;min-width:180px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;"/>
-    <select id="shared-year" onchange="applySharedFilters()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;"><option value="">All Years</option></select>
-    <select id="shared-promo" onchange="applySharedFilters()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;"><option value="">All Promotions</option></select>
-    <select id="shared-champ" onchange="applySharedFilters()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;"><option value="">All Championships</option></select>
-    <div class="title-toggle" id="title-toggle" onclick="toggleTitleOnly()"><span class="dot"></span>Title Only</div>
-    <button class="clear-filters-btn" onclick="clearSharedFilters()">&times; Clear</button>
-  </div>
-  <div class="filter-chips" id="shared-chips" style="max-width:1800px;margin:6px auto 0;"></div>
-</div>
+// SHEET_NAME is no longer used — sheet tab = year (e.g. "2026", "2025")
+// Pull defaults to pulling ALL year sheets or specify ?sheet=2026
+const PROMO_SHEET = "PromotionList"; // overridden by findPromoSheet_() at runtime
 
-<main>
-  <!-- DASHBOARD -->
-  <div id="panel-dashboard" class="panel active">
-    <div class="stats-bar" id="stats-bar"></div>
-    <div class="section-header"><div class="section-title">Recent Entries <span class="tag" id="recent-count">0</span></div></div>
-    <div class="filter-bar" style="margin-bottom:10px;">
-      <input type="text" id="dash-search" placeholder="Search matches&hellip;" oninput="renderDashboard()" style="max-width:260px;"/>
-      <select id="dash-year" onchange="renderDashboard()"><option value="">All Years</option></select>
-      <select id="dash-promo" onchange="renderDashboard()"><option value="">All Promotions</option></select>
-      <button class="clear-filters-btn" onclick="clearFilters('dash')">&#10005; Clear</button>
-    </div>
-    <div class="filter-chips" id="dash-chips"></div>
-    <div id="dash-scroll-top"></div>
-    <div class="table-wrap" id="dash-wrap"><table><thead><tr id="recent-head"></tr></thead><tbody id="recent-body"></tbody></table></div>
-  </div>
-
-  <!-- ADD / EDIT -->
-  <div id="panel-add" class="panel">
-    <div class="section-header"><div class="section-title" id="form-title">Add New Match</div></div>
-    <div class="form-grid" id="match-form">
-      <div class="form-group full">
-        <label>Match URL <span class="required">*</span> <span class="hint">(cagematch.net match link)</span></label>
-        <div class="inline-row">
-          <input type="url" id="f-url" placeholder="https://www.cagematch.net/?id=111&nr=..."/>
-          <button class="fetch-btn" id="fetch-btn" onclick="fetchMatchData()">&#8855; Auto-Fill</button>
-        </div>
-        <div class="fetch-status" id="fetch-status"></div>
-      </div>
-      <div class="form-group full"><label>Match / Wrestlers <span class="required">*</span></label><input type="text" id="f-name" placeholder="e.g. Jon Moxley vs. Konosuke Takeshita"/></div>
-      <div class="form-group"><label>Promotion (full name) <span class="required">*</span></label><select id="f-promo-full" onchange="onPromoChange()"><option value="">&#8212; Select &#8212;</option></select></div>
-      <div class="form-group"><label>Promotion Abbreviation</label><input type="text" id="f-promo-abbr" placeholder="Auto-filled" readonly style="opacity:.6"/></div>
-      <div class="form-group full"><label>Event Name <span class="hint">(auto-filled or override)</span></label><input type="text" id="f-event" placeholder="e.g. AEW Revolution 2026"/></div>
-      <div class="form-group"><label>Date</label><input type="date" id="f-date"/></div>
-      <div class="form-group"><label>Match Type <span class="hint">(auto-filled or override)</span></label><input type="text" id="f-matchtype" placeholder="e.g. No Time Limit"/></div>
-      <div class="form-group full"><label>Championship <span class="hint">(omit &ldquo;Title&rdquo;)</span></label><input type="text" id="f-champ" placeholder="e.g. AEW Continental"/></div>
-      <div class="form-group full">
-        <label>Winner <span class="hint">(manual entry)</span></label>
-        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-          <input type="text" id="f-winner" placeholder="e.g. Jon Moxley" style="flex:1;min-width:200px;"/>
-          <div class="checkbox-row" style="margin:0;"><input type="checkbox" id="f-title-change"/><label for="f-title-change" style="color:var(--accent);font-weight:600;">Title Change</label></div>
-        </div>
-      </div>
-      <div class="form-group"><label>Rating <span class="hint">(1&ndash;10)</span></label><input type="number" id="f-rating" min="0" max="10" step="0.25" placeholder="e.g. 9.5"/></div>
-      <div class="form-group" style="justify-content:flex-end;"><label>&nbsp;</label>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px 0;">
-          <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="f-10plus" style="width:18px;height:18px;accent-color:var(--teal);cursor:pointer;"/><label for="f-10plus" style="font-family:'Barlow',sans-serif;font-size:.88rem;color:var(--text);cursor:pointer;text-transform:none;letter-spacing:0;">&#9733; 10+</label></div>
-          <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="f-saw-live" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer;"/><label for="f-saw-live" style="font-family:'Barlow',sans-serif;font-size:.88rem;color:var(--text);cursor:pointer;text-transform:none;letter-spacing:0;">&#127881; Saw Live</label></div>
-          <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="f-rewatch" style="width:18px;height:18px;accent-color:#a78bfa;cursor:pointer;"/><label for="f-rewatch" style="font-family:'Barlow',sans-serif;font-size:.88rem;color:var(--text);cursor:pointer;text-transform:none;letter-spacing:0;">&#128257; Rewatch</label></div>
-        </div>
-      </div>
-      <div class="form-group"><label>CM Score</label><input type="number" id="f-score" min="0" max="10" step="0.01" placeholder="e.g. 8.81"/></div>
-      <div class="form-group"><label>WON Rating</label><input type="number" id="f-value" min="0" max="10" step="0.25" placeholder="e.g. 4.75"/></div>
-      <div class="form-actions">
-        <button class="btn btn-primary" onclick="saveMatch()">Save Match</button>
-        <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
-        <button class="btn btn-danger" id="delete-btn" style="display:none" onclick="deleteEditing()">Delete Match</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- BEST -->
-  <div id="panel-best" class="panel">
-    <div class="section-header"><div class="section-title">Best Matches <span class="tag" id="best-count">0</span></div></div>
-    <div id="best-scroll-top"></div>
-    <div class="table-wrap" id="best-wrap"><table><thead><tr id="best-head"></tr></thead><tbody id="best-body"></tbody></table></div>
-  </div>
-
-  <!-- WATCH -->
-  <div id="panel-watch" class="panel">
-    <div class="section-header"><div class="section-title">To Watch <span class="tag" id="watch-count">0</span></div></div>
-    <div id="watch-scroll-top"></div>
-    <div class="table-wrap" id="watch-wrap"><table><thead><tr id="watch-head"></tr></thead><tbody id="watch-body"></tbody></table></div>
-  </div>
-
-  <!-- REWATCH -->
-  <div id="panel-rewatch" class="panel">
-    <div class="section-header"><div class="section-title">Rewatch <span class="tag" id="rewatch-count">0</span></div></div>
-    <div id="rewatch-scroll-top"></div>
-    <div class="table-wrap" id="rewatch-wrap"><table><thead><tr id="rewatch-head"></tr></thead><tbody id="rewatch-body"></tbody></table></div>
-  </div>
-
-  <!-- ALL -->
-  <div id="panel-all" class="panel">
-    <div class="section-header"><div class="section-title">All Matches <span class="tag" id="all-count">0</span></div></div>
-    <div id="all-scroll-top"></div>
-    <div class="table-wrap" id="all-wrap"><table><thead><tr id="all-head"></tr></thead><tbody id="all-body"></tbody></table></div>
-  </div>
-
-  <!-- PROMOTIONS -->
-  <div id="panel-promotions" class="panel">
-    <div class="section-header"><div class="section-title">Promotion Manager</div></div>
-    <div class="promo-manager">
-      <div class="promo-list" id="promo-list"></div>
-      <div class="add-promo-row">
-        <input type="text" id="new-promo-name" placeholder="Full promotion name"/>
-        <input type="text" id="new-promo-abbr" placeholder="Abbreviation" style="max-width:140px"/>
-        <button class="btn btn-primary" onclick="addPromotion()">Add</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- EXPORT -->
-  <div id="panel-export" class="panel">
-    <div class="section-header"><div class="section-title">Export &amp; Sync</div></div>
-    <div class="export-section">
-      <h3>Export to CSV</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Download all matches as a CSV file.</p>
-      <button class="btn btn-primary" onclick="exportCSV()">&#8595; Download CSV</button>
-    </div>
-    <div class="export-section">
-      <h3>Import from CSV</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Load a previously exported CSV back into the dashboard.</p>
-      <input type="file" id="import-file" accept=".csv" style="color:var(--text2);margin-bottom:10px;display:block"/>
-      <button class="btn btn-secondary" onclick="importCSV()">&#8593; Import CSV</button>
-    </div>
-    <div class="export-section">
-      <h3>Google Apps Script Sync</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:10px;">Paste your Web App URL to sync with Google Sheets.</p>
-      <details style="margin-bottom:14px;">
-        <summary style="cursor:pointer;font-size:.8rem;color:var(--text3);font-family:'Barlow Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;">Setup Instructions &#9658;</summary>
-        <ol style="margin-top:10px;padding-left:18px;color:var(--text2);font-size:.8rem;line-height:2;">
-          <li>Open your Google Sheet &#8594; Extensions &#8594; Apps Script</li>
-          <li>Replace Code.gs with the provided WebApp_Code.gs</li>
-          <li>Deploy &#8594; New Deployment | Web App | Execute as: Me | Anyone</li>
-          <li>Copy the Web App URL &#8594; paste below</li>
-        </ol>
-      </details>
-      <div class="sheets-url-row">
-        <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/..."/>
-        <button class="btn btn-secondary" onclick="saveSheetURL()">Save URL</button>
-      </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-        <button class="btn btn-primary" onclick="pullFromSheets()">&#8595; Pull from Sheets</button>
-        <button class="btn btn-secondary" onclick="pullFromSheetsYear()" style="font-size:.78rem;padding:8px 14px;">&#8595; Pull Year Only</button>
-        <button class="btn btn-secondary" onclick="pullPromos()">&#8595; Pull Promotions</button>
-        <button class="btn btn-secondary" onclick="pushToSheets()">&#8593; Push All to Sheets</button>
-        <button class="btn btn-secondary" onclick="testConnection()" style="border-color:var(--teal);color:var(--teal)">&#10003; Test Connection</button>
-      </div>
-      <div id="debug-output" style="display:none;margin-top:8px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto;"></div>
-      <div id="sync-status" style="margin-top:6px;font-size:.82rem;color:var(--text3);line-height:1.8;min-height:20px;"></div>
-    </div>
-    <div class="export-section">
-      <h3>&#9889; Batch URL Import</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste cagematch match URLs (one per line). Fetches all fields automatically. <strong style="color:var(--text)">Rating and Winner are always manual.</strong></p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end;">
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <label style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);">Year <span style="color:var(--red)">*</span></label>
-          <input type="text" id="import-year" placeholder="e.g. 2026" maxlength="4" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;font-weight:700;padding:9px 12px;border-radius:4px;outline:none;width:100px;text-align:center;" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,4)"/>
-        </div>
-        <button class="btn btn-primary" onclick="runBatchImport()" id="import-run-btn">&#9889; Import URLs</button>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
-        <label style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);">Match URLs <span style="color:var(--text3);font-weight:400;text-transform:none;font-size:.72rem;margin-left:6px;">one per line</span></label>
-        <textarea id="import-urls" rows="6" placeholder="https://www.cagematch.net/?id=111&nr=134917" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:10px 12px;border-radius:4px;outline:none;resize:vertical;min-height:120px;line-height:1.6;"></textarea>
-      </div>
-      <div id="import-status" style="display:none;margin-top:8px;background:var(--bg3);border-radius:4px;padding:10px 14px;font-size:.82rem;line-height:1.8;"></div>
-      <p style="color:var(--text3);font-size:.78rem;margin-top:10px;">&#9432; After import, click <strong style="color:var(--accent)">&#8595; Pull from Sheets</strong> to sync to the dashboard.</p>
-    </div>
-    <div class="export-section">
-      <h3 style="color:var(--red)">Danger Zone</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Clear all locally stored match data. This cannot be undone.</p>
-      <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
-    </div>
-  </div>
-</main>
-
-<div class="modal-overlay" id="edit-modal">
-  <div class="modal">
-    <div class="modal-title">Edit Match</div>
-    <div id="modal-form-area"></div>
-    <div class="modal-actions">
-      <button class="btn btn-primary" onclick="saveModalMatch()">Save</button>
-      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-danger" onclick="deleteModalMatch()">Delete</button>
-    </div>
-  </div>
-</div>
-<div class="toast" id="toast"></div>
-
-<script>
-const STORAGE_KEY='matches_2026',PROMO_KEY='promotions_2026';
-
-function getTabName(year){
-  const y=parseInt(year);if(isNaN(y))return String(year);
-  if(y>=2025)return String(y);if(y>=2020)return'2020s';if(y>=2010)return'10s';
-  if(y>=2000)return'00s';if(y>=1990)return'90s';if(y>=1980)return'80s';
-  if(y>=1970)return'70s';if(y>=1960)return'60s';
-  return String(Math.floor(y/10)*10)+'s';
+/* Find the PromotionList sheet regardless of exact capitalisation/spacing */
+function findPromoSheet_() {
+  const ss = SpreadsheetApp.getActive();
+  // Try exact name first
+  let s = ss.getSheetByName(PROMO_SHEET);
+  if (s) return s;
+  // Fuzzy: any sheet whose name contains "promo" (case-insensitive)
+  s = ss.getSheets().find(sh => sh.getName().toLowerCase().includes("promo"));
+  if (s) return s;
+  return null;
 }
 
-const DEFAULT_PROMOS=[
-  ["All Elite Wrestling","AEW"],["World Wrestling Entertainment","WWE"],
-  ["New Japan Pro Wrestling","NJPW"],["Impact Wrestling","IMPACT"],["Ring of Honor","ROH"],
-  ["Game Changer Wrestling","GCW"],["Pro Wrestling Guerrilla","PWG"],["Major League Wrestling","MLW"],
-  ["National Wrestling Alliance","NWA"],["Combat Zone Wrestling","CZW"],["House of Glory","HOG"],
-  ["Beyond Wrestling","Beyond"],["Tokyo Joshi Pro-Wrestling","TJPW"],
-  ["Sendai Girls' Pro Wrestling","Sendai Girls"],["SEAdLINNNG","SEAdLINNNG"],["Sareee-ISM","Sareee-ISM"],
-  ["Consejo Mundial de Lucha Libre","CMLL"],["Revolution Pro Wrestling","RevPro"],
-  ["Pro Wrestling Australia","PWA"],["Pro Wrestling NOAH","NOAH"],["Maple Leaf Pro Wrestling","MLP"],
-  ["Marvelous That's Women Pro Wrestling","Marvelous"],["Dream Star Fighting Marigold","Marigold"],
-  ["Wrestling In Japan - Freelance Shows","Freelance JP"],["DEADLOCK Pro-Wrestling","DPW"],
-  ["Dragongate Japan Pro-Wrestling","DG"],["DDT Pro Wrestling","DDT"],["All Japan Pro Wrestling","AJPW"],
-  ["ChocoPro","ChocoPro"],["World Wonder Ring Stardom","Stardom"],["Westside Xtreme Wrestling","wXw"],
-  ["Pro-Wrestling: EVE","EVE"]
-];
+/* ═══════════════════════════════════════════════════════════
+   ROUTER
+═══════════════════════════════════════════════════════════ */
+function doGet(e) {
+  // Guard: e can be undefined when running directly in the Apps Script editor
+  const params   = (e && e.parameter) ? e.parameter : {};
+  const action   = params.action || "pull";
+  const callback = params.callback || ""; // JSONP callback function name
 
-function loadMatches(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||[];}catch{return[];}}
-function saveMatches(arr){localStorage.setItem(STORAGE_KEY,JSON.stringify(arr));}
-function loadPromos(){try{return JSON.parse(localStorage.getItem(PROMO_KEY))||DEFAULT_PROMOS;}catch{return DEFAULT_PROMOS;}}
-function savePromos(arr){localStorage.setItem(PROMO_KEY,JSON.stringify(arr));}
+  // Shorthand — always passes callback for JSONP support
+  const R = (obj) => respond(obj, callback);
 
-function classifyMatch(m){
-  const vI=parseFloat(m.rating);
-  const hasRating=!isNaN(vI)&&m.rating!==''&&m.rating!==null&&m.rating!==undefined;
-  const vK=parseFloat(m.score)||'',vL=parseFloat(m.value)||'';
-  const best=(hasRating&&vI>=9)||m.tenPlus;
-  // To Watch: no rating entered AND not flagged as rewatch
-  const watch=!hasRating&&!m.rewatch;
-  if(best&&m.tenPlus)return'best-10plus';if(best)return'best';if(watch)return'watch';return'none';
-}
-function rowColorClass(m){
-  const cls=classifyMatch(m),vK=parseFloat(m.score)||'';
-  if(cls==='best-10plus')return'row-best-10plus';
-  if(cls==='watch')return(typeof vK==='number'&&vK>=9.25)?'row-watch-hi':'row-watch-lo';
-  return'';
-}
-
-function switchPanel(id){
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
-  document.getElementById('panel-'+id).classList.add('active');
-  document.querySelector(`nav button[onclick="switchPanel('${id}')"]`).classList.add('active');
-  const pf=document.getElementById('persistent-filters');
-  if(pf) pf.style.display=['best','watch','all'].includes(id)?'block':'none';
-  if(id==='dashboard')renderDashboard();
-  if(id==='best'){populateSharedFilterOptions();updateFilterHighlights();updateSharedChips();renderBest();}
-  if(id==='watch'){populateSharedFilterOptions();updateFilterHighlights();updateSharedChips();renderWatch();}
-  if(id==='rewatch'){populateSharedFilterOptions();updateFilterHighlights();updateSharedChips();renderRewatch();}
-  if(id==='all'){populateSharedFilterOptions();updateFilterHighlights();updateSharedChips();renderAll();}
-  if(id==='promotions')renderPromos();
-  if(id==='add'){populatePromoDropdowns();setEditingId(null);}
-}
-
-/* TOP SCROLL */
-function addTopScroll(wrapId,containerId){
-  const wrap=document.getElementById(wrapId),container=document.getElementById(containerId);
-  if(!wrap||!container)return;
-
-  // Clean up previous listeners
-  if(wrap._scrollCleanup){wrap._scrollCleanup();wrap._scrollCleanup=null;}
-
-  container.innerHTML='';
-  const mirror=document.createElement('div');
-  mirror.className='top-scroll-mirror';
-
-  const inner=document.createElement('div');
-  inner.style.cssText='height:1px;display:block;';
-  mirror.appendChild(inner);
-  container.appendChild(mirror);
-
-  // Keep inner width matching table scroll width
-  function syncWidth(){
-    inner.style.width=wrap.scrollWidth+'px';
+  try {
+    if (action === "pull")       return R(JSON.parse(handlePull(params.sheet || "").getContent()));
+    if (action === "pullPromos") return R(JSON.parse(handlePullPromos().getContent()));
+    if (action === "stats")      return R(JSON.parse(handleStats(params.sheet || "").getContent()));
+    if (action === "importTop") {
+      const year      = params.year      || new Date().getFullYear().toString();
+      const minRating = parseFloat(params.minRating) || 8.0;
+      return R(JSON.parse(handleImportTop(year, minRating, year).getContent()));
+    }
+    if (action === "batchImport") {
+      const year      = params.year || new Date().getFullYear().toString();
+      const urlsParam = params.urls || "";
+      return R(JSON.parse(handleBatchImport(year, urlsParam).getContent()));
+    }
+    if (action === "fetchMatch") {
+      const matchUrl = params.url || "";
+      if (!matchUrl) return R({ error: "url parameter required" });
+      return R(JSON.parse(handleFetchMatch(matchUrl).getContent()));
+    }
+    if (action === "pushSingleGet") {
+      try {
+        const m = JSON.parse(params.match || "{}");
+        return R(JSON.parse(handlePushSingle({ match: m }).getContent()));
+      } catch(err) { return R({ error: "Invalid match JSON: " + err.message }); }
+    }
+    if (action === "deleteGet") {
+      return R(JSON.parse(handleDelete({ matchName: params.matchName || "", sheetName: params.sheetName || "" }).getContent()));
+    }
+    return R({ error: "Unknown GET action: " + action });
+  } catch(err) {
+    return R({ error: err.message, stack: err.stack });
   }
-  requestAnimationFrame(syncWidth);
+}
 
-  // Two-way scroll sync
-  let syncing=false;
-  function onMirrorScroll(){if(syncing)return;syncing=true;wrap.scrollLeft=mirror.scrollLeft;syncing=false;}
-  function onWrapScroll(){if(syncing)return;syncing=true;mirror.scrollLeft=wrap.scrollLeft;syncing=false;}
-  mirror.addEventListener('scroll',onMirrorScroll);
-  wrap.addEventListener('scroll',onWrapScroll);
+function doPost(e) {
+  let body;
+  try {
+    body = JSON.parse(e.postData.contents);
+  } catch(err) {
+    return respond({ error: "Invalid JSON body" });
+  }
+  const action = body.action || "";
+  try {
+    if (action === "push")       return handlePush(body);
+    if (action === "pushSingle") return handlePushSingle(body);
+    if (action === "delete")     return handleDelete(body);
+    return respond({ error: "Unknown POST action: " + action });
+  } catch(err) {
+    return respond({ error: err.message });
+  }
+}
 
-  // Fixed-position sticky: pin mirror to top of viewport when table scrolled off
-  const header=document.querySelector('header');
-  const pf=document.getElementById('persistent-filters');
+/* ═══════════════════════════════════════════════════════════
+   BATCH URL IMPORT
+   Accepts a newline-separated list of cagematch match URLs,
+   fetches each one server-side, extracts all available fields,
+   deduplicates against existing sheet rows, and appends new rows.
+   Called as: GET ?action=importTop&year=2026&urls=URL1|URL2|URL3
+═══════════════════════════════════════════════════════════ */
+function handleImportTop(year, minRating, targetSheetName) {
+  // minRating param is unused — kept for router compatibility
+  return respond({ error: "Use action=batchImport instead" });
+}
 
-  function onPageScroll(){
-    const wrapRect=wrap.getBoundingClientRect();
-    const headerH=header?header.offsetHeight:56;
-    const pfH=(pf&&pf.offsetParent&&pf.style.display!=='none')?pf.offsetHeight:0;
-    const stickyTop=headerH+pfH;
-    const mirrorH=mirror.offsetHeight||12;
+function handleBatchImport(year, urlsParam) {
+  if (!year)      return respond({ error: "year parameter required" });
+  if (!urlsParam) return respond({ error: "urls parameter required" });
 
-    if(wrapRect.top<stickyTop&&wrapRect.bottom>stickyTop+mirrorH+20){
-      // Table scrolled past top — fix mirror to viewport
-      mirror.style.cssText=`position:fixed;top:${stickyTop}px;left:${wrapRect.left}px;width:${wrapRect.width}px;height:12px;overflow-x:auto;overflow-y:hidden;background:var(--bg3);border-bottom:1px solid var(--border2);z-index:80;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg3);margin:0;border-radius:0;`;
-      inner.style.width=wrap.scrollWidth+'px';
-    } else {
-      // Restore to normal flow
-      mirror.style.cssText='';
-      mirror.className='top-scroll-mirror';
-      inner.style.width=wrap.scrollWidth+'px';
+  // URLs are pipe-separated to avoid URL encoding issues with newlines
+  var urls = urlsParam.split("|").map(function(u) { return u.trim(); })
+                      .filter(function(u) { return u.length > 0; });
+
+  if (!urls.length) return respond({ error: "No valid URLs provided" });
+
+  var ss      = SpreadsheetApp.getActive();
+  var tabName = getTabName_(year);
+  var sheet   = getOrCreateSheet_(ss, tabName);
+  var promoMap = buildPromotionMap_(findPromoSheet_());
+
+  // Build dedup set from existing rows
+  var existingUrls = getExistingMatchUrls_(sheet);
+
+  Logger.log("handleBatchImport: " + urls.length + " URLs for year=" + year);
+
+  // Deduplicate incoming URLs
+  var newUrls = urls.filter(function(u) {
+    return !existingUrls.has(normaliseUrl_(u));
+  });
+
+  var duplicates = urls.length - newUrls.length;
+  Logger.log("handleBatchImport: " + duplicates + " duplicates skipped, " + newUrls.length + " to fetch");
+
+  if (!newUrls.length) {
+    return respond({
+      imported: 0, duplicates: duplicates, errors: 0, total: urls.length,
+      message: "All " + duplicates + " URLs already exist in the " + year + " sheet."
+    });
+  }
+
+  // Batch fetch all match pages at once
+  var htmlMap = batchFetch_(newUrls);
+
+  var imported = 0, errors = 0;
+  var newRows  = [];
+
+  newUrls.forEach(function(matchUrl) {
+    var matchHtml = htmlMap[matchUrl] || "";
+    if (!matchHtml || matchHtml.length < 500) {
+      Logger.log("handleBatchImport: failed to fetch " + matchUrl);
+      errors++;
+      return;
+    }
+
+    // Extract all fields from match page
+    var wrestlers = extractWrestlers_(matchHtml, matchUrl);
+    var promoName = extractPromoName_(matchHtml);
+    var eventName = extractEventName_(matchHtml);
+    var dateRaw   = extractDate_(matchHtml);
+    var eventUrl  = extractEventUrl_(matchHtml);
+
+    // CM Score from RatingsBox
+    var score = "";
+    var sm = matchHtml.match(/class="RatingsBoxAdjustedRating[^"]*">([\d.]+)<\/div>/i);
+    if (sm) score = sm[1];
+
+    // WON Rating from starRating span
+    var wonRaw2   = matchHtml.match(/class="starRating">([^<]*)<\/span>/i);
+    var wonValue2 = wonRaw2 ? parseStarRating_(wonRaw2[1].trim()) : "";
+
+    // Championship + match type from event card page
+    var champ     = "";
+    var matchType = "";
+    if (eventUrl) {
+      try {
+        var cardHtml = fetchHtml_(eventUrl);
+        if (cardHtml && cardHtml.length > 500) {
+          var cardData = parseEventCard_(cardHtml, wrestlers);
+          if (cardData.championship) champ     = cardData.championship;
+          if (cardData.matchType)    matchType = cardData.matchType.replace(/Match/gi, "").trim();
+        }
+      } catch(e) {
+        Logger.log("handleBatchImport: card fetch failed for " + matchUrl + ": " + e.message);
+      }
+    }
+
+    var promoAbbr = promoMap[promoName] || promoName || "";
+
+    newRows.push({
+      name:         wrestlers || "[No name — use Auto-Fill]",
+      matchUrl:     matchUrl,
+      promoAbbr:    promoAbbr,
+      promoFull:    promoName,
+      event:        eventName,
+      date:         convertDateToISO_(dateRaw),
+      matchType:    matchType,
+      championship: champ,
+      winner:       "",
+      rating:       "",
+      tenPlus:      false,
+      score:        score,
+      value:        wonValue2 ? String(wonValue2) : "",
+      _sheetName:   getTabName_(year)
+    });
+
+    imported++;
+    Logger.log("handleBatchImport: imported " + wrestlers.substring(0,50) + " score=" + score);
+  });
+
+  // Write new rows to sheet
+  if (newRows.length > 0) {
+    var startRow = sheet.getLastRow() + 1;
+    newRows.forEach(function(m, i) {
+      writeMatchRow_(sheet, startRow + i, m);
+    });
+    sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 10)).setFontWeight("bold");
+  }
+
+  return respond({
+    imported:   imported,
+    duplicates: duplicates,
+    errors:     errors,
+    total:      urls.length,
+    message:    "Imported " + imported + " new match" + (imported !== 1 ? "es" : "") +
+                " to " + year + " sheet." +
+                (duplicates ? " " + duplicates + " duplicate(s) skipped." : "") +
+                (errors     ? " " + errors     + " failed to fetch."      : "")
+  });
+}
+
+
+/* ── Extract event card URL from match page ── */
+function extractEventUrl_(html) {
+  // Match page has an "Event:" info box linking to the event card (?page=3)
+  // cagematch uses &amp; in href attributes
+  const m = html.match(/href="(\?id=1&(?:amp;)?nr=\d+&(?:amp;)?page=3)"[^>]*>/i)
+         || html.match(/href="(\?id=1&amp;nr=\d+&amp;page=3)"[^>]*>/i)
+         || html.match(/href="(\?id=1&nr=\d+&page=3)"[^>]*>/i);
+
+  if (!m) {
+    // Log what event links look like for debugging
+    const evLink = html.match(/InformationBoxTitle">Event:[\s\S]{0,200}/i);
+    Logger.log("extractEventUrl_: no page=3 link found. Event area: " + (evLink ? evLink[0].substring(0,150) : "NOT FOUND"));
+    return "";
+  }
+  const url = "https://www.cagematch.net/" + m[1].replace(/&amp;/g, "&");
+  Logger.log("extractEventUrl_: found " + url);
+  return url;
+}
+
+function extractEventName_(html) {
+  const m = html.match(
+    /<div class="InformationBoxTitle">Event:<\/div>[\s\S]*?<a[^>]*>([^<]+)<\/a>/i
+  );
+  return m ? m[1].trim() : "";
+}
+
+function extractPromoName_(html) {
+  // Find the Promotion info box section
+  const boxMatch = html.match(
+    /<div class="InformationBoxTitle">Promotion:<\/div>([\s\S]*?)<\/div>\s*<\/div>/i
+  );
+  if (!boxMatch) {
+    // Fallback: grab first promotion link
+    const m = html.match(/<div class="InformationBoxTitle">Promotion:<\/div>[\s\S]*?<a[^>]*>([^<]+)<\/a>/i);
+    if (!m) return "";
+    return m[1].trim().replace(/\s*\([^)]+\)\s*$/, "").trim();
+  }
+  // Extract all promotion anchor texts from the section
+  const section = boxMatch[0];
+  const names = [];
+  const re = /<a[^>]*>([^<]+)<\/a>/gi;
+  let m;
+  while ((m = re.exec(section)) !== null) {
+    const name = m[1].trim().replace(/\s*\([^)]+\)\s*$/, "").trim();
+    if (name) names.push(name);
+  }
+  return names.join(" / ");
+}
+
+function extractDate_(html) {
+  const m = html.match(
+    /<div class="InformationBoxTitle">Date:<\/div>[\s\S]*?<div[^>]*>([^<]+)<\/div>/i
+  );
+  return m ? m[1].trim() : "";
+}
+
+/* ── Parse event card page for championship + match type ── */
+function parseEventCard_(html, wrestlers) {
+  const result = { championship: "", matchType: "" };
+
+  // Strategy: find the section of the card page that contains this match's wrestlers,
+  // then look at the line immediately above it for title/match type info.
+  //
+  // Cagematch card format (page=3):
+  //   <a href="...championship...">WWE Title</a> No DQ Match   ← title line
+  //   <a href="...match...">Wrestler A vs. Wrestler B</a>       ← match line
+  //
+  // We split by wrestler names to find the right context window.
+
+  // Normalise wrestler string for fuzzy matching
+  const parts = wrestlers.split(/\s+vs\.?\s+/i).map(s => s.trim().toLowerCase());
+
+  // Try each wrestler name until we find a match in the card HTML
+  let idx = -1;
+  for (const part of parts) {
+    if (!part) continue;
+    // Try full name first, then just last name
+    const tryIdx = html.toLowerCase().indexOf(part.toLowerCase());
+    if (tryIdx >= 0) { idx = tryIdx; break; }
+    const lastName = part.split(/\s+/).pop();
+    if (lastName && lastName.length > 3) {
+      const lastIdx = html.toLowerCase().indexOf(lastName.toLowerCase());
+      if (lastIdx >= 0) { idx = lastIdx; break; }
     }
   }
 
-  window.addEventListener('scroll',onPageScroll,{passive:true});
-  window.addEventListener('resize',()=>{syncWidth();onPageScroll();},{passive:true});
+  if (idx === -1) return result;
 
-  wrap._scrollCleanup=()=>{
-    window.removeEventListener('scroll',onPageScroll);
-    mirror.removeEventListener('scroll',onMirrorScroll);
-    wrap.removeEventListener('scroll',onWrapScroll);
-  };
-}
+  // Look at ~600 chars before that position for title/match-type line
+  const context = html.substring(Math.max(0, idx - 600), idx + 100);
 
-const COLS=[
-  {key:'matchUrl',label:'Match',render:m=>m.matchUrl
-    ?`<div class="match-name"><a href="${m.matchUrl}" target="_blank">${esc(m.name||m.matchUrl)}</a></div>`
-    :`<div class="match-name inline-field" onclick="inlineEditField(event,'${m.id}','name')" title="Click to edit">${esc(m.name||'&mdash;')}</div>`},
-  {key:'promoAbbr',label:'Promo',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','promoAbbr')" title="Click to edit">${m.promoAbbr?`<span class="promo-badge">${esc(m.promoAbbr)}</span>`:'<span class="rating-empty">&mdash;</span>'}</span>`},
-  {key:'event',label:'Event',render:m=>`<div class="event-name inline-field" onclick="inlineEditField(event,'${m.id}','event')" title="Click to edit">${esc(m.event||'&mdash;')}</div>`},
-  {key:'date',label:'Date',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','date')" title="Click to edit">${m.date?fmtDate(m.date):'&mdash;'}</span>`},
-  {key:'matchType',label:'Type',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','matchType')" title="Click to edit">${esc(m.matchType||'&mdash;')}</span>`},
-  {key:'championship',label:'Championship',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','championship')" title="Click to edit">${m.championship?`<span class="champ-badge">&#127942; ${esc(m.championship)}</span>`:'<span class="rating-empty">&mdash;</span>'}</span>`},
-  {key:'winner',label:'Winner',render:m=>{
-    const wt=m.winner?`<span class="winner-val" style="${m.titleChange?'font-weight:700;color:var(--accent);':''}">${esc(m.winner)}${m.titleChange?' &#9733;':''}</span>`:'<span class="rating-empty">&mdash;</span>';
-    return`<span class="winner-cell" onclick="inlineEditWinner(event,'${m.id}')" title="Click to edit winner">${wt}</span>`;
-  }},
-  {key:'rating',label:'Rating',render:m=>{
-    const rv=parseFloat(m.rating);
-    const cls=(!m.rating||isNaN(rv))?'':(rv>=9?'rating-val rating-high':'rating-val');
-    return`<span class="rating-cell" onclick="inlineEditRating(event,'${m.id}')" title="Click to edit">${m.rating?`<span class="${cls}">${m.rating}</span>`:'<span class="rating-empty">&mdash;</span>'}</span>`;
-  }},
-  {key:'tenPlus',label:'Flags',render:m=>{
-    const has10=m.tenPlus,hasLive=m.sawLive,hasRw=m.rewatch;
-    if(!has10&&!hasLive&&!hasRw) return`<span class="flags-cell" onclick="inlineToggleFlagMenu(event,'${m.id}')" title="Click to toggle flags"><span class="rating-empty">&mdash;</span></span>`;
-    return`<span class="flags-cell" onclick="inlineToggleFlagMenu(event,'${m.id}')" title="Click to toggle flags">`+
-      (has10?`<span class="flag-pill" style="background:var(--teal);color:#000;">10+</span>`:`<span class="flag-pill off">10+</span>`)+
-      (hasLive?`<span class="flag-pill" style="background:var(--accent);color:#000;">Live</span>`:`<span class="flag-pill off">Live</span>`)+
-      (hasRw?`<span class="flag-pill" style="background:#a78bfa;color:#000;">Rewatch</span>`:`<span class="flag-pill off">Rewatch</span>`)+
-      `</span>`;
-  }},
-  {key:'score',label:'CM',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','score')" title="Click to edit">${m.score?`<span class="score-val">${m.score}</span>`:'<span class="rating-empty">&mdash;</span>'}</span>`},
-  {key:'value',label:'WON',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','value')" title="Click to edit">${m.value||'<span class="rating-empty">&mdash;</span>'}</span>`},
-];
+  Logger.log("parseEventCard_: idx=" + idx + " context=" + context.substring(0, 200));
 
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function fmtDate(d){if(!d)return'&mdash;';const p=d.split('-');return p.length===3?`${p[1]}/${p[2]}/${p[0]}`:d;}
+  // Championship: hyperlinked text ending in "Title"
+  const champMatch = context.match(/<a[^>]*>([^<]*?Title[^<]*?)<\/a>/i);
+  if (champMatch) {
+    result.championship = champMatch[1]
+      .replace(/\bTitle\b/gi, "")
+      .trim()
+      .replace(/\s+/g, " ");
+  }
 
-function buildHead(trEl){
-  trEl.innerHTML=COLS.map(c=>{let cls='';if(c.key===sortKey)cls=sortDir===1?' sort-asc':' sort-desc';return`<th onclick="sortBy('${c.key}')" id="th-${c.key}" class="${cls}">${c.label}</th>`;}).join('')+'<th>Actions</th>';
+  // Match type: plain text after the championship link (or standalone), ending with "Match"
+  const typeMatch = context.match(/<\/a>\s*([^<\n]{3,60}?Match)/i)
+                 || context.match(/>([\w\s]+ Match)</i);
+  if (typeMatch) {
+    result.matchType = typeMatch[1]
+      .replace(/\bMatch\b/gi, "")
+      .trim()
+      .replace(/\s+/g, " ");
+  }
+
+  return result;
 }
 
-let sortKey='date',sortDir=-1;
-function sortBy(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=-1;}renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();updateSortIndicators();}
-function updateSortIndicators(){document.querySelectorAll('th[id^="th-"]').forEach(th=>{th.classList.remove('sort-asc','sort-desc');if(th.id.replace('th-','')===sortKey)th.classList.add(sortDir===1?'sort-asc':'sort-desc');});}
+/* ── Get existing match URLs from sheet col A (for dedup) ── */
+function getExistingMatchUrls_(sheet) {
+  const set = new Set();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return set;
 
-function normaliseSortVal(key,m){
-  const v=m[key]||'';
-  if(key==='date'){if(!v)return'0000-00-00';if(/^\d{4}-\d{2}-\d{2}$/.test(v))return v;const p=v.split('/');if(p.length===3&&p[2].length===4)return p[2]+'-'+p[0].padStart(2,'0')+'-'+p[1].padStart(2,'0');return v;}
-  const n=parseFloat(v);return isNaN(n)?v:n;
-}
-function sortMatches(arr){return[...arr].sort((a,b)=>{const va=normaliseSortVal(sortKey,a),vb=normaliseSortVal(sortKey,b);if(va<vb)return-sortDir;if(va>vb)return sortDir;return 0;});}
+  try {
+    const rich = sheet.getRange(2, 1, lastRow - 1, 1).getRichTextValues();
+    rich.forEach(r => {
+      const url = r[0] && r[0].getLinkUrl ? r[0].getLinkUrl() : "";
+      if (url) set.add(normaliseUrl_(url));
+    });
+    // Also check plain text values for non-hyperlinked URLs
+    const vals = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    vals.forEach(r => {
+      const v = String(r[0] || "").trim();
+      if (v.startsWith("http")) set.add(normaliseUrl_(v));
+    });
+  } catch(e) { /* ignore */ }
 
-function buildRows(arr,tbody,showActions=true){
-  if(!arr.length){tbody.innerHTML=`<tr><td colspan="${COLS.length+1}" class="empty-state">No matches found</td></tr>`;return;}
-  tbody.innerHTML=arr.map(m=>{
-    const cls=rowColorClass(m);
-    const cells=COLS.map(c=>`<td>${c.render(m)}</td>`).join('');
-    const actions=showActions?`<td><div class="row-actions"><button onclick="editMatch('${m.id}')">Edit</button><button class="del" onclick="confirmDelete('${m.id}')">Del</button></div></td>`:'<td></td>';
-    return`<tr class="${cls}" data-id="${m.id}">${cells}${actions}</tr>`;
-  }).join('');
-}
-
-const sharedFilters={search:'',year:'',promo:'',champ:'',titleOnly:false};
-function getYearFromDate(d){if(!d)return'';if(d.includes('-'))return d.split('-')[0];if(d.includes('/'))return d.split('/')[2]||'';return'';}
-function getMatchTab(m){if(m._sheetName&&!/^\d{4}$/.test(m._sheetName))return m._sheetName;const y=getYearFromDate(m.date);if(!y)return m._sheetName||'';return getTabName(parseInt(y));}
-
-function filterMatches(arr,overrides){
-  const f=Object.assign({},sharedFilters,overrides||{});
-  const q=(f.search||'').toLowerCase().trim();
-  return arr.filter(m=>{
-    if(q&&![m.name,m.event,m.championship,m.winner,m.matchType,m.promoAbbr,m.promoFull].some(v=>(v||'').toLowerCase().includes(q)))return false;
-    if(f.year&&getMatchTab(m)!==f.year)return false;
-    if(f.promo&&m.promoAbbr!==f.promo&&m.promoFull!==f.promo)return false;
-    if(f.champ&&(m.championship||'').toLowerCase()!==f.champ.toLowerCase())return false;
-    if(f.titleOnly&&!m.championship)return false;
-    return true;
-  });
+  return set;
 }
 
-function applySharedFilters(){
-  sharedFilters.search=(document.getElementById('shared-search')||{value:''}).value||'';
-  sharedFilters.year=(document.getElementById('shared-year')||{value:''}).value||'';
-  sharedFilters.promo=(document.getElementById('shared-promo')||{value:''}).value||'';
-  sharedFilters.champ=(document.getElementById('shared-champ')||{value:''}).value||'';
-  renderBest();renderWatch();renderAll();updateSharedChips();updateFilterHighlights();
-}
-function toggleTitleOnly(){sharedFilters.titleOnly=!sharedFilters.titleOnly;const tog=document.getElementById('title-toggle');if(tog)tog.classList.toggle('on',sharedFilters.titleOnly);applySharedFilters();}
-function clearSharedFilters(){
-  sharedFilters.search=sharedFilters.year=sharedFilters.promo=sharedFilters.champ='';sharedFilters.titleOnly=false;
-  ['shared-search','shared-year','shared-promo','shared-champ'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  const tog=document.getElementById('title-toggle');if(tog)tog.classList.remove('on');
-  renderBest();renderWatch();renderAll();updateSharedChips();updateFilterHighlights();
-}
-function clearFilters(prefix){
-  ['search','year','promo'].forEach(s=>{const el=document.getElementById(prefix+'-'+s);if(el)el.value='';});
-  const chips=document.getElementById(prefix+'-chips');if(chips)chips.innerHTML='';
-  if(prefix==='dash')renderDashboard();
-}
-function updateSharedChips(){
-  const chips=document.getElementById('shared-chips');if(!chips)return;
-  const parts=[];
-  if(sharedFilters.search)parts.push(['Search','"'+sharedFilters.search+'"',()=>{sharedFilters.search='';document.getElementById('shared-search').value='';applySharedFilters();}]);
-  if(sharedFilters.year)parts.push(['Year',sharedFilters.year,()=>{sharedFilters.year='';document.getElementById('shared-year').value='';applySharedFilters();}]);
-  if(sharedFilters.promo)parts.push(['Promo',sharedFilters.promo,()=>{sharedFilters.promo='';document.getElementById('shared-promo').value='';applySharedFilters();}]);
-  if(sharedFilters.champ)parts.push(['Champ',sharedFilters.champ,()=>{sharedFilters.champ='';document.getElementById('shared-champ').value='';applySharedFilters();}]);
-  if(sharedFilters.titleOnly)parts.push(['Title Only','',()=>{sharedFilters.titleOnly=false;document.getElementById('title-toggle').classList.remove('on');applySharedFilters();}]);
-  chips.innerHTML=parts.map(p=>`<span class="filter-active-badge">${p[0]}: ${p[1]}<button onclick="(${p[2].toString()})()" title="Remove">&#10005;</button></span>`).join('');
-}
-function updateFilterHighlights(){['shared-search','shared-year','shared-promo','shared-champ'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.toggle('active-filter',!!el.value);});}
-
-function populateSharedFilterOptions(){
-  const matches=loadMatches(),promos=loadPromos();
-  const years=[...new Set(matches.map(m=>getMatchTab(m)).filter(Boolean))].sort((a,b)=>(parseInt(b)||0)-(parseInt(a)||0));
-  const promoSet=[...new Set(matches.map(m=>m.promoAbbr).filter(Boolean))].sort();
-  const champSet=[...new Set(matches.map(m=>m.championship).filter(Boolean))].sort();
-  function fillSelect(id,blank,opts){const sel=document.getElementById(id);if(!sel)return;const cur=sel.value;sel.innerHTML=`<option value="">${blank}</option>`+opts;if(cur&&[...sel.options].some(o=>o.value===cur))sel.value=cur;}
-  const yearOpts=years.map(y=>`<option value="${y}">${y}</option>`).join('');
-  const promoOpts=promoSet.map(abbr=>{const full=(promos.find(p=>p[1]===abbr)||[])[0]||abbr;return`<option value="${esc(abbr)}">${esc(full)} (${esc(abbr)})</option>`;}).join('');
-  const champOpts=champSet.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
-  fillSelect('shared-year','All Years',yearOpts);fillSelect('shared-promo','All Promotions',promoOpts);fillSelect('shared-champ','All Championships',champOpts);
-  fillSelect('dash-year','All Years',yearOpts);fillSelect('dash-promo','All Promotions',promoOpts);
+/* Strip trailing params that vary but refer to same match */
+function normaliseUrl_(url) {
+  return String(url || "")
+    .replace(/&s=\d+/g, "")
+    .replace(/&page=\d+/g, "")
+    .trim()
+    .toLowerCase();
 }
 
-function renderDashboard(){
-  const matches=loadMatches();
-  const best=matches.filter(m=>classifyMatch(m).startsWith('best'));
-  const watch=matches.filter(m=>classifyMatch(m)==='watch');
-  const tenplus=matches.filter(m=>m.tenPlus);
-  const rewatch=matches.filter(m=>m.rewatch);
-  document.getElementById('stats-bar').innerHTML=`
-    <div class="stat-card"><div class="stat-num">${matches.length}</div><div class="stat-label">Total Matches</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--teal)">${best.length}</div><div class="stat-label">Best</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--blue-hi)">${watch.length}</div><div class="stat-label">To Watch</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--accent)">${rewatch.length}</div><div class="stat-label">Rewatch</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--teal-text)">${tenplus.length}</div><div class="stat-label">10+ Matches</div></div>`;
-  populateSharedFilterOptions();
-  const ds=(document.getElementById('dash-search')||{value:''}).value||'';
-  const dy=(document.getElementById('dash-year')||{value:''}).value||'';
-  const dp=(document.getElementById('dash-promo')||{value:''}).value||'';
-  let recent=sortMatches(matches);
-  if(ds||dy||dp)recent=filterMatches(recent,{search:ds,year:dy,promo:dp,champ:'',titleOnly:false});
-  recent=recent.slice(0,20);
-  document.getElementById('recent-count').textContent=recent.length;
-  buildHead(document.getElementById('recent-head'));
-  buildRows(recent,document.getElementById('recent-body'));
-  addTopScroll('dash-wrap','dash-scroll-top');
-  const dc=document.getElementById('dash-chips');
-  if(dc){const p=[];if(ds)p.push(`<span class="filter-active-badge">Search: "${esc(ds)}"</span>`);if(dy)p.push(`<span class="filter-active-badge">Year: ${esc(dy)}</span>`);if(dp)p.push(`<span class="filter-active-badge">Promo: ${esc(dp)}</span>`);dc.innerHTML=p.join('');}
-}
-function renderBest(){
-  populateSharedFilterOptions();
-  const best=filterMatches(sortMatches(loadMatches().filter(m=>classifyMatch(m).startsWith('best'))));
-  document.getElementById('best-count').textContent=best.length;
-  buildHead(document.getElementById('best-head'));buildRows(best,document.getElementById('best-body'));
-  addTopScroll('best-wrap','best-scroll-top');
-}
-function renderWatch(){
-  const watch=filterMatches(sortMatches(loadMatches().filter(m=>classifyMatch(m)==='watch')));
-  document.getElementById('watch-count').textContent=watch.length;
-  buildHead(document.getElementById('watch-head'));buildRows(watch,document.getElementById('watch-body'));
-  addTopScroll('watch-wrap','watch-scroll-top');
-}
-function renderRewatch(){
-  const matches=loadMatches();
-  const rw=filterMatches(sortMatches(matches.filter(m=>m.rewatch)));
-  document.getElementById('rewatch-count').textContent=rw.length;
-  buildHead(document.getElementById('rewatch-head'));
-  buildRows(rw,document.getElementById('rewatch-body'));
-  addTopScroll('rewatch-wrap','rewatch-scroll-top');
+/* ── Get or create a named sheet ── */
+function getOrCreateSheet_(ss, name) {
+  let sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+    // Write header row matching your sheet structure
+    sheet.getRange(1, 1, 1, 13).setValues([[
+      "MATCH", "PROMOTION", "EVENT", "DATE", "MATCH TYPE",
+      "CHAMPIONSHIP", "WINNER", "RATING", "CM", "WON", "10+", "SAW LIVE", "REWATCH"
+    ]]).setFontWeight("bold");
+  }
+  return sheet;
 }
 
-function renderAll(){
-  const filtered=filterMatches(sortMatches(loadMatches()));
-  document.getElementById('all-count').textContent=filtered.length;
-  buildHead(document.getElementById('all-head'));buildRows(filtered,document.getElementById('all-body'));
-  addTopScroll('all-wrap','all-scroll-top');
-}
-function renderPromos(){
-  const promos=loadPromos();
-  document.getElementById('promo-list').innerHTML=promos.map((p,i)=>`<div class="promo-item"><span class="promo-item-name">${esc(p[0])}</span><span class="promo-item-abbr">${esc(p[1])}</span><button class="promo-item-del" onclick="deletePromo(${i})" title="Delete">&#10005;</button></div>`).join('');
-}
+/* ═══════════════════════════════════════════════════════════
+   FETCH MATCH: server-side fetch of a single cagematch match page
+   Returns all parseable fields so the dashboard form can auto-fill.
+   Called as: GET ?action=fetchMatch&url=https://www.cagematch.net/?id=111&nr=XXXXX
+═══════════════════════════════════════════════════════════ */
+function handleFetchMatch(matchUrl) {
+  // ── Fetch match page ──
+  const matchHtml = fetchHtml_(matchUrl);
+  if (!matchHtml || matchHtml.length < 500) {
+    return respond({ error: "Could not fetch match page. Check the URL and try again." });
+  }
 
-function populatePromoDropdowns(){const promos=loadPromos();const sel=document.getElementById('f-promo-full');const cur=sel.value;sel.innerHTML='<option value="">&#8212; Select &#8212;</option>'+promos.map(p=>`<option value="${esc(p[0])}">${esc(p[0])}</option>`).join('');sel.value=cur;}
-function onPromoChange(){const promos=loadPromos();const full=document.getElementById('f-promo-full').value;const match=promos.find(p=>p[0]===full);document.getElementById('f-promo-abbr').value=match?match[1]:'';}
-function addPromotion(){const name=document.getElementById('new-promo-name').value.trim();const abbr=document.getElementById('new-promo-abbr').value.trim();if(!name||!abbr){toast('Enter both name and abbreviation',true);return;}const promos=loadPromos();if(promos.find(p=>p[0].toLowerCase()===name.toLowerCase())){toast('Promotion already exists',true);return;}promos.push([name,abbr]);savePromos(promos);document.getElementById('new-promo-name').value='';document.getElementById('new-promo-abbr').value='';renderPromos();toast('Promotion added');}
-function deletePromo(idx){const promos=loadPromos();promos.splice(idx,1);savePromos(promos);renderPromos();toast('Promotion removed');}
+  const ss       = SpreadsheetApp.getActive();
+  const promoMap = buildPromotionMap_(ss.getSheetByName(PROMO_SHEET));
 
-async function fetchMatchData(){
-  const url=document.getElementById('f-url').value.trim();
-  if(!url){setFetchStatus('Enter a cagematch.net match URL first','err');return;}
-  const btn=document.getElementById('fetch-btn');btn.disabled=true;btn.textContent='Fetching\u2026';
-  setFetchStatus('Fetching via Google Apps Script\u2026');
-  try{
-    const data=await gasGet('fetchMatch',{url});
-    if(!data.ok)throw new Error(data.error||'Unexpected response');
-    if(data.name)document.getElementById('f-name').value=data.name;
-    if(data.event)document.getElementById('f-event').value=data.event;
-    if(data.date)document.getElementById('f-date').value=data.date;
-    if(data.matchType)document.getElementById('f-matchtype').value=data.matchType;
-    if(data.championship)document.getElementById('f-champ').value=data.championship;
-    if(data.score)document.getElementById('f-score').value=data.score;
-    if(data.value)document.getElementById('f-value').value=data.value;
-    if(data.promoFull||data.promoAbbr){
-      populatePromoDropdowns();const sel=document.getElementById('f-promo-full');let matched=false;
-      for(const opt of sel.options){if(data.promoFull&&opt.value.toLowerCase()===data.promoFull.toLowerCase()){sel.value=opt.value;onPromoChange();matched=true;break;}}
-      if(!matched&&data.promoAbbr){const p=loadPromos().find(x=>x[1].toLowerCase()===data.promoAbbr.toLowerCase());if(p){sel.value=p[0];onPromoChange();}else document.getElementById('f-promo-abbr').value=data.promoAbbr;}
+  // ── Extract fields from match page ──
+  const wrestlers  = extractWrestlers_(matchHtml, matchUrl);
+  const promoName  = extractPromoName_(matchHtml);
+  const eventName  = extractEventName_(matchHtml);
+  const dateRaw    = extractDate_(matchHtml);
+  const eventUrl   = extractEventUrl_(matchHtml);
+
+  // ── CM Score: <div class="RatingsBoxAdjustedRating ...">9.04</div> ──
+  const scoreMatch = matchHtml.match(/class="RatingsBoxAdjustedRating[^"]*">([\d.]+)<\/div>/i);
+  const score = scoreMatch ? scoreMatch[1] : "";
+
+  // ── WON Rating: <span class="starRating">*****</span> ──
+  const wonMatch = matchHtml.match(/class="starRating">([^<]*)<\/span>/i);
+  const wonRaw   = wonMatch ? wonMatch[1].trim() : "";
+  const wonValue = wonRaw ? parseStarRating_(wonRaw) : "";
+
+  Logger.log("handleFetchMatch score=" + score + " won=" + wonValue + " url=" + matchUrl);
+
+  // ── Fetch event card for championship + match type ──
+  let championship = "";
+  let matchType    = "";
+
+  Logger.log("handleFetchMatch: eventUrl=" + eventUrl);
+  if (eventUrl) {
+    const cardHtml = fetchHtml_(eventUrl);
+    Logger.log("handleFetchMatch: cardHtml length=" + (cardHtml ? cardHtml.length : 0));
+    if (cardHtml && cardHtml.length > 500) {
+      const cardData = parseEventCard_(cardHtml, wrestlers);
+      championship   = cardData.championship || "";
+      matchType      = cardData.matchType    || "";
+      Logger.log("handleFetchMatch: champ=" + championship + " type=" + matchType);
     }
-    const filled=[data.name&&'wrestlers',data.promoFull&&'promotion',data.event&&'event',data.date&&'date',data.matchType&&'match type',data.championship&&'championship',data.score&&'score'].filter(Boolean);
-    setFetchStatus('\u2713 Auto-filled: '+filled.join(', '),'ok');
-  }catch(e){setFetchStatus('\u2717 '+(e.message.includes('No Web App URL')?'Set your Apps Script URL in Export \u2192 Sync first.':'Auto-fill failed: '+e.message),'err');}
-  btn.disabled=false;btn.textContent='\u2297 Auto-Fill';
-}
-function setFetchStatus(msg,type){const el=document.getElementById('fetch-status');el.textContent=msg;el.className='fetch-status'+(type?' '+type:'');}
-
-let editingId=null;
-function setEditingId(id){editingId=id;document.getElementById('form-title').textContent=id?'Edit Match':'Add New Match';document.getElementById('delete-btn').style.display=id?'inline-block':'none';}
-function getFormData(){return{id:editingId||('m_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)),matchUrl:document.getElementById('f-url').value.trim(),name:document.getElementById('f-name').value.trim(),promoFull:document.getElementById('f-promo-full').value,promoAbbr:document.getElementById('f-promo-abbr').value.trim(),event:document.getElementById('f-event').value.trim(),date:document.getElementById('f-date').value,matchType:document.getElementById('f-matchtype').value.trim(),championship:document.getElementById('f-champ').value.trim(),winner:document.getElementById('f-winner').value.trim(),titleChange:document.getElementById('f-title-change').checked,rating:document.getElementById('f-rating').value,tenPlus:document.getElementById('f-10plus').checked,sawLive:document.getElementById('f-saw-live').checked,rewatch:document.getElementById('f-rewatch').checked,score:document.getElementById('f-score').value,value:document.getElementById('f-value').value};}
-function fillForm(m){document.getElementById('f-url').value=m.matchUrl||'';document.getElementById('f-name').value=m.name||'';populatePromoDropdowns();document.getElementById('f-promo-full').value=m.promoFull||'';document.getElementById('f-promo-abbr').value=m.promoAbbr||'';document.getElementById('f-event').value=m.event||'';document.getElementById('f-date').value=m.date||'';document.getElementById('f-matchtype').value=m.matchType||'';document.getElementById('f-champ').value=m.championship||'';document.getElementById('f-winner').value=m.winner||'';document.getElementById('f-title-change').checked=!!m.titleChange;document.getElementById('f-rating').value=m.rating||'';document.getElementById('f-10plus').checked=!!m.tenPlus;document.getElementById('f-saw-live').checked=!!m.sawLive;document.getElementById('f-rewatch').checked=!!m.rewatch;document.getElementById('f-score').value=m.score||'';document.getElementById('f-value').value=m.value||'';setFetchStatus('');}
-function clearForm(){['f-url','f-name','f-event','f-matchtype','f-champ','f-winner','f-rating','f-score','f-value','f-date','f-promo-abbr'].forEach(id=>document.getElementById(id).value='');document.getElementById('f-promo-full').value='';document.getElementById('f-10plus').checked=false;document.getElementById('f-saw-live').checked=false;document.getElementById('f-rewatch').checked=false;document.getElementById('f-title-change').checked=false;setFetchStatus('');setEditingId(null);}
-function saveMatch(){
-  const data=getFormData();if(!data.name){toast('Match name is required',true);return;}
-  if(data.date){const y=data.date.split('-')[0];if(y)data._sheetName=getTabName(parseInt(y));}
-  const matches=loadMatches();const idx=matches.findIndex(m=>m.id===editingId);
-  if(idx>=0)matches[idx]=data;else matches.unshift(data);
-  saveMatches(matches);toast(editingId?'Match updated':'Match saved');clearForm();switchPanel('dashboard');
-}
-function editMatch(id){const m=loadMatches().find(m=>m.id===id);if(!m)return;switchPanel('add');setTimeout(()=>{fillForm(m);setEditingId(id);},50);}
-function deleteEditing(){if(!editingId)return;if(!confirm('Delete this match?'))return;saveMatches(loadMatches().filter(m=>m.id!==editingId));toast('Match deleted');clearForm();switchPanel('dashboard');}
-function confirmDelete(id){if(!confirm('Delete this match?'))return;saveMatches(loadMatches().filter(m=>m.id!==id));toast('Match deleted');renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();}
-
-let modalEditId=null;
-function closeModal(){document.getElementById('edit-modal').classList.remove('open');modalEditId=null;}
-function saveModalMatch(){closeModal();}function deleteModalMatch(){closeModal();}
-
-/* INLINE EDITING */
-function inlineToggle10plus(e,id){
-  // Legacy — kept for any remaining references
-  if(e&&e.stopPropagation)e.stopPropagation();
-  const matches=loadMatches();const m=matches.find(x=>x.id===id);if(!m)return;
-  m.tenPlus=!m.tenPlus;saveMatches(matches);
-  renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();
-  toast(m.tenPlus?'10+ set':'10+ removed');
-}
-
-function inlineToggleFlagMenu(e,id){
-  if(e&&e.stopPropagation)e.stopPropagation();
-  const cell=e.currentTarget||e.target.closest('.flags-cell');
-  const matches=loadMatches();const m=matches.find(x=>x.id===id);if(!m)return;
-
-  // Show a small popup with two toggles
-  const existing=document.getElementById('flag-popup');if(existing)existing.remove();
-
-  const popup=document.createElement('div');
-  popup.id='flag-popup';
-  popup.style.cssText='position:absolute;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;display:flex;gap:8px;z-index:500;box-shadow:0 4px 16px rgba(0,0,0,.5);';
-
-  function makeBtn(label,active,color,onToggle){
-    const btn=document.createElement('button');
-    btn.textContent=label;
-    btn.style.cssText=`font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:3px;cursor:pointer;border:none;background:${active?color:'var(--bg4)'};color:${active?'#000':'var(--text3)'};border:1px solid ${active?color:'var(--border2)'};transition:all .15s;`;
-    btn.addEventListener('click',ev=>{ev.stopPropagation();onToggle();popup.remove();saveMatches(matches);renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();});
-    return btn;
   }
 
-  popup.appendChild(makeBtn('10+',m.tenPlus,'var(--teal)',()=>{m.tenPlus=!m.tenPlus;}));
-  popup.appendChild(makeBtn('Live',m.sawLive,'var(--accent)',()=>{m.sawLive=!m.sawLive;}));
-  popup.appendChild(makeBtn('Rewatch',m.rewatch,'#a78bfa',()=>{m.rewatch=!m.rewatch;}));
+  const promoAbbr = promoMap[promoName] || "";
 
-  // Position popup near the cell
-  const rect=cell.getBoundingClientRect();
-  popup.style.left=(rect.left+window.scrollX)+'px';
-  popup.style.top=(rect.bottom+window.scrollY+4)+'px';
-  document.body.appendChild(popup);
-
-  // Close on outside click
-  setTimeout(()=>{
-    function close(ev){if(!popup.contains(ev.target)){popup.remove();document.removeEventListener('click',close);}}
-    document.addEventListener('click',close);
-  },10);
-}
-function inlineEditRating(e,id){
-  e.stopPropagation();
-  const cell=e.currentTarget||e.target.closest('.rating-cell');
-  const matches=loadMatches();const m=matches.find(x=>x.id===id);if(!m)return;
-  const cur=m.rating||'';const inp=document.createElement('input');
-  inp.type='number';inp.step='0.25';inp.min='0';inp.max='10';inp.className='rating-inline-input';inp.value=cur;
-  cell.innerHTML='';cell.appendChild(inp);
-  // Use setTimeout to ensure DOM is ready before focusing
-  setTimeout(()=>{inp.focus();inp.select();},0);
-  function commit(){
-    const v=inp.value.trim();
-    m.rating=v;
-    saveMatches(matches);
-    renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();
-  }
-  inp.addEventListener('blur',commit);
-  inp.addEventListener('keydown',ev=>{
-    if(ev.key==='Enter')inp.blur();
-    if(ev.key==='Escape'){m.rating=cur;inp.removeEventListener('blur',commit);renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();}
+  return respond({
+    ok:           true,
+    name:         wrestlers,
+    matchUrl:     matchUrl,
+    promoFull:    promoName,
+    promoAbbr:    promoAbbr,
+    event:        eventName,
+    date:         convertDateToISO_(dateRaw),
+    matchType:    matchType,
+    championship: championship,
+    score:        score,
+    value:        wonValue ? String(wonValue) : "",
+    // rating, tenPlus, winner always left blank for manual entry
   });
 }
-function inlineEditField(e,id,field){
-  e.stopPropagation();
-  const cell=e.currentTarget||e.target.closest('.inline-field,.event-name,.match-name');
-  const matches=loadMatches();const m=matches.find(x=>x.id===id);if(!m)return;
-  const cur=m[field]||'';const isDate=field==='date';const isNum=['score','value'].includes(field);
-  const inp=document.createElement('input');
-  inp.type=isDate?'date':(isNum?'number':'text');inp.value=cur;
-  if(isNum){inp.step='0.01';inp.style.width='80px';}
-  inp.className=isNum?'rating-inline-input':'inline-text-input';
-  if(isDate)inp.style.cssText='background:var(--bg4);border:1px solid var(--text2);color:var(--text);padding:3px 6px;border-radius:3px;outline:none;font-size:.82rem;';
-  cell.innerHTML='';cell.appendChild(inp);inp.focus();if(inp.select)inp.select();
-  function commit(){m[field]=inp.value.trim();saveMatches(matches);renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();}
-  inp.addEventListener('blur',commit);
-  inp.addEventListener('keydown',ev=>{if(ev.key==='Enter')inp.blur();if(ev.key==='Escape'){m[field]=cur;inp.removeEventListener('blur',commit);renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();}});
-}
-function inlineEditWinner(e,id){
-  e.stopPropagation();const cell=e.currentTarget;const matches=loadMatches();const m=matches.find(x=>x.id===id);if(!m)return;
-  const cur=m.winner||'',curTc=!!m.titleChange;
-  cell.innerHTML=`<input class="winner-inline-input" type="text" value="${esc(cur)}" placeholder="Winner name" id="inline-winner-${id}" style="margin-right:6px;"/>`+
-    `<label style="font-size:.75rem;color:var(--accent);cursor:pointer;white-space:nowrap;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase;display:inline-flex;align-items:center;gap:4px;"><input type="checkbox" id="inline-tc-${id}" ${curTc?'checked':''} style="accent-color:var(--accent);"/>Title Change</label>`+
-    `<button onclick="commitWinner('${id}')" style="margin-left:6px;background:var(--accent);border:none;color:#000;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;padding:3px 8px;border-radius:3px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;">Save</button>`;
-  const inp=cell.querySelector('input[type="text"]');inp.focus();inp.select();
-  inp.addEventListener('keydown',ev=>{if(ev.key==='Enter')commitWinner(id);if(ev.key==='Escape'){m.winner=cur;m.titleChange=curTc;renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();}});
-  function outsideClick(ev){if(!cell.contains(ev.target)){document.removeEventListener('click',outsideClick);commitWinner(id);}}
-  setTimeout(()=>document.addEventListener('click',outsideClick),10);
-}
-function commitWinner(id){
-  const inp=document.getElementById('inline-winner-'+id);const tcBox=document.getElementById('inline-tc-'+id);if(!inp)return;
-  const matches=loadMatches();const m=matches.find(x=>x.id===id);
-  if(m){m.winner=inp.value.trim();m.titleChange=tcBox?tcBox.checked:false;saveMatches(matches);}
-  renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();
+
+/* ── Extract wrestler names from match page ── */
+function extractWrestlers_(html, matchUrl) {
+  // Pattern 1: h1 Headline class
+  var m = html.match(/<h1[^>]*class="[^"]*Headline[^"]*"[^>]*>([^<]+)<\/h1>/i);
+  if (m && /vs/i.test(m[1])) return m[1].trim();
+  // Pattern 2: any h1 with vs
+  m = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+  if (m && /vs/i.test(m[1])) return m[1].trim();
+  // Pattern 3: title tag
+  m = html.match(/<title>([^<]+)<\/title>/i);
+  if (m) {
+    var segs = m[1].split(' - ');
+    for (var i = 0; i < segs.length; i++) {
+      var t = segs[i].trim();
+      if (/vs/i.test(t)) return t;
+    }
+  }
+  // Pattern 4: InformationBox Match field
+  m = html.match(/<div class="InformationBoxTitle">Match:<\/div>[\s\S]*?<div[^>]*>([^<]+)<\/div>/i);
+  if (m && m[1].trim()) return m[1].trim();
+  Logger.log('extractWrestlers_: not found. URL=' + matchUrl);
+  Logger.log('HTML[0:1000]=' + html.substring(0, 1000));
+  return '';
 }
 
-/* EXPORT / IMPORT */
-function exportCSV(){
-  const matches=loadMatches();if(!matches.length){toast('No matches to export',true);return;}
-  const headers=['ID','MatchURL','Name','PromoFull','PromoAbbr','Event','Date','MatchType','Championship','Winner','TitleChange','Rating','10Plus','Score','Value'];
-  const rows=matches.map(m=>[m.id,m.matchUrl,m.name,m.promoFull,m.promoAbbr,m.event,m.date,m.matchType,m.championship,m.winner,m.titleChange?'1':'',m.rating,m.tenPlus?'10+':'',m.score,m.value].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([[headers.join(','),...rows].join('\n')],{type:'text/csv'}));a.download='matches.csv';a.click();toast('CSV downloaded');
-}
-function importCSV(){
-  const file=document.getElementById('import-file').files[0];if(!file){toast('Select a CSV file first',true);return;}
-  const reader=new FileReader();reader.onload=e=>{try{const lines=e.target.result.split('\n').filter(l=>l.trim());const headers=lines[0].split(',').map(h=>h.replace(/"/g,'').trim());const matches=lines.slice(1).map(line=>{const vals=line.match(/(".*?"|[^,]+)(?=,|$)/g)||[];const clean=vals.map(v=>v.replace(/^"|"$/g,'').replace(/""/g,'"'));const obj={};headers.forEach((h,i)=>obj[h]=clean[i]||'');return{id:obj.ID||('m_'+Date.now()+Math.random()),matchUrl:obj.MatchURL,name:obj.Name,promoFull:obj.PromoFull,promoAbbr:obj.PromoAbbr,event:obj.Event,date:obj.Date,matchType:obj.MatchType,championship:obj.Championship,winner:obj.Winner,titleChange:obj.TitleChange==='1',rating:obj.Rating,tenPlus:obj['10Plus']==='10+',score:obj.Score,value:obj.Value};});saveMatches(matches);toast(`Imported ${matches.length} matches`);renderDashboard();}catch(err){toast('Import failed — check CSV format',true);}};reader.readAsText(file);
-}
-function saveSheetURL(){const url=document.getElementById('sheets-url').value.trim();if(!url){toast('Enter a URL first',true);return;}localStorage.setItem('sheets_url_2026',url);toast('Sheets URL saved');}
-function setSyncStatus(msg,color){const el=document.getElementById('sync-status');el.textContent=msg;el.style.color=color||'var(--text3)';}
-function getSheetURL(){const url=localStorage.getItem('sheets_url_2026');if(!url){toast('Set your Sheets Web App URL first',true);return null;}return url;}
+/* ═══════════════════════════════════════════════════════════
+   PULL: send sheet rows to dashboard
+   If ?sheet=2026 pulls just that year tab.
+   If no sheet param, pulls ALL year-named tabs (numeric names).
+═══════════════════════════════════════════════════════════ */
+function handlePull(sheetParam) {
+  const ss = SpreadsheetApp.getActive();
+  const allSheets = ss.getSheets();
 
-async function testConnection(){
-  const url=getSheetURL();const dbg=document.getElementById('debug-output');dbg.style.display='block';
-  if(!url){dbg.textContent='ERROR: No Web App URL saved.';return;}
-  const lines=['Testing connection...','Saved URL: '+url,''];const flush=()=>{dbg.textContent=lines.join('\n');};flush();
-  try{const res=await fetch(url+'?action=stats',{method:'GET',redirect:'follow'});lines.push('HTTP: '+res.status,'Type: '+res.type,'URL: '+res.url,'');flush();const text=await res.text();lines.push('Response ('+text.length+' chars):',text.substring(0,500));flush();
-    try{const json=JSON.parse(text);lines.push('','JSON OK: '+JSON.stringify(json));flush();setSyncStatus('Connection works! '+JSON.stringify(json),'var(--green)');}
-    catch(e){lines.push('JSON FAILED: '+e.message);flush();setSyncStatus('Connection failed','var(--red)');}
-  }catch(err){lines.push('ERROR: '+err.message);flush();setSyncStatus('Network error','var(--red)');}
+  // Determine which sheets to read
+  let sheetsToRead = [];
+  if (sheetParam && sheetParam.trim()) {
+    const s = ss.getSheetByName(sheetParam.trim());
+    if (!s) return respond({ error: "Sheet '" + sheetParam + "' not found" });
+    sheetsToRead = [s];
+  } else {
+    // Pull all sheets whose name is a 4-digit year (e.g. "2026", "2025")
+    sheetsToRead = allSheets.filter(s => isDataTab_(s.getName()));
+    if (!sheetsToRead.length) {
+      const fallback = ss.getSheetByName("2026");
+      if (fallback) sheetsToRead = [fallback];
+      else return respond({ error: "No data sheets found. Create tabs named e.g. '2026', '2020s', '10s'" });
+    }
+  }
+
+  const matches = [];
+
+  sheetsToRead.forEach(sheet => {
+    const sheetYear = sheet.getName().trim();
+    const lastRow   = sheet.getLastRow();
+    if (lastRow < 2) return;
+
+    const lastCol  = Math.max(sheet.getLastColumn(), 13);
+    const values   = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+    // Read rich text for col A data rows only (skip header row 1)
+    const richCol  = sheet.getRange(2, 1, lastRow - 1, 1).getRichTextValues();
+
+    for (let r = 1; r < values.length; r++) {
+      const row      = values[r];
+      const richCell = richCol[r - 1] ? richCol[r - 1][0] : null;
+      // Get URL and display name from rich text
+      const matchUrl = richCell ? (richCell.getLinkUrl() || "") : "";
+      const richName = richCell ? (richCell.getText() || "").trim() : "";
+
+      // Use display name; if it's a URL or blank, mark for auto-fill
+      const rawName = richName || String(row[0] || "").trim();
+      const name = (rawName.startsWith("http") || rawName.startsWith("www") || !rawName)
+                   ? "[No name — edit to add]"
+                   : rawName;
+      const promoAbbr = String(row[1]  || "").trim();
+      const event     = String(row[2]  || "").trim();
+      const date      = convertDateToISO_(row[3]); // pass raw value — handles Date objects
+      const matchType = String(row[4]  || "").trim();
+      const champ     = String(row[5]  || "").trim(); // Col F — Championship
+      const winner    = String(row[6]  || "").trim(); // Col G — Winner
+      const rating    = row[7]  !== "" && row[7]  !== null ? String(row[7])  : ""; // Col H — Rating
+      const score     = row[8]  !== "" && row[8]  !== null ? String(row[8])  : ""; // Col I — CM
+      // Col J — WON: convert star text (e.g. "*****1/4") to numeric (5.25) if needed
+      const rawWon  = row[9] !== "" && row[9] !== null ? row[9] : "";
+      const value   = rawWon === "" ? ""
+                    : (typeof rawWon === "string" && rawWon.includes("*"))
+                      ? String(parseStarRating_(rawWon))
+                      : String(rawWon);
+      // Col K — 10+ flag
+      const tenPlus = row[10] === true || String(row[10]).toUpperCase() === 'TRUE';
+      // Col L — Saw Live
+      const sawLive = row[11] === true || String(row[11]).toUpperCase() === 'TRUE';
+      // Col M — Rewatch
+      const rewatch = row[12] === true || String(row[12]).toUpperCase() === 'TRUE';
+
+      if (!name && !matchUrl) continue;
+
+      matches.push({
+        id:           "sheet_" + sheetYear + "_" + r + "_" + sanitizeId_(name),
+        matchUrl,
+        name,
+        promoFull:    getPromoFullName_(promoAbbr),
+        promoAbbr,
+        event,
+        date,
+        matchType,
+        championship: champ,
+        winner,
+        rating,
+        tenPlus,
+        sawLive,
+        rewatch,
+        score,
+        value,
+        _sheetRow:    r + 1,
+        _sheetName:   sheetYear
+      });
+    }
+  });
+
+  return respond({ matches, total: matches.length });
 }
 
-function gasGet(action,extraParams={}){
-  const baseUrl=getSheetURL();if(!baseUrl)throw new Error('No Web App URL set \u2014 paste it in Export \u2192 Sync and click Save URL');
-  const params=new URLSearchParams({action,...extraParams});const fullUrl=baseUrl+'?'+params.toString();
-  console.log('[gasGet] JSONP:',fullUrl);
-  return new Promise((resolve,reject)=>{
-    const cbName='_gasCb_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
-    const timer=setTimeout(()=>{cleanup();reject(new Error('Timed out \u2014 Apps Script may be slow to start. Try again.'));},90000);
-    function cleanup(){clearTimeout(timer);delete window[cbName];const el=document.getElementById(cbName);if(el)el.remove();}
-    window[cbName]=function(data){cleanup();if(data&&data.error)reject(new Error(data.error));else resolve(data);};
-    const script=document.createElement('script');script.id=cbName;script.src=fullUrl+'&callback='+cbName;
-    script.onerror=function(){cleanup();reject(new Error('Script load failed \u2014 check Web App URL is deployed as Anyone'));};
-    document.head.appendChild(script);
+/* ═══════════════════════════════════════════════════════════
+   PULL PROMOTIONS
+═══════════════════════════════════════════════════════════ */
+function handlePullPromos() {
+  const sheet = findPromoSheet_();
+  if (!sheet) return respond({ error: "PromotionList sheet not found. Make sure a sheet tab contains the word 'Promo' in its name." });
+
+  const data   = sheet.getDataRange().getValues();
+  const promos = [];
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][1]) {
+      promos.push([String(data[i][0]).trim(), String(data[i][1]).trim()]);
+    }
+  }
+  return respond({ promos });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   STATS — across all year tabs
+═══════════════════════════════════════════════════════════ */
+function handleStats(sheetParam) {
+  const ss = SpreadsheetApp.getActive();
+  let sheetsToScan = [];
+
+  if (sheetParam && sheetParam.trim()) {
+    const s = ss.getSheetByName(sheetParam.trim());
+    if (s) sheetsToScan = [s];
+  } else {
+    sheetsToScan = ss.getSheets().filter(s => isDataTab_(s.getName()));
+    if (!sheetsToScan.length) {
+      const fallback = ss.getSheetByName("2026");
+      if (fallback) sheetsToScan = [fallback];
+    }
+  }
+
+  let total = 0, best = 0, watch = 0, tenPlus = 0;
+
+  sheetsToScan.forEach(sheet => {
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return;
+    const lastCol = Math.max(sheet.getLastColumn(), 12);
+    const values  = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+    values.forEach(row => {
+      if (!String(row[0] || "").trim()) return;
+      total++;
+      const rating   = parseFloat(row[7]) || null;  // Col H — Rating
+      const score    = parseFloat(row[8]) || null;  // Col I — CM
+      const value    = parseFloat(row[9]) || null;  // Col J — WON
+      const flagJ    = "";  // 10+ not stored in sheet
+      const is10plus = false; // 10+ is dashboard-only
+      if ((rating !== null && rating >= 9)) best++;
+      else if (!rating && ((score !== null && score >= 8.75) || (value !== null && value >= 4.75))) watch++;
+    });
+  });
+
+  return respond({ total, best, watch, tenPlus });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PUSH: dashboard → sheet
+   Groups matches by year (derived from date or _sheetName),
+   writes each group to its corresponding year tab.
+═══════════════════════════════════════════════════════════ */
+function handlePush(body) {
+  const matches = body.matches;
+  if (!Array.isArray(matches)) return respond({ error: "No matches array" });
+
+  const ss = SpreadsheetApp.getActive();
+
+  // Group matches by tab name (uses decade bucketing)
+  const groups = {};
+  matches.forEach(m => {
+    const year = m._sheetName && !isDataTab_(m._sheetName)
+      ? (m.date ? m.date.split("-")[0] : new Date().getFullYear().toString())
+      : (m._sheetName || (m.date ? m.date.split("-")[0] : new Date().getFullYear().toString()));
+    const tabName = getTabName_(year);
+    if (!groups[tabName]) groups[tabName] = [];
+    groups[tabName].push(m);
+  });
+
+  let totalWritten = 0;
+
+  Object.entries(groups).forEach(([year, yearMatches]) => {
+    const sheet = getOrCreateSheet_(ss, year);
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
+    }
+    yearMatches.forEach((m, i) => writeMatchRow_(sheet, i + 2, m));
+    if (yearMatches.length) {
+      sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 12)).setFontWeight("bold");
+    }
+    totalWritten += yearMatches.length;
+  });
+
+  return respond({ written: totalWritten, status: "ok" });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PUSH SINGLE
+═══════════════════════════════════════════════════════════ */
+function handlePushSingle(body) {
+  const m = body.match;
+  if (!m) return respond({ error: "No match object" });
+
+  const ss = SpreadsheetApp.getActive();
+
+  // Determine correct tab using decade bucketing
+  const rawYear = m._sheetName
+    || (m.date ? m.date.split("-")[0] : "")
+    || new Date().getFullYear().toString();
+  const tabName = isDataTab_(rawYear) ? rawYear : getTabName_(rawYear);
+
+  const sheet = getOrCreateSheet_(ss, tabName);
+
+  if (m._sheetRow && m._sheetRow > 1) {
+    writeMatchRow_(sheet, m._sheetRow, m);
+    return respond({ status: "updated", row: m._sheetRow, sheet: tabName });
+  }
+
+  const newRow = sheet.getLastRow() + 1;
+  writeMatchRow_(sheet, newRow, m);
+  return respond({ status: "appended", row: newRow, sheet: tabName });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DELETE — searches correct year tab first, then all tabs
+═══════════════════════════════════════════════════════════ */
+function handleDelete(body) {
+  const matchName  = body.matchName;
+  const sheetHint  = body.sheetName || "";
+  if (!matchName) return respond({ error: "matchName required" });
+
+  const ss = SpreadsheetApp.getActive();
+
+  // Try hinted sheet first, then all year tabs
+  let sheetsToSearch = [];
+  if (sheetHint) {
+    const s = ss.getSheetByName(sheetHint);
+    if (s) sheetsToSearch = [s];
+  }
+  if (!sheetsToSearch.length) {
+    sheetsToSearch = ss.getSheets().filter(s => isDataTab_(s.getName()));
+  }
+
+  for (const sheet of sheetsToSearch) {
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) continue;
+    const values = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    for (let i = values.length - 1; i >= 0; i--) {
+      if (String(values[i][0]).trim() === matchName.trim()) {
+        sheet.deleteRow(i + 2);
+        return respond({ deleted: true, row: i + 2, sheet: sheet.getName() });
+      }
+    }
+  }
+
+  return respond({ deleted: false, message: "Match not found in any sheet" });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HTTP HELPERS
+═══════════════════════════════════════════════════════════ */
+function fetchHtml_(url) {
+  try {
+    const resp = UrlFetchApp.fetch(url, {
+      muteHttpExceptions: true,
+      followRedirects: true,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5"
+      }
+    });
+    if (resp.getResponseCode() !== 200) return "";
+    return resp.getContentText();
+  } catch(e) {
+    return "";
+  }
+}
+
+function batchFetch_(urls) {
+  if (!urls.length) return {};
+  const requests = urls.map(u => ({
+    url: u,
+    muteHttpExceptions: true,
+    followRedirects: true,
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+  }));
+  const responses = UrlFetchApp.fetchAll(requests);
+  const map = {};
+  responses.forEach((r, i) => {
+    map[urls[i]] = r.getResponseCode() === 200 ? r.getContentText() : "";
+  });
+  return map;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SHEET WRITE HELPER
+═══════════════════════════════════════════════════════════ */
+function writeMatchRow_(sheet, row, m) {
+  // Col A — Match name (hyperlink)
+  if (m.matchUrl) {
+    sheet.getRange(row, 1).setRichTextValue(
+      SpreadsheetApp.newRichTextValue()
+        .setText(m.name || m.matchUrl)
+        .setLinkUrl(m.matchUrl)
+        .build()
+    );
+  } else {
+    sheet.getRange(row, 1).setValue(m.name || "");
+  }
+
+  // Col B — Promotion abbreviation
+  sheet.getRange(row, 2).setValue(m.promoAbbr || "")
+    .setFontWeight("bold").setHorizontalAlignment("center");
+
+  // Col C — Event
+  sheet.getRange(row, 3).setValue(m.event || "");
+
+  // Col D — Date
+  sheet.getRange(row, 4).setValue(convertDateFromISO_(m.date || ""));
+
+  // Col E — Match Type
+  sheet.getRange(row, 5).setValue(m.matchType || "");
+
+  // Col F — Championship
+  sheet.getRange(row, 6).setValue(m.championship || "");
+
+  // Col G — Winner
+  sheet.getRange(row, 7).setValue(m.winner || "");
+
+  // Col H — Rating (numeric, explicit number format to prevent date interpretation)
+  const ratingVal = parseFloat(m.rating);
+  const ratingCell = sheet.getRange(row, 8);
+  ratingCell.setNumberFormat("0.##");
+  ratingCell.setValue(isNaN(ratingVal) ? "" : ratingVal);
+
+  // Col I — CM Score
+  const scoreVal = parseFloat(m.score);
+  const scoreCell = sheet.getRange(row, 9);
+  scoreCell.setNumberFormat("0.##");
+  scoreCell.setValue(isNaN(scoreVal) ? "" : scoreVal);
+
+  // Col J — WON / Value / Star rating
+  const valueVal = parseFloat(m.value);
+  const valueCell = sheet.getRange(row, 10);
+  valueCell.setNumberFormat("0.##");
+  valueCell.setValue(isNaN(valueVal) ? "" : valueVal);
+
+  // Col K — 10+ flag
+  sheet.getRange(row, 11).setValue(m.tenPlus ? true : false);
+
+  // Col L — Saw Live
+  sheet.getRange(row, 12).setValue(m.sawLive ? true : false);
+
+  // Col M — Rewatch
+  sheet.getRange(row, 13).setValue(m.rewatch ? true : false);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PROMOTION HELPERS
+═══════════════════════════════════════════════════════════ */
+function buildPromotionMap_(sheet) {
+  // Accept either a passed sheet or auto-find it
+  const s = sheet || findPromoSheet_();
+  const map = {};
+  if (!s) return map;
+  const data = s.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][1]) {
+      map[String(data[i][0]).trim()] = String(data[i][1]).trim();
+    }
+  }
+  return map;
+}
+
+function getPromoFullName_(abbr) {
+  if (!abbr) return "";
+  const sheet = findPromoSheet_();
+  if (!sheet) return "";
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][1]).trim() === abbr.trim()) return String(data[i][0]).trim();
+  }
+  return "";
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DATE CONVERSION HELPERS
+═══════════════════════════════════════════════════════════ */
+function convertDateToISO_(dateVal) {
+  if (!dateVal) return "";
+
+  // Handle Google Sheets Date objects (most common case)
+  if (dateVal instanceof Date) {
+    const y = dateVal.getFullYear();
+    const m = String(dateVal.getMonth() + 1).padStart(2, "0");
+    const d = String(dateVal.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + d;
+  }
+
+  const dateStr = String(dateVal).trim();
+  if (!dateStr) return "";
+
+  // Already ISO: YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+
+  // MM/DD/YYYY
+  const p = dateStr.split("/");
+  if (p.length === 3 && p[2].length === 4) {
+    return p[2] + "-" + p[0].padStart(2,"0") + "-" + p[1].padStart(2,"0");
+  }
+
+  // DD.MM.YYYY
+  const q = dateStr.split(".");
+  if (q.length === 3 && q[2].length === 4) {
+    return q[2] + "-" + q[1].padStart(2,"0") + "-" + q[0].padStart(2,"0");
+  }
+
+  // JS Date string fallback (e.g. "Sat Oct 18 2025 00:00:00 GMT...")
+  try {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      const y = d.getFullYear();
+      const mo = String(d.getMonth() + 1).padStart(2, "0");
+      const dy = String(d.getDate()).padStart(2, "0");
+      return y + "-" + mo + "-" + dy;
+    }
+  } catch(e) {}
+
+  return dateStr;
+}
+
+function convertDateFromISO_(dateVal) {
+  if (!dateVal) return "";
+  // If it's already a Date object, format directly
+  if (dateVal instanceof Date) {
+    const m = String(dateVal.getMonth() + 1).padStart(2, "0");
+    const d = String(dateVal.getDate()).padStart(2, "0");
+    const y = dateVal.getFullYear();
+    return m + "/" + d + "/" + y;
+  }
+  const dateStr = String(dateVal).trim();
+  if (!dateStr) return "";
+  // YYYY-MM-DD → MM/DD/YYYY
+  const p = dateStr.split("-");
+  if (p.length === 3 && p[0].length === 4) return p[1] + "/" + p[2] + "/" + p[0];
+  return dateStr;
+}
+
+function sanitizeId_(str) {
+  return String(str).replace(/[^a-zA-Z0-9]/g, "_").slice(0, 20);
+}
+
+/* ── Tab name routing ──
+   2025+       → individual year tab ("2025", "2026", ...)
+   2020-2024   → "2020s"
+   2010-2019   → "10s"
+   2000-2009   → "00s"
+   1990-1999   → "90s"
+   1980-1989   → "80s"
+   1970-1979   → "70s"  (and so on for earlier decades)
+*/
+function getTabName_(year) {
+  const y = parseInt(year);
+  if (isNaN(y)) return String(year);
+  if (y >= 2025) return String(y);                          // individual year
+  if (y >= 2020) return "2020s";                           // 2020-2024
+  if (y >= 2010) return "10s";
+  if (y >= 2000) return "00s";
+  if (y >= 1990) return "90s";
+  if (y >= 1980) return "80s";
+  if (y >= 1970) return "70s";
+  if (y >= 1960) return "60s";
+  return String(Math.floor(y / 10) * 10) + "s";           // anything earlier
+}
+
+/* Returns true if a tab name is a valid year-or-decade tab (not PromotionList etc.) */
+function isDataTab_(name) {
+  const n = name.trim();
+  return /^\d{4}$/.test(n)          // individual year: 2025, 2026
+      || /^\d{2}0s$/.test(n)        // decade: 80s, 90s, 00s, 10s
+      || n === "2020s";              // special case
+}
+
+/* Parse WON star rating text to numeric — mirrors build2026FromUnsorted logic
+   e.g. "*****" = 5, "****1/2" = 4.5, "***3/4" = 3.75 */
+function parseStarRating_(v) {
+  if (!v) return "";
+  var t = String(v);
+  var stars = (t.match(/\*/g) || []).length;
+  var frac = 0;
+  if (t.indexOf("1/4") >= 0) frac = 0.25;
+  if (t.indexOf("1/2") >= 0) frac = 0.5;
+  if (t.indexOf("3/4") >= 0) frac = 0.75;
+  var result = stars + frac;
+  return result > 0 ? result : "";
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RESPOND
+═══════════════════════════════════════════════════════════ */
+function respond(obj, callback) {
+  const json = JSON.stringify(obj);
+  if (callback) {
+    // JSONP: wrap response in callback(data) — bypasses CORS entirely
+    return ContentService
+      .createTextOutput(callback + "(" + json + ");")
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService
+    .createTextOutput(json)
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/* doOptions handles CORS preflight for POST requests */
+function doOptions(e) {
+  return ContentService
+    .createTextOutput("")
+    .setMimeType(ContentService.MimeType.TEXT);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DIAGNOSTIC TESTS
+   Run these directly in the Apps Script editor (not as Web App)
+   to check each part of the system independently.
+   Select the function name and click ▶ Run.
+═══════════════════════════════════════════════════════════ */
+
+/**
+ * TEST 1 — Sheet structure
+ * Checks: can we find your sheets, how many rows, column headers?
+ * Run this first.
+ */
+function test_1_checkSheets() {
+  const ss = SpreadsheetApp.getActive();
+  const allSheets = ss.getSheets().map(s => s.getName());
+  Logger.log("All sheet tabs: " + allSheets.join(", "));
+
+  const promoSheet = findPromoSheet_();
+  Logger.log("PromotionList found: " + !!promoSheet + (promoSheet ? " (tab: '" + promoSheet.getName() + "')" : " — no tab with 'promo' in name found"));
+  if (promoSheet) {
+    Logger.log("PromotionList rows: " + promoSheet.getLastRow());
+    const firstFew = promoSheet.getRange(1, 1, Math.min(3, promoSheet.getLastRow()), 2).getValues();
+    Logger.log("First rows: " + JSON.stringify(firstFew));
+  }
+
+  // Check year-named sheets
+  const yearSheets = ss.getSheets().filter(s => isDataTab_(s.getName()));
+  Logger.log("Data tabs (years + decades): " + yearSheets.map(s => s.getName()).join(", "));
+
+  yearSheets.forEach(sheet => {
+    const rows = sheet.getLastRow();
+    const cols = sheet.getLastColumn();
+    Logger.log(sheet.getName() + " → " + rows + " rows, " + cols + " cols");
+    if (rows > 0) {
+      const headers = sheet.getRange(1, 1, 1, cols).getValues()[0];
+      Logger.log(sheet.getName() + " headers: " + headers.join(" | "));
+    }
   });
 }
-async function gasPost(body){const baseUrl=getSheetURL();if(!baseUrl)throw new Error('No Web App URL set');await fetch(baseUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(body),mode:'no-cors',redirect:'follow'});return{status:'sent'};}
 
-async function pullFromSheets(){
-  const url=getSheetURL();if(!url)return;setSyncStatus('Pulling matches from Sheet\u2026');
-  try{const data=await gasGet('pull');if(!Array.isArray(data.matches))throw new Error('Unexpected response');
-    const incoming=data.matches.map(m=>({...m,id:m.id||('sheet_'+Date.now()+'_'+Math.random().toString(36).slice(2,5))}));
-    const incomingUrls=new Set(incoming.map(m=>m.matchUrl).filter(Boolean));const incomingNames=new Set(incoming.map(m=>m.name).filter(Boolean));
-    const local=loadMatches().filter(m=>!m.id.startsWith('sheet_')&&!m.id.startsWith('test_')&&!incomingUrls.has(m.matchUrl)&&!incomingNames.has(m.name));
-    saveMatches([...incoming,...local]);renderDashboard();populateSharedFilterOptions();
-    setSyncStatus('\u2713 Pulled '+incoming.length+' matches. ('+local.length+' local-only preserved)','var(--green)');toast('Pulled '+incoming.length+' matches');
-  }catch(e){setSyncStatus('\u2717 Pull failed: '+e.message,'var(--red)');toast('Pull failed',true);}
-}
-async function pullFromSheetsYear(){
-  const year=prompt('Enter year or decade tab (e.g. 2026, 2020s, 10s, 90s):');if(!year||!year.trim()){toast('Enter a year or decade tab name',true);return;}
-  const url=getSheetURL();if(!url)return;setSyncStatus('Pulling '+year+' matches\u2026');
-  try{const data=await gasGet('pull',{sheet:year.trim()});if(!Array.isArray(data.matches))throw new Error('Unexpected response');
-    const incoming=data.matches.map(m=>({...m,id:m.id||('sheet_'+Date.now()+'_'+Math.random().toString(36).slice(2,5))}));
-    const others=loadMatches().filter(m=>m._sheetName!==year.trim()&&!m.id.startsWith('sheet_'+year.trim()));
-    saveMatches([...incoming,...others]);renderDashboard();populateSharedFilterOptions();
-    setSyncStatus('\u2713 Pulled '+incoming.length+' matches for '+year+'.','var(--green)');toast('Pulled '+incoming.length+' matches');
-  }catch(e){setSyncStatus('\u2717 Pull failed: '+e.message,'var(--red)');toast('Pull failed',true);}
-}
-async function pullPromos(){
-  const url=getSheetURL();if(!url)return;setSyncStatus('Pulling promotions\u2026');
-  try{const data=await gasGet('pullPromos');if(!Array.isArray(data.promos))throw new Error('No promos');
-    savePromos(data.promos);populatePromoDropdowns();populateSharedFilterOptions();renderPromos();
-    setSyncStatus('\u2713 Pulled '+data.promos.length+' promotions.','var(--green)');toast('Promotions updated');
-  }catch(e){setSyncStatus('\u2717 Promo pull failed: '+e.message,'var(--red)');toast('Promo pull failed',true);}
-}
-async function pushToSheets(){
-  const url=getSheetURL();if(!url)return;const matches=loadMatches();if(!matches.length){toast('No matches to push',true);return;}
-  if(!confirm('Push '+matches.length+' matches to Google Sheet? This will overwrite existing data rows.'))return;
-  setSyncStatus('Pushing '+matches.length+' matches\u2026');
-  try{await gasPost({action:'push',matches});setSyncStatus('\u2713 Push sent \u2014 check your Sheet.','var(--accent)');toast('Push sent to Sheet');}
-  catch(e){setSyncStatus('\u2717 Push failed: '+e.message,'var(--red)');toast('Push failed',true);}
-}
-async function runBatchImport(){
-  const year=(document.getElementById('import-year').value||'').trim();
-  if(!year||year.length!==4||isNaN(parseInt(year))){toast('Enter a valid 4-digit year',true);document.getElementById('import-year').focus();return;}
-  const rawUrls=document.getElementById('import-urls').value.trim();
-  if(!rawUrls){toast('Paste at least one URL',true);document.getElementById('import-urls').focus();return;}
-  const urls=rawUrls.split('\n').map(u=>u.trim()).filter(u=>u.length>0&&u.includes('cagematch.net'));
-  if(!urls.length){toast('No valid cagematch URLs found',true);return;}
-  const statusEl=document.getElementById('import-status');const btn=document.getElementById('import-run-btn');
-  statusEl.style.display='block';statusEl.style.color='var(--text2)';
-  statusEl.innerHTML='\u26a1 Importing '+urls.length+' URL'+(urls.length!==1?'s':'')+' into <strong>'+year+'</strong>\u2026<br><span style="color:var(--text3);font-size:.78rem;">Running on Google\u2019s servers. Please wait.</span>';
-  btn.disabled=true;btn.textContent='Running\u2026';
-  try{
-    const data=await gasGet('batchImport',{year,urls:urls.join('|')});
-    const imported=data.imported||0,duplicates=data.duplicates||0,errors=data.errors||0;
-    statusEl.style.color=imported>0?'var(--green)':'var(--accent)';
-    statusEl.innerHTML='<strong style="color:var(--text)">'+(data.message||'Import complete.')+'</strong><br><span style="color:var(--text2)">\u2713 '+imported+' new match'+(imported!==1?'es':'')+' written'+(duplicates?' | \u29b8 '+duplicates+' duplicate'+(duplicates!==1?'s':'')+' skipped':'')+(errors?' | \u2717 '+errors+' failed':'')+
-      '</span><br><span style="color:var(--text3);font-size:.78rem;">Click <strong style="color:var(--accent)">\u2193 Pull from Sheets</strong> to sync into the dashboard.</span>';
-    if(imported>0)toast(imported+' match'+(imported!==1?'es':'')+' imported \u2192 '+year);else toast('No new matches \u2014 '+duplicates+' duplicate'+(duplicates!==1?'s':'')+' skipped');
-  }catch(e){statusEl.style.color='var(--red)';statusEl.innerHTML='<strong>\u2717 Import failed:</strong> '+esc(e.message);toast('Import failed',true);}
-  btn.disabled=false;btn.textContent='\u26a1 Import URLs';
-}
-
-function clearAllData(){if(!confirm('Delete ALL match data? This cannot be undone.'))return;localStorage.removeItem(STORAGE_KEY);saveMatches([]);renderDashboard();populateSharedFilterOptions();toast('All data cleared');}
-
-let toastTimer;
-function toast(msg,isErr=false){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(isErr?' err':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3000);}
-
-(function init(){
-  const savedUrl=localStorage.getItem('sheets_url_2026');
-  if(savedUrl)document.getElementById('sheets-url').value=savedUrl;
-  populatePromoDropdowns();populateSharedFilterOptions();renderDashboard();
-  const existing=loadMatches();
-  if(savedUrl&&existing.length===0){
-    setSyncStatus('No local data \u2014 loading from Sheets\u2026');
-    setTimeout(()=>{switchPanel('export');},100);
-    setTimeout(async()=>{
-      try{setSyncStatus('Connecting to Sheet\u2026');await gasGet('stats');setSyncStatus('Pulling matches\u2026');const data=await gasGet('pull');
-        if(Array.isArray(data.matches)&&data.matches.length>0){
-          const incoming=data.matches.map(m=>({...m,id:m.id||('sheet_'+Date.now()+'_'+Math.random().toString(36).slice(2,5))}));
-          saveMatches(incoming);renderDashboard();populateSharedFilterOptions();
-          setSyncStatus('\u2713 Loaded '+incoming.length+' matches.','var(--green)');toast('Loaded '+incoming.length+' matches');
-          setTimeout(()=>switchPanel('dashboard'),1000);
-        }else{setSyncStatus('Sheet appears empty \u2014 add matches to get started.','var(--text3)');switchPanel('dashboard');}
-      }catch(e){setSyncStatus('\u2717 Auto-load failed: '+e.message,'var(--red)');switchPanel('dashboard');}
-    },400);
+/**
+ * TEST 2 — Pull data
+ * Checks: does handlePull() return match data correctly?
+ * Look at the Execution Log for the JSON output.
+ */
+function test_2_pull() {
+  const result = handlePull("");
+  const json = JSON.parse(result.getContent());
+  Logger.log("Pull result — total: " + json.total);
+  if (json.error) Logger.log("ERROR: " + json.error);
+  if (json.matches && json.matches.length > 0) {
+    json.matches.forEach((m, i) => {
+      Logger.log("Match " + (i+1) + ": name='" + m.name + "' | url='" + m.matchUrl + "' | promo=" + m.promoAbbr + " | date=" + m.date + " | rating=" + m.rating + " | score=" + m.score);
+    });
+  } else {
+    Logger.log("No matches returned.");
   }
-})();
-</script>
-</body>
-</html>
+}
+
+/**
+ * TEST 3 — Fetch a single match from cagematch
+ * Checks: can Apps Script fetch cagematch pages?
+ * Uses the Moxley vs Takeshita match as a known example.
+ */
+function test_3_fetchMatch() {
+  const testUrl = "https://www.cagematch.net/?id=111&nr=134917";
+  Logger.log("Fetching: " + testUrl);
+
+  const result = handleFetchMatch(testUrl);
+  const json = JSON.parse(result.getContent());
+
+  if (json.error) {
+    Logger.log("ERROR: " + json.error);
+  } else {
+    Logger.log("Name: "         + json.name);
+    Logger.log("Promotion: "    + json.promoFull + " (" + json.promoAbbr + ")");
+    Logger.log("Event: "        + json.event);
+    Logger.log("Date: "         + json.date);
+    Logger.log("Match Type: "   + json.matchType);
+    Logger.log("Championship: " + json.championship);
+    Logger.log("Score: "        + json.score);
+  }
+}
+
+/**
+ * TEST 4 — Raw cagematch HTTP fetch
+ * Checks: can we reach cagematch at all? What does the raw HTML look like?
+ * If this returns empty or an error, it's a network/permissions issue.
+ */
+function test_4_rawFetch() {
+  const testUrl = "https://www.cagematch.net/?id=111&nr=134917";
+  Logger.log("Fetching raw HTML from: " + testUrl);
+
+  try {
+    const resp = UrlFetchApp.fetch(testUrl, {
+      muteHttpExceptions: true,
+      followRedirects: true,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    });
+    const code = resp.getResponseCode();
+    const body = resp.getContentText();
+    Logger.log("HTTP status: " + code);
+    Logger.log("Body length: " + body.length + " chars");
+    Logger.log("First 500 chars:\n" + body.substring(0, 500));
+
+    // Check for key markers
+    Logger.log("Contains 'InformationBox': " + body.includes("InformationBox"));
+    Logger.log("Contains 'Javascript is required': " + body.includes("Javascript is required"));
+    Logger.log("Contains wrestler names: " + body.includes("Moxley"));
+  } catch(err) {
+    Logger.log("FETCH ERROR: " + err.message);
+  }
+}
+
+/**
+ * TEST 5 — Probe cagematch URLs for server-side ratings
+ * Tests multiple URL patterns to find one that returns ratings in HTML
+ */
+function test_5_importDryRun() {
+  const year = "2026";
+
+  // Array of URL patterns to try
+  var urls = [
+    // Top lists — may have ratings server-side
+    "https://www.cagematch.net/?id=111&view=toplists&sYear=" + year,
+    // Advanced search with minimum rating filter
+    "https://www.cagematch.net/?id=111&view=search&sYear=" + year + "&sMinRating=8",
+    // List sorted by rating with minimum votes
+    "https://www.cagematch.net/?id=111&view=list&sYear=" + year + "&s=0&count=50&sortorder=4&sMinVotes=5",
+    // Try the ratings parameter directly
+    "https://www.cagematch.net/?id=111&view=list&sYear=" + year + "&s=0&count=50&sMinRating=8.00",
+  ];
+
+  urls.forEach(function(url) {
+    Logger.log("\n--- Testing: " + url);
+    var html = fetchHtml_(url);
+    Logger.log("Length: " + html.length);
+
+    // Check for rating data in various forms
+    var hasStarRatingContent = (html.match(/<span class="starRating">[^<]+<\/span>/gi) || []).length;
+    var hasStarRatingTitle   = (html.match(/starRating[^>]*title="[\d.]+"/gi) || []).length;
+    var hasNumericRating     = (html.match(/>[89]\.\d{2}<\/td>/gi) || []).length;
+    var hasGradeValue        = (html.match(/GradeValue/gi) || []).length;
+    var hasMatchLink         = (html.match(/\?id=111&(?:amp;)?nr=\d+/gi) || []).length;
+
+    Logger.log("starRating with content: " + hasStarRatingContent);
+    Logger.log("starRating with title: " + hasStarRatingTitle);
+    Logger.log("numeric rating >8 in td: " + hasNumericRating);
+    Logger.log("GradeValue: " + hasGradeValue);
+    Logger.log("match links: " + hasMatchLink);
+
+    // Show first match link context if any ratings found
+    if (hasStarRatingContent > 0 || hasStarRatingTitle > 0 || hasNumericRating > 0) {
+      Logger.log("*** RATINGS FOUND — showing sample ***");
+      var idx = html.search(/>[89]\.\d{2}<\/td>|starRating">[^<]+|starRating[^>]*title/i);
+      if (idx >= 0) Logger.log("Sample: " + html.substring(Math.max(0, idx-100), idx+200));
+    }
+  });
+}
+
+/**
+ * TEST 5b — probe individual match page for score location
+ */
+function test_5b_matchPageScore() {
+  // Fetch a known rated match and dump key sections
+  var url = "https://www.cagematch.net/?id=111&nr=130229"; // Takeshita vs Tsuji (rated 9.04)
+  var html = fetchHtml_(url);
+  Logger.log("Match page length: " + html.length);
+
+  // Log 3000 chars around known rating keywords
+  // Dump the full RatingsBox section — score must be in here
+  var rbIdx = html.indexOf("RatingsBox");
+  if (rbIdx >= 0) {
+    Logger.log("RatingsBox section (500 chars): " + html.substring(rbIdx, rbIdx + 500));
+  }
+
+  // Also dump the starRating area
+  var srIdx = html.indexOf("starRating");
+  if (srIdx >= 0) {
+    Logger.log("starRating area (300 chars before+after): " + html.substring(Math.max(0, srIdx - 100), srIdx + 300));
+  }
+}
+
+/**
+ * TEST 6 — Web App URL check (simulates a GET request)
+ * Checks: does doGet work when called with a mock event object?
+ */
+function test_6_doGetSimulation() {
+  // Simulate GET ?action=stats
+  const mockEvent = { parameter: { action: "stats" } };
+  const result = doGet(mockEvent);
+  const json = JSON.parse(result.getContent());
+  Logger.log("Stats result: " + JSON.stringify(json));
+
+  // Simulate GET with no params (should default to pull)
+  const mockEvent2 = { parameter: {} };
+  const result2 = doGet(mockEvent2);
+  const json2 = JSON.parse(result2.getContent());
+  Logger.log("Pull (no params) total: " + json2.total);
+  if (json2.error) Logger.log("Pull error: " + json2.error);
+}
