@@ -78,6 +78,17 @@ tr.row-watch-lo td{background:rgba(230,239,255,.07)!important}
 .rating-inline-input::-webkit-outer-spin-button,.rating-inline-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .inline-text-input{background:var(--bg4);border:1px solid var(--text2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.82rem;padding:3px 8px;border-radius:3px;outline:none;min-width:100px;max-width:260px}
 .flag-10plus{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.7rem;background:var(--teal);color:#000;padding:2px 6px;border-radius:3px}
+.flag-live{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.7rem;background:var(--accent);color:#000;padding:2px 6px;border-radius:3px}
+.flags-cell{cursor:pointer;padding:2px 4px;border-radius:3px;border:1px solid transparent;display:inline-flex;gap:4px;align-items:center;transition:border-color .15s,background .15s;min-width:36px}
+.flags-cell:hover{border-color:var(--accent);background:rgba(232,200,64,.08)}
+.flag-pill{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.7rem;padding:2px 6px;border-radius:3px}
+.flag-pill.off{background:var(--bg4);border:1px solid var(--border2);color:var(--text3)}
+.flag-live{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.7rem;background:var(--accent);color:#000;padding:2px 6px;border-radius:3px}
+.flags-cell{cursor:pointer;padding:2px 4px;border-radius:3px;border:1px solid transparent;display:inline-flex;gap:4px;align-items:center;transition:border-color .15s,background .15s;min-width:36px}
+.flags-cell:hover{border-color:var(--accent);background:rgba(232,200,64,.08)}
+.flag-pill{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.7rem;padding:2px 6px;border-radius:3px;cursor:pointer;transition:opacity .15s}
+.flag-pill:hover{opacity:.75}
+.flag-pill.off{background:var(--bg4);border:1px solid var(--border2);color:var(--text3)}
 .champ-badge{font-size:.72rem;background:rgba(232,200,64,.15);border:1px solid rgba(232,200,64,.4);color:var(--accent);padding:2px 7px;border-radius:3px;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;display:inline-block}
 .winner-val{color:var(--text2);font-size:.82rem;max-width:260px;overflow:hidden;text-overflow:ellipsis;display:inline-block}
 .winner-cell{cursor:pointer;padding:2px 4px;border-radius:3px;border:1px solid transparent;display:inline-block;min-width:40px;max-width:260px;transition:border-color .15s,background .15s}
@@ -223,7 +234,12 @@ textarea{resize:vertical;min-height:70px}
         </div>
       </div>
       <div class="form-group"><label>Rating <span class="hint">(1&ndash;10)</span></label><input type="number" id="f-rating" min="0" max="10" step="0.25" placeholder="e.g. 9.5"/></div>
-      <div class="form-group" style="justify-content:flex-end;"><label>&nbsp;</label><div class="checkbox-row"><input type="checkbox" id="f-10plus"/><label for="f-10plus">&#9733; 10+ (exceptional match)</label></div></div>
+      <div class="form-group" style="justify-content:flex-end;"><label>&nbsp;</label>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px 0;">
+          <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="f-10plus" style="width:18px;height:18px;accent-color:var(--teal);cursor:pointer;"/><label for="f-10plus" style="font-family:'Barlow',sans-serif;font-size:.88rem;color:var(--text);cursor:pointer;text-transform:none;letter-spacing:0;">&#9733; 10+</label></div>
+          <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="f-saw-live" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer;"/><label for="f-saw-live" style="font-family:'Barlow',sans-serif;font-size:.88rem;color:var(--text);cursor:pointer;text-transform:none;letter-spacing:0;">&#127881; Saw Live</label></div>
+        </div>
+      </div>
       <div class="form-group"><label>CM Score</label><input type="number" id="f-score" min="0" max="10" step="0.01" placeholder="e.g. 8.81"/></div>
       <div class="form-group"><label>WON Rating</label><input type="number" id="f-value" min="0" max="10" step="0.25" placeholder="e.g. 4.75"/></div>
       <div class="form-actions">
@@ -381,6 +397,7 @@ function savePromos(arr){localStorage.setItem(PROMO_KEY,JSON.stringify(arr));}
 function classifyMatch(m){
   const vI=parseFloat(m.rating)||'',vK=parseFloat(m.score)||'',vL=parseFloat(m.value)||'';
   const best=(typeof vI==='number'&&vI>=9)||m.tenPlus;
+  // sawLive doesn't affect best/watch classification but is stored
   const watch=(vI===''||isNaN(vI))&&((typeof vK==='number'&&vK>=8.75)||(typeof vL==='number'&&vL>=4.75));
   if(best&&m.tenPlus)return'best-10plus';if(best)return'best';if(watch)return'watch';return'none';
 }
@@ -441,7 +458,14 @@ const COLS=[
     const cls=(!m.rating||isNaN(rv))?'':(rv>=9?'rating-val rating-high':'rating-val');
     return`<span class="rating-cell" onclick="inlineEditRating(event,'${m.id}')" title="Click to edit">${m.rating?`<span class="${cls}">${m.rating}</span>`:'<span class="rating-empty">&mdash;</span>'}</span>`;
   }},
-  {key:'tenPlus',label:'10+',render:m=>`<span class="tenplus-cell" onclick="inlineToggle10plus(event,'${m.id}')" title="Click to toggle 10+">${m.tenPlus?'<span class="flag-10plus">10+</span>':'<span class="rating-empty">&mdash;</span>'}</span>`},
+  {key:'tenPlus',label:'Flags',render:m=>{
+    const has10=m.tenPlus,hasLive=m.sawLive;
+    if(!has10&&!hasLive) return`<span class="flags-cell" onclick="inlineToggleFlagMenu(event,'${m.id}')" title="Click to toggle flags"><span class="rating-empty">&mdash;</span></span>`;
+    return`<span class="flags-cell" onclick="inlineToggleFlagMenu(event,'${m.id}')" title="Click to toggle flags">`+
+      (has10?`<span class="flag-pill" style="background:var(--teal);color:#000;">10+</span>`:`<span class="flag-pill off">10+</span>`)+
+      (hasLive?`<span class="flag-pill" style="background:var(--accent);color:#000;">Live</span>`:`<span class="flag-pill off">Live</span>`)+
+      `</span>`;
+  }},
   {key:'score',label:'CM',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','score')" title="Click to edit">${m.score?`<span class="score-val">${m.score}</span>`:'<span class="rating-empty">&mdash;</span>'}</span>`},
   {key:'value',label:'WON',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','value')" title="Click to edit">${m.value||'<span class="rating-empty">&mdash;</span>'}</span>`},
 ];
@@ -637,11 +661,48 @@ function saveModalMatch(){closeModal();}function deleteModalMatch(){closeModal()
 
 /* INLINE EDITING */
 function inlineToggle10plus(e,id){
+  // Legacy — kept for any remaining references
   if(e&&e.stopPropagation)e.stopPropagation();
   const matches=loadMatches();const m=matches.find(x=>x.id===id);if(!m)return;
   m.tenPlus=!m.tenPlus;saveMatches(matches);
   renderDashboard();renderBest();renderWatch();renderAll();
   toast(m.tenPlus?'10+ set':'10+ removed');
+}
+
+function inlineToggleFlagMenu(e,id){
+  if(e&&e.stopPropagation)e.stopPropagation();
+  const cell=e.currentTarget||e.target.closest('.flags-cell');
+  const matches=loadMatches();const m=matches.find(x=>x.id===id);if(!m)return;
+
+  // Show a small popup with two toggles
+  const existing=document.getElementById('flag-popup');if(existing)existing.remove();
+
+  const popup=document.createElement('div');
+  popup.id='flag-popup';
+  popup.style.cssText='position:absolute;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;display:flex;gap:8px;z-index:500;box-shadow:0 4px 16px rgba(0,0,0,.5);';
+
+  function makeBtn(label,active,color,onToggle){
+    const btn=document.createElement('button');
+    btn.textContent=label;
+    btn.style.cssText=`font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:3px;cursor:pointer;border:none;background:${active?color:'var(--bg4)'};color:${active?'#000':'var(--text3)'};border:1px solid ${active?color:'var(--border2)'};transition:all .15s;`;
+    btn.addEventListener('click',ev=>{ev.stopPropagation();onToggle();popup.remove();saveMatches(matches);renderDashboard();renderBest();renderWatch();renderAll();});
+    return btn;
+  }
+
+  popup.appendChild(makeBtn('10+',m.tenPlus,'var(--teal)',()=>{m.tenPlus=!m.tenPlus;}));
+  popup.appendChild(makeBtn('Live',m.sawLive,'var(--accent)',()=>{m.sawLive=!m.sawLive;}));
+
+  // Position popup near the cell
+  const rect=cell.getBoundingClientRect();
+  popup.style.left=(rect.left+window.scrollX)+'px';
+  popup.style.top=(rect.bottom+window.scrollY+4)+'px';
+  document.body.appendChild(popup);
+
+  // Close on outside click
+  setTimeout(()=>{
+    function close(ev){if(!popup.contains(ev.target)){popup.remove();document.removeEventListener('click',close);}}
+    document.addEventListener('click',close);
+  },10);
 }
 function inlineEditRating(e,id){
   e.stopPropagation();
