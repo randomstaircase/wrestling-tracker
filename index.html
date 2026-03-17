@@ -1133,6 +1133,21 @@ textarea { resize: vertical; min-height: 70px; }
 const STORAGE_KEY = 'matches_2026';
 const PROMO_KEY   = 'promotions_2026';
 
+/* Mirror of Apps Script getTabName_ — routes a year to its tab name */
+function getTabName(year) {
+  const y = parseInt(year);
+  if (isNaN(y)) return String(year);
+  if (y >= 2025) return String(y);
+  if (y >= 2020) return '2020s';
+  if (y >= 2010) return '10s';
+  if (y >= 2000) return '00s';
+  if (y >= 1990) return '90s';
+  if (y >= 1980) return '80s';
+  if (y >= 1970) return '70s';
+  if (y >= 1960) return '60s';
+  return String(Math.floor(y / 10) * 10) + 's';
+}
+
 const DEFAULT_PROMOS = [
   ["All Elite Wrestling","AEW"],
   ["World Wrestling Entertainment","WWE"],
@@ -1364,6 +1379,15 @@ function getYearFromDate(d) {
   return '';
 }
 
+/* Get the tab/bucket label for a match — used for year filter dropdown */
+function getMatchTab(m) {
+  // If _sheetName is a decade tab, use that as the display label
+  if (m._sheetName && !/^\d{4}$/.test(m._sheetName)) return m._sheetName;
+  const y = getYearFromDate(m.date);
+  if (!y) return m._sheetName || '';
+  return getTabName(parseInt(y));
+}
+
 function filterMatches(arr, overrides) {
   const f = Object.assign({}, sharedFilters, overrides || {});
   const q = (f.search || '').toLowerCase().trim();
@@ -1371,8 +1395,8 @@ function filterMatches(arr, overrides) {
     // search
     if (q && ![m.name, m.event, m.championship, m.winner, m.matchType, m.promoAbbr, m.promoFull]
         .some(v => (v||'').toLowerCase().includes(q))) return false;
-    // year
-    if (f.year && getYearFromDate(m.date) !== f.year) return false;
+    // year/tab filter
+    if (f.year && getMatchTab(m) !== f.year) return false;
     // promo
     if (f.promo && m.promoAbbr !== f.promo && m.promoFull !== f.promo) return false;
     // champ dropdown
@@ -1456,8 +1480,14 @@ function populateSharedFilterOptions() {
   const matches = loadMatches();
   const promos  = loadPromos();
 
-  // ── Years (from match dates) ──
-  const years = [...new Set(matches.map(m => getYearFromDate(m.date)).filter(Boolean))].sort().reverse();
+  // ── Years/tabs (use tab bucket label for decade tabs) ──
+  const years = [...new Set(matches.map(m => getMatchTab(m)).filter(Boolean))]
+    .sort((a, b) => {
+      // Sort: individual years desc, then decade labels desc
+      const aNum = parseInt(a) || 0;
+      const bNum = parseInt(b) || 0;
+      return bNum - aNum;
+    });
 
   // ── Promotions (from actual match data, mapped to full names) ──
   const promoSet = [...new Set(matches.map(m => m.promoAbbr).filter(Boolean))].sort();
@@ -1753,6 +1783,11 @@ function clearForm() {
 function saveMatch() {
   const data = getFormData();
   if (!data.name) { toast('Match name is required', true); return; }
+  // Assign correct tab name based on date year
+  if (data.date) {
+    const y = data.date.split('-')[0];
+    if (y) data._sheetName = getTabName(parseInt(y));
+  }
 
   const matches = loadMatches();
   const idx = matches.findIndex(m => m.id === editingId);
@@ -2019,9 +2054,9 @@ async function pullFromSheets() {
 }
 
 async function pullFromSheetsYear() {
-  const year = prompt('Enter year to pull (e.g. 2026):');
-  if (!year || !/^\d{4}$/.test(year.trim())) {
-    toast('Enter a valid 4-digit year', true);
+  const year = prompt('Enter year or decade tab (e.g. 2026, 2020s, 10s, 90s):');
+  if (!year || !year.trim()) {
+    toast('Enter a year or decade tab name', true);
     return;
   }
   const url = getSheetURL(); if (!url) return;
