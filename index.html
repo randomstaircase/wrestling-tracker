@@ -194,6 +194,7 @@ textarea{resize:vertical;min-height:70px}
     <button onclick="switchPanel('all')">All Matches</button>
     <button onclick="switchPanel('promotions')">Promotions</button>
     <button onclick="switchPanel('export')">Export</button>
+    <button id="theme-btn" onclick="toggleTheme()" style="border-color:var(--accent);color:var(--accent);">&#9790; Dark</button>
   </nav>
 </header>
 
@@ -322,10 +323,7 @@ textarea{resize:vertical;min-height:70px}
 
   <!-- EXPORT -->
   <div id="panel-export" class="panel">
-    <div class="section-header">
-      <div class="section-title">Export &amp; Sync</div>
-      <button id="theme-btn" onclick="toggleTheme()" style="background:none;border:1px solid var(--border2);color:var(--text2);font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:4px;cursor:pointer;white-space:nowrap;transition:all .15s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">&#9790; Dark Mode</button>
-    </div>
+    <div class="section-header"><div class="section-title">Export &amp; Sync</div></div>
     <div class="export-section">
       <h3>Export to CSV</h3>
       <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Download all matches as a CSV file.</p>
@@ -530,13 +528,11 @@ function addTopScroll(wrapId,containerId){
 
 const COLS=[
   {key:'matchUrl',label:'Match',render:m=>{
-    const nameEl=m.matchUrl
-      ?`<div class="match-name"><a href="${m.matchUrl}" target="_blank">${esc(m.name||m.matchUrl)}</a></div>`
-      :`<div class="match-name inline-field" onclick="inlineEditField(event,'${m.id}','name')" title="Click to edit">${esc(m.name||'&mdash;')}</div>`;
-    const champEl=m.champion
-      ?`<div style="font-size:.72rem;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.04em;margin-top:2px;cursor:pointer;" onclick="inlineEditField(event,'${m.id}','champion')" title="Click to edit champion">&#127885; ${esc(m.champion)}</div>`
-      :`<div style="font-size:.7rem;color:var(--text3);cursor:pointer;" onclick="inlineEditField(event,'${m.id}','champion')" title="Click to set champion"></div>`;
-    return nameEl+champEl;
+    const champBadge=m.champion
+      ?` <span class="inline-field" onclick="inlineEditField(event,'${m.id}','champion')" title="Click to edit champion" style="font-size:.72rem;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.04em;">&#127942; ${esc(m.champion)}</span>`
+      :'';
+    if(m.matchUrl) return`<div class="match-name"><a href="${m.matchUrl}" target="_blank">${esc(m.name||m.matchUrl)}</a>${champBadge}</div>`;
+    return`<div class="match-name inline-field" onclick="inlineEditField(event,'${m.id}','name')" title="Click to edit">${esc(m.name||'&mdash;')}${champBadge}</div>`;
   }},
   {key:'promoAbbr',label:'Promo',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','promoAbbr')" title="Click to edit">${m.promoAbbr?`<span class="promo-badge">${esc(m.promoAbbr)}</span>`:'<span class="rating-empty">&mdash;</span>'}</span>`},
   {key:'event',label:'Event',render:m=>`<div class="event-name inline-field" onclick="inlineEditField(event,'${m.id}','event')" title="Click to edit">${esc(m.event||'&mdash;')}</div>`},
@@ -1105,7 +1101,7 @@ function toggleTheme(){
   // Load saved theme (default is light)
   if(localStorage.getItem('wt_theme')==='dark'){
     document.documentElement.setAttribute('data-theme','stardom-dark');
-    const tb=document.getElementById('theme-btn');if(tb)tb.textContent='☉ Light Mode';
+    const tb=document.getElementById('theme-btn');if(tb)tb.innerHTML='☀ Light';
   }
   const savedUrl=localStorage.getItem('sheets_url_2026');
   if(savedUrl)document.getElementById('sheets-url').value=savedUrl;
