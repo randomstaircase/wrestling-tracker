@@ -528,17 +528,25 @@ function addTopScroll(wrapId,containerId){
 
 const COLS=[
   {key:'matchUrl',label:'Match',render:m=>{
+    // Replace (c) in name with belt icon, add champion if set
+    function fmtName(raw){
+      return esc(raw||'').replace(/\(c\)/gi,'&#127942;');
+    }
     const champBadge=m.champion
       ?` <span class="inline-field" onclick="inlineEditField(event,'${m.id}','champion')" title="Click to edit champion" style="font-size:.72rem;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.04em;">&#127942; ${esc(m.champion)}</span>`
       :'';
-    if(m.matchUrl) return`<div class="match-name"><a href="${m.matchUrl}" target="_blank">${esc(m.name||m.matchUrl)}</a>${champBadge}</div>`;
-    return`<div class="match-name inline-field" onclick="inlineEditField(event,'${m.id}','name')" title="Click to edit">${esc(m.name||'&mdash;')}${champBadge}</div>`;
+    const displayName=fmtName(m.name||m.matchUrl||'&mdash;');
+    if(m.matchUrl) return`<div class="match-name"><a href="${m.matchUrl}" target="_blank" style="text-decoration:none;color:inherit;">${displayName}</a>${champBadge}</div>`;
+    return`<div class="match-name inline-field" onclick="inlineEditField(event,'${m.id}','name')" title="Click to edit">${displayName}${champBadge}</div>`;
   }},
   {key:'promoAbbr',label:'Promo',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','promoAbbr')" title="Click to edit">${m.promoAbbr?`<span class="promo-badge">${esc(m.promoAbbr)}</span>`:'<span class="rating-empty">&mdash;</span>'}</span>`},
   {key:'event',label:'Event',render:m=>`<div class="event-name inline-field" onclick="inlineEditField(event,'${m.id}','event')" title="Click to edit">${esc(m.event||'&mdash;')}</div>`},
   {key:'date',label:'Date',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','date')" title="Click to edit">${m.date?fmtDate(m.date):'&mdash;'}</span>`},
   {key:'matchType',label:'Type',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','matchType')" title="Click to edit">${esc(m.matchType||'&mdash;')}</span>`},
-  {key:'championship',label:'Championship',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','championship')" title="Click to edit">${m.championship?`<span class="champ-badge">&#127942; ${esc(m.championship)}</span>`:'<span class="rating-empty">&mdash;</span>'}</span>`},
+  {key:'championship',label:'Championship',render:m=>{
+    const cv=m.championship?esc(m.championship).replace(/\(c\)/gi,'&#127942;'):'';
+    return`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','championship')" title="Click to edit">${cv?`<span class="champ-badge">&#127942; ${cv}</span>`:'<span class="rating-empty">&mdash;</span>'}</span>`;
+  }},
   {key:'winner',label:'Winner',render:m=>{
     const wt=m.winner?`<span class="winner-val" style="${m.titleChange?'font-weight:700;color:var(--accent);':''}">${esc(m.winner)}${m.titleChange?' &#9733;':''}</span>`:'<span class="rating-empty">&mdash;</span>';
     return`<span class="winner-cell" onclick="inlineEditWinner(event,'${m.id}')" title="Click to edit winner">${wt}</span>`;
@@ -834,6 +842,7 @@ async function fetchMatchData(){
     if(data.date)document.getElementById('f-date').value=data.date;
     if(data.matchType)document.getElementById('f-matchtype').value=data.matchType;
     if(data.championship)document.getElementById('f-champ').value=data.championship;
+    if(data.champion)document.getElementById('f-champion').value=data.champion;
     if(data.score)document.getElementById('f-score').value=data.score;
     if(data.value)document.getElementById('f-value').value=data.value;
     if(data.promoFull||data.promoAbbr){
@@ -1085,15 +1094,16 @@ function toast(msg,isErr=false){const el=document.getElementById('toast');el.tex
 
 function toggleTheme(){
   const html=document.documentElement;
-  const isLight=html.getAttribute('data-theme')==='stardom-light';
-  if(isLight){
+  const isDark=html.getAttribute('data-theme')==='stardom-dark';
+  const btn=document.getElementById('theme-btn');
+  if(isDark){
     html.removeAttribute('data-theme');
-    document.getElementById('theme-btn').textContent='☾ Light';
-    localStorage.setItem('wt_theme','dark');
-  } else {
-    html.setAttribute('data-theme','stardom-light');
-    document.getElementById('theme-btn').textContent='☀ Dark';
+    if(btn) btn.innerHTML='☽ Dark';
     localStorage.setItem('wt_theme','light');
+  } else {
+    html.setAttribute('data-theme','stardom-dark');
+    if(btn) btn.innerHTML='☀ Light';
+    localStorage.setItem('wt_theme','dark');
   }
 }
 
@@ -1103,6 +1113,9 @@ function toggleTheme(){
     document.documentElement.setAttribute('data-theme','stardom-dark');
     const tb=document.getElementById('theme-btn');if(tb)tb.innerHTML='☀ Light';
   }
+  // Also ensure nav button starts with correct label
+  const _tb=document.getElementById('theme-btn');
+  if(_tb&&!localStorage.getItem('wt_theme')) _tb.innerHTML='☽ Dark';
   const savedUrl=localStorage.getItem('sheets_url_2026');
   if(savedUrl)document.getElementById('sheets-url').value=savedUrl;
   populatePromoDropdowns();populateSharedFilterOptions();renderDashboard();
