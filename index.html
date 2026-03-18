@@ -528,16 +528,10 @@ function addTopScroll(wrapId,containerId){
 
 const COLS=[
   {key:'matchUrl',label:'Match',render:m=>{
-    // Replace (c) in name with belt icon, add champion if set
-    function fmtName(raw){
-      return esc(raw||'').replace(/\(c\)/gi,'&#127942;');
-    }
-    const champBadge=m.champion
-      ?` <span class="inline-field" onclick="inlineEditField(event,'${m.id}','champion')" title="Click to edit champion" style="font-size:.72rem;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.04em;">&#127942; ${esc(m.champion)}</span>`
-      :'';
-    const displayName=fmtName(m.name||m.matchUrl||'&mdash;');
-    if(m.matchUrl) return`<div class="match-name"><a href="${m.matchUrl}" target="_blank" style="text-decoration:none;color:inherit;">${displayName}</a>${champBadge}</div>`;
-    return`<div class="match-name inline-field" onclick="inlineEditField(event,'${m.id}','name')" title="Click to edit">${displayName}${champBadge}</div>`;
+    // Replace (c) with belt icon — champion name stored separately, not shown again here
+    const displayName=esc(m.name||m.matchUrl||'&mdash;').replace(/\(c\)/gi,'&#127942;');
+    if(m.matchUrl) return`<div class="match-name"><a href="${m.matchUrl}" target="_blank" style="text-decoration:none;color:inherit;">${displayName}</a></div>`;
+    return`<div class="match-name inline-field" onclick="inlineEditField(event,'${m.id}','name')" title="Click to edit">${displayName}</div>`;
   }},
   {key:'promoAbbr',label:'Promo',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','promoAbbr')" title="Click to edit">${m.promoAbbr?`<span class="promo-badge">${esc(m.promoAbbr)}</span>`:'<span class="rating-empty">&mdash;</span>'}</span>`},
   {key:'event',label:'Event',render:m=>`<div class="event-name inline-field" onclick="inlineEditField(event,'${m.id}','event')" title="Click to edit">${esc(m.event||'&mdash;')}</div>`},
