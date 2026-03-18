@@ -6,13 +6,24 @@
 <title>Wrestling Match Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,900;1,700&family=Barlow:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
 <style>
+/* ── DEFAULT: Stardom Light ── */
 :root {
-  --bg:#0a0a0c;--bg2:#111116;--bg3:#18181f;--bg4:#1f1f28;
-  --border:#2a2a35;--border2:#38384a;
-  --text:#e8e8f0;--text2:#9090a8;--text3:#5a5a72;
-  --accent:#e8c840;--accent2:#c8a820;--red:#ff3a5c;
-  --teal:#00d4d4;--teal-text:#ff1493;
-  --blue-hi:#9fc5e8;--blue-lo:#e6efff;--green:#4ade80;
+  --bg:#fdf0f7;--bg2:#ffffff;--bg3:#fae0f0;--bg4:#f5cce6;
+  --border:#e8c4d8;--border2:#d898c0;
+  --text:#1a0a18;--text2:#6b2060;--text3:#b06898;
+  --accent:#e8157a;--accent2:#c01060;--red:#d42b2b;
+  --teal:#a855f7;--teal-text:#e8157a;
+  --blue-hi:#e8157a;--blue-lo:#fdf0f7;--green:#16a34a;
+  --shadow:0 4px 24px rgba(100,0,80,0.15);
+}
+/* ── Stardom Dark ── */
+[data-theme="stardom-dark"] {
+  --bg:#0d0a0e;--bg2:#150f18;--bg3:#1e1220;--bg4:#261528;
+  --border:#2a1a28;--border2:#3d2040;
+  --text:#f5e8f5;--text2:#c090b8;--text3:#7a4870;
+  --accent:#e8157a;--accent2:#c01060;--red:#ff3a5c;
+  --teal:#a855f7;--teal-text:#e8157a;
+  --blue-hi:#e8157a;--blue-lo:#fdf0f7;--green:#4ade80;
   --shadow:0 4px 24px rgba(0,0,0,0.6);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -177,7 +188,7 @@ textarea{resize:vertical;min-height:70px}
   <nav>
     <button class="active" onclick="switchPanel('dashboard')">Dashboard</button>
     <button onclick="switchPanel('add')">+ Add Match</button>
-    <button onclick="switchPanel('best')">Best</button>
+    <button onclick="switchPanel('best')">Favs</button>
     <button onclick="switchPanel('watch')">To Watch</button>
     <button onclick="switchPanel('rewatch')">Rewatch</button>
     <button onclick="switchPanel('all')">All Matches</button>
@@ -241,7 +252,8 @@ textarea{resize:vertical;min-height:70px}
       <div class="form-group full"><label>Event Name <span class="hint">(auto-filled or override)</span></label><input type="text" id="f-event" placeholder="e.g. AEW Revolution 2026"/></div>
       <div class="form-group"><label>Date</label><input type="date" id="f-date"/></div>
       <div class="form-group"><label>Match Type <span class="hint">(auto-filled or override)</span></label><input type="text" id="f-matchtype" placeholder="e.g. No Time Limit"/></div>
-      <div class="form-group full"><label>Championship <span class="hint">(omit &ldquo;Title&rdquo;)</span></label><input type="text" id="f-champ" placeholder="e.g. AEW Continental"/></div>
+      <div class="form-group full"><label>Championship <span class="hint">(omit &ldquo;Title&rdquo;)</span></label><input type="text" id="f-champ" placeholder="e.g. Wonder of Stardom"/></div>
+      <div class="form-group full"><label>Champion <span class="hint">(title holder going in)</span></label><input type="text" id="f-champion" placeholder="e.g. Saya Kamitani"/></div>
       <div class="form-group full">
         <label>Winner <span class="hint">(manual entry)</span></label>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
@@ -269,7 +281,7 @@ textarea{resize:vertical;min-height:70px}
 
   <!-- BEST -->
   <div id="panel-best" class="panel">
-    <div class="section-header"><div class="section-title">Best Matches <span class="tag" id="best-count">0</span></div></div>
+    <div class="section-header"><div class="section-title">Favorite Matches <span class="tag" id="best-count">0</span></div></div>
     <div id="best-scroll-top"></div>
     <div class="table-wrap" id="best-wrap"><table><thead><tr id="best-head"></tr></thead><tbody id="best-body"></tbody></table></div>
   </div>
@@ -310,7 +322,10 @@ textarea{resize:vertical;min-height:70px}
 
   <!-- EXPORT -->
   <div id="panel-export" class="panel">
-    <div class="section-header"><div class="section-title">Export &amp; Sync</div></div>
+    <div class="section-header">
+      <div class="section-title">Export &amp; Sync</div>
+      <button id="theme-btn" onclick="toggleTheme()" style="background:none;border:1px solid var(--border2);color:var(--text2);font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:4px;cursor:pointer;white-space:nowrap;transition:all .15s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">&#9790; Dark Mode</button>
+    </div>
     <div class="export-section">
       <h3>Export to CSV</h3>
       <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Download all matches as a CSV file.</p>
@@ -440,7 +455,7 @@ function switchPanel(id){
   document.getElementById('panel-'+id).classList.add('active');
   document.querySelector(`nav button[onclick="switchPanel('${id}')"]`).classList.add('active');
   const pf=document.getElementById('persistent-filters');
-  if(pf) pf.style.display=['best','watch','all'].includes(id)?'block':'none';
+  if(pf) pf.style.display=['best','watch','rewatch','all'].includes(id)?'block':'none';
   if(id==='dashboard')renderDashboard();
   if(id==='best'){populateSharedFilterOptions();updateFilterHighlights();updateSharedChips();renderBest();}
   if(id==='watch'){populateSharedFilterOptions();updateFilterHighlights();updateSharedChips();renderWatch();}
@@ -514,9 +529,15 @@ function addTopScroll(wrapId,containerId){
 }
 
 const COLS=[
-  {key:'matchUrl',label:'Match',render:m=>m.matchUrl
-    ?`<div class="match-name"><a href="${m.matchUrl}" target="_blank">${esc(m.name||m.matchUrl)}</a></div>`
-    :`<div class="match-name inline-field" onclick="inlineEditField(event,'${m.id}','name')" title="Click to edit">${esc(m.name||'&mdash;')}</div>`},
+  {key:'matchUrl',label:'Match',render:m=>{
+    const nameEl=m.matchUrl
+      ?`<div class="match-name"><a href="${m.matchUrl}" target="_blank">${esc(m.name||m.matchUrl)}</a></div>`
+      :`<div class="match-name inline-field" onclick="inlineEditField(event,'${m.id}','name')" title="Click to edit">${esc(m.name||'&mdash;')}</div>`;
+    const champEl=m.champion
+      ?`<div style="font-size:.72rem;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.04em;margin-top:2px;cursor:pointer;" onclick="inlineEditField(event,'${m.id}','champion')" title="Click to edit champion">&#127885; ${esc(m.champion)}</div>`
+      :`<div style="font-size:.7rem;color:var(--text3);cursor:pointer;" onclick="inlineEditField(event,'${m.id}','champion')" title="Click to set champion"></div>`;
+    return nameEl+champEl;
+  }},
   {key:'promoAbbr',label:'Promo',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','promoAbbr')" title="Click to edit">${m.promoAbbr?`<span class="promo-badge">${esc(m.promoAbbr)}</span>`:'<span class="rating-empty">&mdash;</span>'}</span>`},
   {key:'event',label:'Event',render:m=>`<div class="event-name inline-field" onclick="inlineEditField(event,'${m.id}','event')" title="Click to edit">${esc(m.event||'&mdash;')}</div>`},
   {key:'date',label:'Date',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','date')" title="Click to edit">${m.date?fmtDate(m.date):'&mdash;'}</span>`},
@@ -580,7 +601,7 @@ function filterMatches(arr,overrides){
   const f=Object.assign({},sharedFilters,overrides||{});
   const q=(f.search||'').toLowerCase().trim();
   return arr.filter(m=>{
-    if(q&&![m.name,m.event,m.championship,m.winner,m.matchType,m.promoAbbr,m.promoFull].some(v=>(v||'').toLowerCase().includes(q)))return false;
+    if(q&&![m.name,m.event,m.championship,m.champion,m.winner,m.matchType,m.promoAbbr,m.promoFull].some(v=>(v||'').toLowerCase().includes(q)))return false;
     if(f.year&&getMatchTab(m)!==f.year)return false;
     if(f.promo&&m.promoAbbr!==f.promo&&m.promoFull!==f.promo)return false;
     if(f.champ&&(m.championship||'').toLowerCase()!==f.champ.toLowerCase())return false;
@@ -748,7 +769,7 @@ function renderDashboard(){
   const rewatch=matches.filter(m=>m.rewatch);
   document.getElementById('stats-bar').innerHTML=`
     <div class="stat-card"><div class="stat-num">${matches.length}</div><div class="stat-label">Total Matches</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--teal)">${best.length}</div><div class="stat-label">Best</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--teal)">${best.length}</div><div class="stat-label">Favs</div></div>
     <div class="stat-card"><div class="stat-num" style="color:var(--blue-hi)">${watch.length}</div><div class="stat-label">To Watch</div></div>
     <div class="stat-card"><div class="stat-num" style="color:var(--accent)">${rewatch.length}</div><div class="stat-label">Rewatch</div></div>
     <div class="stat-card"><div class="stat-num" style="color:var(--teal-text)">${tenplus.length}</div><div class="stat-label">10+ Matches</div></div>`;
@@ -834,9 +855,11 @@ function setFetchStatus(msg,type){const el=document.getElementById('fetch-status
 let editingId=null;
 let prevPanel='dashboard'; // panel to return to after save
 function setEditingId(id){editingId=id;document.getElementById('form-title').textContent=id?'Edit Match':'Add New Match';document.getElementById('delete-btn').style.display=id?'inline-block':'none';}
-function getFormData(){return{id:editingId||('m_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)),matchUrl:document.getElementById('f-url').value.trim(),name:document.getElementById('f-name').value.trim(),promoFull:document.getElementById('f-promo-full').value,promoAbbr:document.getElementById('f-promo-abbr').value.trim(),event:document.getElementById('f-event').value.trim(),date:document.getElementById('f-date').value,matchType:document.getElementById('f-matchtype').value.trim(),championship:document.getElementById('f-champ').value.trim(),winner:document.getElementById('f-winner').value.trim(),titleChange:document.getElementById('f-title-change').checked,rating:document.getElementById('f-rating').value,tenPlus:document.getElementById('f-10plus').checked,sawLive:document.getElementById('f-saw-live').checked,rewatch:document.getElementById('f-rewatch').checked,score:document.getElementById('f-score').value,value:document.getElementById('f-value').value};}
-function fillForm(m){document.getElementById('f-url').value=m.matchUrl||'';document.getElementById('f-name').value=m.name||'';populatePromoDropdowns();document.getElementById('f-promo-full').value=m.promoFull||'';document.getElementById('f-promo-abbr').value=m.promoAbbr||'';document.getElementById('f-event').value=m.event||'';document.getElementById('f-date').value=m.date||'';document.getElementById('f-matchtype').value=m.matchType||'';document.getElementById('f-champ').value=m.championship||'';document.getElementById('f-winner').value=m.winner||'';document.getElementById('f-title-change').checked=!!m.titleChange;document.getElementById('f-rating').value=m.rating||'';document.getElementById('f-10plus').checked=!!m.tenPlus;document.getElementById('f-saw-live').checked=!!m.sawLive;document.getElementById('f-rewatch').checked=!!m.rewatch;document.getElementById('f-score').value=m.score||'';document.getElementById('f-value').value=m.value||'';setFetchStatus('');}
-function clearForm(){['f-url','f-name','f-event','f-matchtype','f-champ','f-winner','f-rating','f-score','f-value','f-date','f-promo-abbr'].forEach(id=>document.getElementById(id).value='');document.getElementById('f-promo-full').value='';document.getElementById('f-10plus').checked=false;document.getElementById('f-saw-live').checked=false;document.getElementById('f-rewatch').checked=false;document.getElementById('f-title-change').checked=false;setFetchStatus('');setEditingId(null);}
+function getFormData(){return{id:editingId||('m_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)),matchUrl:document.getElementById('f-url').value.trim(),name:document.getElementById('f-name').value.trim(),promoFull:document.getElementById('f-promo-full').value,promoAbbr:document.getElementById('f-promo-abbr').value.trim(),event:document.getElementById('f-event').value.trim(),date:document.getElementById('f-date').value,matchType:document.getElementById('f-matchtype').value.trim(),championship:document.getElementById('f-champ').value.trim(),
+    champion:document.getElementById('f-champion').value.trim(),winner:document.getElementById('f-winner').value.trim(),titleChange:document.getElementById('f-title-change').checked,rating:document.getElementById('f-rating').value,tenPlus:document.getElementById('f-10plus').checked,sawLive:document.getElementById('f-saw-live').checked,rewatch:document.getElementById('f-rewatch').checked,score:document.getElementById('f-score').value,value:document.getElementById('f-value').value};}
+function fillForm(m){document.getElementById('f-url').value=m.matchUrl||'';document.getElementById('f-name').value=m.name||'';populatePromoDropdowns();document.getElementById('f-promo-full').value=m.promoFull||'';document.getElementById('f-promo-abbr').value=m.promoAbbr||'';document.getElementById('f-event').value=m.event||'';document.getElementById('f-date').value=m.date||'';document.getElementById('f-matchtype').value=m.matchType||'';document.getElementById('f-champ').value=m.championship||'';
+  document.getElementById('f-champion').value=m.champion||'';document.getElementById('f-winner').value=m.winner||'';document.getElementById('f-title-change').checked=!!m.titleChange;document.getElementById('f-rating').value=m.rating||'';document.getElementById('f-10plus').checked=!!m.tenPlus;document.getElementById('f-saw-live').checked=!!m.sawLive;document.getElementById('f-rewatch').checked=!!m.rewatch;document.getElementById('f-score').value=m.score||'';document.getElementById('f-value').value=m.value||'';setFetchStatus('');}
+function clearForm(){['f-url','f-name','f-event','f-matchtype','f-champ','f-champion','f-winner','f-rating','f-score','f-value','f-date','f-promo-abbr'].forEach(id=>document.getElementById(id).value='');document.getElementById('f-promo-full').value='';document.getElementById('f-10plus').checked=false;document.getElementById('f-saw-live').checked=false;document.getElementById('f-rewatch').checked=false;document.getElementById('f-title-change').checked=false;setFetchStatus('');setEditingId(null);}
 function saveMatch(){
   const data=getFormData();if(!data.name){toast('Match name is required',true);return;}
   if(data.date){const y=data.date.split('-')[0];if(y)data._sheetName=getTabName(parseInt(y));}
@@ -1064,7 +1087,26 @@ function clearAllData(){if(!confirm('Delete ALL match data? This cannot be undon
 let toastTimer;
 function toast(msg,isErr=false){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(isErr?' err':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3000);}
 
+function toggleTheme(){
+  const html=document.documentElement;
+  const isLight=html.getAttribute('data-theme')==='stardom-light';
+  if(isLight){
+    html.removeAttribute('data-theme');
+    document.getElementById('theme-btn').textContent='☾ Light';
+    localStorage.setItem('wt_theme','dark');
+  } else {
+    html.setAttribute('data-theme','stardom-light');
+    document.getElementById('theme-btn').textContent='☀ Dark';
+    localStorage.setItem('wt_theme','light');
+  }
+}
+
 (function init(){
+  // Load saved theme (default is light)
+  if(localStorage.getItem('wt_theme')==='dark'){
+    document.documentElement.setAttribute('data-theme','stardom-dark');
+    const tb=document.getElementById('theme-btn');if(tb)tb.textContent='☉ Light Mode';
+  }
   const savedUrl=localStorage.getItem('sheets_url_2026');
   if(savedUrl)document.getElementById('sheets-url').value=savedUrl;
   populatePromoDropdowns();populateSharedFilterOptions();renderDashboard();
