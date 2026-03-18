@@ -832,6 +832,7 @@ async function fetchMatchData(){
 function setFetchStatus(msg,type){const el=document.getElementById('fetch-status');el.textContent=msg;el.className='fetch-status'+(type?' '+type:'');}
 
 let editingId=null;
+let prevPanel='dashboard'; // panel to return to after save
 function setEditingId(id){editingId=id;document.getElementById('form-title').textContent=id?'Edit Match':'Add New Match';document.getElementById('delete-btn').style.display=id?'inline-block':'none';}
 function getFormData(){return{id:editingId||('m_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)),matchUrl:document.getElementById('f-url').value.trim(),name:document.getElementById('f-name').value.trim(),promoFull:document.getElementById('f-promo-full').value,promoAbbr:document.getElementById('f-promo-abbr').value.trim(),event:document.getElementById('f-event').value.trim(),date:document.getElementById('f-date').value,matchType:document.getElementById('f-matchtype').value.trim(),championship:document.getElementById('f-champ').value.trim(),winner:document.getElementById('f-winner').value.trim(),titleChange:document.getElementById('f-title-change').checked,rating:document.getElementById('f-rating').value,tenPlus:document.getElementById('f-10plus').checked,sawLive:document.getElementById('f-saw-live').checked,rewatch:document.getElementById('f-rewatch').checked,score:document.getElementById('f-score').value,value:document.getElementById('f-value').value};}
 function fillForm(m){document.getElementById('f-url').value=m.matchUrl||'';document.getElementById('f-name').value=m.name||'';populatePromoDropdowns();document.getElementById('f-promo-full').value=m.promoFull||'';document.getElementById('f-promo-abbr').value=m.promoAbbr||'';document.getElementById('f-event').value=m.event||'';document.getElementById('f-date').value=m.date||'';document.getElementById('f-matchtype').value=m.matchType||'';document.getElementById('f-champ').value=m.championship||'';document.getElementById('f-winner').value=m.winner||'';document.getElementById('f-title-change').checked=!!m.titleChange;document.getElementById('f-rating').value=m.rating||'';document.getElementById('f-10plus').checked=!!m.tenPlus;document.getElementById('f-saw-live').checked=!!m.sawLive;document.getElementById('f-rewatch').checked=!!m.rewatch;document.getElementById('f-score').value=m.score||'';document.getElementById('f-value').value=m.value||'';setFetchStatus('');}
@@ -841,9 +842,19 @@ function saveMatch(){
   if(data.date){const y=data.date.split('-')[0];if(y)data._sheetName=getTabName(parseInt(y));}
   const matches=loadMatches();const idx=matches.findIndex(m=>m.id===editingId);
   if(idx>=0)matches[idx]=data;else matches.unshift(data);
-  saveMatches(matches);toast(editingId?'Match updated':'Match saved');clearForm();switchPanel('dashboard');
+  const wasEditing=!!editingId;
+  saveMatches(matches);toast(wasEditing?'Match updated':'Match saved');
+  clearForm();
+  switchPanel(wasEditing?prevPanel:'dashboard');
 }
-function editMatch(id){const m=loadMatches().find(m=>m.id===id);if(!m)return;switchPanel('add');setTimeout(()=>{fillForm(m);setEditingId(id);},50);}
+function editMatch(id){
+  const m=loadMatches().find(m=>m.id===id);if(!m)return;
+  // Remember which panel we came from
+  const active=document.querySelector('.panel.active');
+  if(active&&active.id) prevPanel=active.id.replace('panel-','');
+  switchPanel('add');
+  setTimeout(()=>{fillForm(m);setEditingId(id);},50);
+}
 function deleteEditing(){if(!editingId)return;if(!confirm('Delete this match?'))return;saveMatches(loadMatches().filter(m=>m.id!==editingId));toast('Match deleted');clearForm();switchPanel('dashboard');}
 function confirmDelete(id){if(!confirm('Delete this match?'))return;saveMatches(loadMatches().filter(m=>m.id!==id));toast('Match deleted');renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();}
 
