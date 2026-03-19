@@ -323,64 +323,62 @@ textarea{resize:vertical;min-height:70px}
 
   <!-- EXPORT -->
   <div id="panel-export" class="panel">
-    <div class="section-header"><div class="section-title">Export &amp; Sync</div></div>
+    <div class="section-header"><div class="section-title">Export &amp; Import</div></div>
+
     <div class="export-section">
-      <h3>Export to CSV</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Download all matches as a CSV file.</p>
-      <button class="btn btn-primary" onclick="exportCSV()">&#8595; Download CSV</button>
+      <h3>&#128190; JSON Backup</h3>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Full backup of all matches including flags and ratings. Use this to save or transfer your data between devices.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <button class="btn btn-primary" onclick="exportJSON()">&#8595; Download Backup</button>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <input type="file" id="import-json-file" accept=".json" style="color:var(--text2);font-size:.82rem;"/>
+          <button class="btn btn-secondary" onclick="importJSON()">&#8593; Restore from Backup</button>
+        </div>
+      </div>
     </div>
+
     <div class="export-section">
-      <h3>Import from CSV</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Load a previously exported CSV back into the dashboard.</p>
-      <input type="file" id="import-file" accept=".csv" style="color:var(--text2);margin-bottom:10px;display:block"/>
-      <button class="btn btn-secondary" onclick="importCSV()">&#8593; Import CSV</button>
+      <h3>&#128202; CSV</h3>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Export for use in spreadsheet apps.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <button class="btn btn-secondary" onclick="exportCSV()">&#8595; Download CSV</button>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <input type="file" id="import-file" accept=".csv" style="color:var(--text2);font-size:.82rem;"/>
+          <button class="btn btn-secondary" onclick="importCSV()">&#8593; Import CSV</button>
+        </div>
+      </div>
     </div>
+
     <div class="export-section">
-      <h3>Google Apps Script Sync</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:10px;">Paste your Web App URL to sync with Google Sheets.</p>
-      <details style="margin-bottom:14px;">
-        <summary style="cursor:pointer;font-size:.8rem;color:var(--text3);font-family:'Barlow Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;">Setup Instructions &#9658;</summary>
-        <ol style="margin-top:10px;padding-left:18px;color:var(--text2);font-size:.8rem;line-height:2;">
-          <li>Open your Google Sheet &#8594; Extensions &#8594; Apps Script</li>
-          <li>Replace Code.gs with the provided WebApp_Code.gs</li>
-          <li>Deploy &#8594; New Deployment | Web App | Execute as: Me | Anyone</li>
-          <li>Copy the Web App URL &#8594; paste below</li>
-        </ol>
-      </details>
+      <h3>&#9889; Auto-Fill (cagematch)</h3>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:10px;">Auto-Fill and Event Card Import require a Google Apps Script Web App. Set the URL once — it handles both features. No Sheets sync needed.</p>
       <div class="sheets-url-row">
         <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/..."/>
         <button class="btn btn-secondary" onclick="saveSheetURL()">Save URL</button>
       </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-        <button class="btn btn-primary" onclick="pullFromSheets()">&#8595; Pull from Sheets</button>
-        <button class="btn btn-secondary" onclick="pullFromSheetsYear()" style="font-size:.78rem;padding:8px 14px;">&#8595; Pull Year Only</button>
-        <button class="btn btn-secondary" onclick="pullPromos()">&#8595; Pull Promotions</button>
-        <button class="btn btn-secondary" onclick="pushToSheets()">&#8593; Push All to Sheets</button>
-        <button class="btn btn-secondary" onclick="testConnection()" style="border-color:var(--teal);color:var(--teal)">&#10003; Test Connection</button>
-      </div>
-      <div id="debug-output" style="display:none;margin-top:8px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto;"></div>
-      <div id="sync-status" style="margin-top:6px;font-size:.82rem;color:var(--text3);line-height:1.8;min-height:20px;"></div>
+      <div id="autofill-status" style="font-size:.78rem;color:var(--text3);margin-top:6px;min-height:16px;"></div>
     </div>
+
     <div class="export-section">
-      <h3>&#9889; Batch URL Import</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste cagematch match URLs (one per line). Fetches all fields automatically. <strong style="color:var(--text)">Rating and Winner are always manual.</strong></p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end;">
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <label style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);">Year <span style="color:var(--red)">*</span></label>
-          <input type="text" id="import-year" placeholder="e.g. 2026" maxlength="4" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;font-weight:700;padding:9px 12px;border-radius:4px;outline:none;width:100px;text-align:center;" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,4)"/>
+      <h3>&#127915; Event Card Import</h3>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste a cagematch event card URL (ending in page=3) to import all matches from a show at once. Requires Apps Script URL above. Auto-detects <strong style="color:var(--text)">TITLE CHANGE !!!</strong></p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;">
+        <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:6px;">
+          <label class="form-label">Event Card URL</label>
+          <input type="url" id="event-card-url" placeholder="https://www.cagematch.net/?id=1&amp;nr=...&amp;page=3"/>
         </div>
-        <button class="btn btn-primary" onclick="runBatchImport()" id="import-run-btn">&#9889; Import URLs</button>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label class="form-label">Year</label>
+          <input type="text" id="event-card-year" placeholder="2026" maxlength="4" style="width:80px;text-align:center;" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,4)"/>
+        </div>
+        <button class="btn btn-primary" id="event-import-btn" onclick="runEventCardImport()">&#127915; Import Event</button>
       </div>
-      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
-        <label style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);">Match URLs <span style="color:var(--text3);font-weight:400;text-transform:none;font-size:.72rem;margin-left:6px;">one per line</span></label>
-        <textarea id="import-urls" rows="6" placeholder="https://www.cagematch.net/?id=111&nr=134917" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:10px 12px;border-radius:4px;outline:none;resize:vertical;min-height:120px;line-height:1.6;"></textarea>
-      </div>
-      <div id="import-status" style="display:none;margin-top:8px;background:var(--bg3);border-radius:4px;padding:10px 14px;font-size:.82rem;line-height:1.8;"></div>
-      <p style="color:var(--text3);font-size:.78rem;margin-top:10px;">&#9432; After import, click <strong style="color:var(--accent)">&#8595; Pull from Sheets</strong> to sync to the dashboard.</p>
+      <div id="event-import-status" style="display:none;background:var(--bg3);border-radius:4px;padding:10px 14px;font-size:.82rem;line-height:1.8;"></div>
     </div>
+
     <div class="export-section">
-      <h3 style="color:var(--red)">Danger Zone</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Clear all locally stored match data. This cannot be undone.</p>
+      <h3 style="color:var(--red);">&#9888; Danger Zone</h3>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Delete all locally stored match data. Cannot be undone — download a JSON backup first.</p>
       <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
     </div>
   </div>
@@ -987,6 +985,79 @@ function commitWinner(id){
 }
 
 /* EXPORT / IMPORT */
+function exportJSON(){
+  const matches=loadMatches();
+  if(!matches.length){toast('No matches to export',true);return;}
+  const blob=new Blob([JSON.stringify({version:1,exported:new Date().toISOString(),matches},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='wrestling-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  toast('Backup downloaded ('+matches.length+' matches)');
+}
+function importJSON(){
+  const file=(document.getElementById('import-json-file')||{}).files&&document.getElementById('import-json-file').files[0];
+  if(!file){toast('Select a JSON file first',true);return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      const matches=Array.isArray(data)?data:(data.matches||[]);
+      if(!matches.length)throw new Error('No matches found in file');
+      if(!confirm('Import '+matches.length+' matches? This replaces all current data.'))return;
+      saveMatches(matches);renderDashboard();populateSharedFilterOptions();
+      toast('Imported '+matches.length+' matches');
+    }catch(err){toast('Import failed: '+err.message,true);}
+  };
+  reader.readAsText(file);
+}
+function getTabName(year){
+  if(year>=2025)return String(year);
+  if(year>=2020)return'2020s';
+  if(year>=2010)return'10s';
+  if(year>=2000)return'00s';
+  if(year>=1990)return'90s';
+  return'80s';
+}
+async function runEventCardImport(){
+  const url=(document.getElementById('event-card-url')||{value:''}).value.trim();
+  const year=(document.getElementById('event-card-year')||{value:''}).value.trim();
+  if(!url){toast('Paste an event card URL first',true);return;}
+  if(!year||year.length!==4){toast('Enter a valid year',true);return;}
+  const gasUrl=getSheetURL();
+  if(!gasUrl){toast('Set your Apps Script URL in the Auto-Fill section first',true);return;}
+  const statusEl=document.getElementById('event-import-status');
+  const btn=document.getElementById('event-import-btn');
+  if(statusEl){statusEl.style.display='block';statusEl.style.color='var(--text2)';statusEl.innerHTML='&#127915; Fetching event card&hellip;<br><span style="color:var(--text3);font-size:.78rem;">Parsing all matches. Please wait.</span>';}
+  if(btn){btn.disabled=true;btn.textContent='Importing…';}
+  try{
+    const data=await gasGet('importEvent',{url,year});
+    if(!data.matches||!data.matches.length){
+      if(statusEl){statusEl.style.color='var(--accent)';statusEl.innerHTML='<strong>No matches found.</strong> Make sure URL ends with &amp;page=3.';}
+      return;
+    }
+    const existing=loadMatches();
+    const existingUrls=new Set(existing.map(m=>m.matchUrl).filter(Boolean));
+    const fresh=data.matches.filter(m=>!existingUrls.has(m.matchUrl));
+    const dupes=data.matches.length-fresh.length;
+    const yr=parseInt(year)||new Date().getFullYear();
+    const withIds=fresh.map(m=>({...m,id:'ev_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),_sheetName:getTabName(yr)}));
+    saveMatches([...withIds,...existing]);
+    renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
+    const tc=fresh.filter(m=>m.titleChange).length;
+    if(statusEl){
+      statusEl.style.color='var(--green)';
+      statusEl.innerHTML='<strong style="color:var(--text)">'+esc(data.eventName||'Event')+'</strong><br>'+
+        '✓ '+fresh.length+' match'+(fresh.length!==1?'es':'')+' imported'+
+        (dupes?' &nbsp;&middot;&nbsp; ⦸ '+dupes+' duplicate'+(dupes!==1?'s':'')+' skipped':'')+
+        (tc?' &nbsp;&middot;&nbsp; &#127942; '+tc+' title change'+(tc!==1?'s':''):'')+
+        '<br><span style="color:var(--text3);font-size:.78rem;">Check All Matches to review.</span>';
+    }
+    toast(fresh.length+' matches imported');
+  }catch(e){
+    if(statusEl){statusEl.style.color='var(--red)';statusEl.innerHTML='<strong>✗ Import failed:</strong> '+esc(e.message);}
+    toast('Event import failed: '+e.message,true);
+  }
+  if(btn){btn.disabled=false;btn.innerHTML='&#127915; Import Event';}
+}
 function exportCSV(){
   const matches=loadMatches();if(!matches.length){toast('No matches to export',true);return;}
   const headers=['ID','MatchURL','Name','PromoFull','PromoAbbr','Event','Date','MatchType','Championship','Winner','TitleChange','Rating','10Plus','Score','Value'];
@@ -997,7 +1068,20 @@ function importCSV(){
   const file=document.getElementById('import-file').files[0];if(!file){toast('Select a CSV file first',true);return;}
   const reader=new FileReader();reader.onload=e=>{try{const lines=e.target.result.split('\n').filter(l=>l.trim());const headers=lines[0].split(',').map(h=>h.replace(/"/g,'').trim());const matches=lines.slice(1).map(line=>{const vals=line.match(/(".*?"|[^,]+)(?=,|$)/g)||[];const clean=vals.map(v=>v.replace(/^"|"$/g,'').replace(/""/g,'"'));const obj={};headers.forEach((h,i)=>obj[h]=clean[i]||'');return{id:obj.ID||('m_'+Date.now()+Math.random()),matchUrl:obj.MatchURL,name:obj.Name,promoFull:obj.PromoFull,promoAbbr:obj.PromoAbbr,event:obj.Event,date:obj.Date,matchType:obj.MatchType,championship:obj.Championship,winner:obj.Winner,titleChange:obj.TitleChange==='1',rating:obj.Rating,tenPlus:obj['10Plus']==='10+',score:obj.Score,value:obj.Value};});saveMatches(matches);toast(`Imported ${matches.length} matches`);renderDashboard();}catch(err){toast('Import failed — check CSV format',true);}};reader.readAsText(file);
 }
-function saveSheetURL(){const url=document.getElementById('sheets-url').value.trim();if(!url){toast('Enter a URL first',true);return;}localStorage.setItem('sheets_url_2026',url);toast('Sheets URL saved');}
+function saveSheetURL(){
+  const url=document.getElementById('sheets-url').value.trim();
+  if(!url){toast('Enter a URL first',true);return;}
+  localStorage.setItem('sheets_url_2026',url);
+  toast('Web App URL saved');
+  updateAutoFillUI();
+}
+function updateAutoFillUI(){
+  const url=localStorage.getItem('sheets_url_2026');
+  const btn=document.getElementById('fetch-btn');
+  const el=document.getElementById('autofill-status');
+  if(btn){btn.disabled=!url;btn.style.opacity=url?'1':'0.45';btn.title=url?'':'Set Web App URL in Export tab first';}
+  if(el) el.textContent=url?'✓ Web App URL set — Auto-Fill and Event Import enabled.':'No URL set. Auto-Fill disabled.';
+}
 function setSyncStatus(msg,color){const el=document.getElementById('sync-status');el.textContent=msg;el.style.color=color||'var(--text3)';}
 function getSheetURL(){const url=localStorage.getItem('sheets_url_2026');if(!url){toast('Set your Sheets Web App URL first',true);return null;}return url;}
 
@@ -1027,61 +1111,11 @@ function gasGet(action,extraParams={}){
 }
 async function gasPost(body){const baseUrl=getSheetURL();if(!baseUrl)throw new Error('No Web App URL set');await fetch(baseUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(body),mode:'no-cors',redirect:'follow'});return{status:'sent'};}
 
-async function pullFromSheets(){
-  const url=getSheetURL();if(!url)return;setSyncStatus('Pulling matches from Sheet\u2026');
-  try{const data=await gasGet('pull');if(!Array.isArray(data.matches))throw new Error('Unexpected response');
-    const incoming=data.matches.map(m=>({...m,id:m.id||('sheet_'+Date.now()+'_'+Math.random().toString(36).slice(2,5))}));
-    const incomingUrls=new Set(incoming.map(m=>m.matchUrl).filter(Boolean));const incomingNames=new Set(incoming.map(m=>m.name).filter(Boolean));
-    const local=loadMatches().filter(m=>!m.id.startsWith('sheet_')&&!m.id.startsWith('test_')&&!incomingUrls.has(m.matchUrl)&&!incomingNames.has(m.name));
-    saveMatches([...incoming,...local]);renderDashboard();populateSharedFilterOptions();
-    setSyncStatus('\u2713 Pulled '+incoming.length+' matches. ('+local.length+' local-only preserved)','var(--green)');toast('Pulled '+incoming.length+' matches');
-  }catch(e){setSyncStatus('\u2717 Pull failed: '+e.message,'var(--red)');toast('Pull failed',true);}
-}
-async function pullFromSheetsYear(){
-  const year=prompt('Enter year or decade tab (e.g. 2026, 2020s, 10s, 90s):');if(!year||!year.trim()){toast('Enter a year or decade tab name',true);return;}
-  const url=getSheetURL();if(!url)return;setSyncStatus('Pulling '+year+' matches\u2026');
-  try{const data=await gasGet('pull',{sheet:year.trim()});if(!Array.isArray(data.matches))throw new Error('Unexpected response');
-    const incoming=data.matches.map(m=>({...m,id:m.id||('sheet_'+Date.now()+'_'+Math.random().toString(36).slice(2,5))}));
-    const others=loadMatches().filter(m=>m._sheetName!==year.trim()&&!m.id.startsWith('sheet_'+year.trim()));
-    saveMatches([...incoming,...others]);renderDashboard();populateSharedFilterOptions();
-    setSyncStatus('\u2713 Pulled '+incoming.length+' matches for '+year+'.','var(--green)');toast('Pulled '+incoming.length+' matches');
-  }catch(e){setSyncStatus('\u2717 Pull failed: '+e.message,'var(--red)');toast('Pull failed',true);}
-}
-async function pullPromos(){
-  const url=getSheetURL();if(!url)return;setSyncStatus('Pulling promotions\u2026');
-  try{const data=await gasGet('pullPromos');if(!Array.isArray(data.promos))throw new Error('No promos');
-    savePromos(data.promos);populatePromoDropdowns();populateSharedFilterOptions();renderPromos();
-    setSyncStatus('\u2713 Pulled '+data.promos.length+' promotions.','var(--green)');toast('Promotions updated');
-  }catch(e){setSyncStatus('\u2717 Promo pull failed: '+e.message,'var(--red)');toast('Promo pull failed',true);}
-}
-async function pushToSheets(){
-  const url=getSheetURL();if(!url)return;const matches=loadMatches();if(!matches.length){toast('No matches to push',true);return;}
-  if(!confirm('Push '+matches.length+' matches to Google Sheet? This will overwrite existing data rows.'))return;
-  setSyncStatus('Pushing '+matches.length+' matches\u2026');
-  try{await gasPost({action:'push',matches});setSyncStatus('\u2713 Push sent \u2014 check your Sheet.','var(--accent)');toast('Push sent to Sheet');}
-  catch(e){setSyncStatus('\u2717 Push failed: '+e.message,'var(--red)');toast('Push failed',true);}
-}
-async function runBatchImport(){
-  const year=(document.getElementById('import-year').value||'').trim();
-  if(!year||year.length!==4||isNaN(parseInt(year))){toast('Enter a valid 4-digit year',true);document.getElementById('import-year').focus();return;}
-  const rawUrls=document.getElementById('import-urls').value.trim();
-  if(!rawUrls){toast('Paste at least one URL',true);document.getElementById('import-urls').focus();return;}
-  const urls=rawUrls.split('\n').map(u=>u.trim()).filter(u=>u.length>0&&u.includes('cagematch.net'));
-  if(!urls.length){toast('No valid cagematch URLs found',true);return;}
-  const statusEl=document.getElementById('import-status');const btn=document.getElementById('import-run-btn');
-  statusEl.style.display='block';statusEl.style.color='var(--text2)';
-  statusEl.innerHTML='\u26a1 Importing '+urls.length+' URL'+(urls.length!==1?'s':'')+' into <strong>'+year+'</strong>\u2026<br><span style="color:var(--text3);font-size:.78rem;">Running on Google\u2019s servers. Please wait.</span>';
-  btn.disabled=true;btn.textContent='Running\u2026';
-  try{
-    const data=await gasGet('batchImport',{year,urls:urls.join('|')});
-    const imported=data.imported||0,duplicates=data.duplicates||0,errors=data.errors||0;
-    statusEl.style.color=imported>0?'var(--green)':'var(--accent)';
-    statusEl.innerHTML='<strong style="color:var(--text)">'+(data.message||'Import complete.')+'</strong><br><span style="color:var(--text2)">\u2713 '+imported+' new match'+(imported!==1?'es':'')+' written'+(duplicates?' | \u29b8 '+duplicates+' duplicate'+(duplicates!==1?'s':'')+' skipped':'')+(errors?' | \u2717 '+errors+' failed':'')+
-      '</span><br><span style="color:var(--text3);font-size:.78rem;">Click <strong style="color:var(--accent)">\u2193 Pull from Sheets</strong> to sync into the dashboard.</span>';
-    if(imported>0)toast(imported+' match'+(imported!==1?'es':'')+' imported \u2192 '+year);else toast('No new matches \u2014 '+duplicates+' duplicate'+(duplicates!==1?'s':'')+' skipped');
-  }catch(e){statusEl.style.color='var(--red)';statusEl.innerHTML='<strong>\u2717 Import failed:</strong> '+esc(e.message);toast('Import failed',true);}
-  btn.disabled=false;btn.textContent='\u26a1 Import URLs';
-}
+
+
+
+
+
 
 function clearAllData(){if(!confirm('Delete ALL match data? This cannot be undone.'))return;localStorage.removeItem(STORAGE_KEY);saveMatches([]);renderDashboard();populateSharedFilterOptions();toast('All data cleared');}
 
