@@ -377,6 +377,18 @@ textarea{resize:vertical;min-height:70px}
     </div>
 
     <div class="export-section">
+      <h3>&#128279; Individual Match Import</h3>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste one or more cagematch match URLs (one per line) to import them individually. Requires Apps Script URL above.</p>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <textarea id="batch-urls" rows="5" placeholder="https://www.cagematch.net/?id=111&nr=134917&#10;https://www.cagematch.net/?id=111&nr=69051" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:monospace;font-size:.78rem;padding:8px;border-radius:4px;resize:vertical;outline:none;"></textarea>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="btn btn-primary" id="batch-import-btn" onclick="runBatchURLImport()">&#8595; Import URLs</button>
+          <div id="batch-import-status" style="font-size:.78rem;color:var(--text3);"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="export-section">
       <h3 style="color:var(--red);">&#9888; Danger Zone</h3>
       <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Delete all locally stored match data. Cannot be undone — download a JSON backup first.</p>
       <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
@@ -1116,6 +1128,46 @@ async function gasPost(body){const baseUrl=getSheetURL();if(!baseUrl)throw new E
 
 
 
+
+async function runBatchURLImport(){
+  const raw=(document.getElementById('batch-urls')||{value:''}).value;
+  const urls=raw.replace(/\r/g,'').split('\n').join(',').split(',').map(u=>u.trim()).filter(u=>u.startsWith('http'));
+  if(!urls.length){toast('Paste at least one match URL',true);return;}
+  const gasUrl=getSheetURL();
+  if(!gasUrl){toast('Set your Apps Script URL in the Auto-Fill section first',true);return;}
+  const btn=document.getElementById('batch-import-btn');
+  const statusEl=document.getElementById('batch-import-status');
+  btn.disabled=true;btn.textContent='Importing…';
+  let imported=0,skipped=0,failed=0;
+  const existing=loadMatches();
+  const existingUrls=new Set(existing.map(m=>m.matchUrl).filter(Boolean));
+  const newMatches=[...existing];
+  for(let i=0;i<urls.length;i++){
+    const url=urls[i];
+    if(statusEl) statusEl.textContent=`Fetching ${i+1}/${urls.length}…`;
+    if(existingUrls.has(url)){skipped++;continue;}
+    try{
+      const data=await gasGet('fetchMatch',{url});
+      if(!data||!data.name){failed++;continue;}
+      const yr=parseInt((data.date||'').split('-')[0])||new Date().getFullYear();
+      newMatches.unshift({
+        ...data,
+        id:'batch_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+        _sheetName:getTabName(yr)
+      });
+      existingUrls.add(url);
+      imported++;
+    }catch(e){failed++;Logger&&Logger.log&&Logger.log(e);}
+    // Small delay to avoid rate limiting
+    if(i<urls.length-1) await new Promise(r=>setTimeout(r,300));
+  }
+  saveMatches(newMatches);
+  renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
+  const msg=imported+' imported'+(skipped?' · '+skipped+' skipped':'')+( failed?' · '+failed+' failed':'');
+  if(statusEl) statusEl.textContent='✓ Done: '+msg;
+  toast(msg);
+  btn.disabled=false;btn.innerHTML='&#8595; Import URLs';
+}
 
 function clearAllData(){if(!confirm('Delete ALL match data? This cannot be undone.'))return;localStorage.removeItem(STORAGE_KEY);saveMatches([]);renderDashboard();populateSharedFilterOptions();toast('All data cleared');}
 
