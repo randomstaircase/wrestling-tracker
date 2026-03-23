@@ -595,11 +595,31 @@ function sortMatches(arr){return[...arr].sort((a,b)=>{const va=normaliseSortVal(
 
 function buildRows(arr,tbody,showActions=true){
   if(!arr.length){tbody.innerHTML=`<tr><td colspan="${COLS.length+1}" class="empty-state">No matches found</td></tr>`;return;}
+  const beltIcon=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="-55 -30 110 60" width="16" height="16" style="display:inline-block;vertical-align:middle;flex-shrink:0;margin-right:2px;"><rect x="-50" y="-18" width="32" height="36" rx="4" fill="#1a1a1a"/><rect x="-47" y="-15" width="26" height="30" rx="3" fill="#b8860b"/><ellipse cx="-34" cy="0" rx="8" ry="8" fill="#1a1a1a"/><ellipse cx="-34" cy="0" rx="5" ry="5" fill="#e8c840"/><circle cx="-34" cy="0" r="2" fill="#1a1a1a"/><rect x="-22" y="-28" width="44" height="56" rx="5" fill="#1a1a1a"/><rect x="-19" y="-25" width="38" height="50" rx="4" fill="#c9a030"/><rect x="-14" y="-20" width="28" height="40" rx="3" fill="#1a1a1a"/><rect x="-11" y="-17" width="22" height="34" rx="2" fill="#e8c840"/><polygon points="0,-10 3,-3 10,-3 4,2 7,9 0,5 -7,9 -4,2 -10,-3 -3,-3" fill="#1a1a1a"/><rect x="18" y="-18" width="32" height="36" rx="4" fill="#1a1a1a"/><rect x="21" y="-15" width="26" height="30" rx="3" fill="#b8860b"/><ellipse cx="34" cy="0" rx="8" ry="8" fill="#1a1a1a"/><ellipse cx="34" cy="0" rx="5" ry="5" fill="#e8c840"/><circle cx="34" cy="0" r="2" fill="#1a1a1a"/></svg>`;
+  const beltSm=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="-55 -30 110 60" width="12" height="12" style="display:inline-block;vertical-align:middle;margin-right:2px;"><rect x="-50" y="-18" width="32" height="36" rx="4" fill="#1a1a1a"/><rect x="-47" y="-15" width="26" height="30" rx="3" fill="#b8860b"/><rect x="-22" y="-28" width="44" height="56" rx="5" fill="#1a1a1a"/><rect x="-19" y="-25" width="38" height="50" rx="4" fill="#c9a030"/><rect x="-11" y="-17" width="22" height="34" rx="2" fill="#e8c840"/><rect x="18" y="-18" width="32" height="36" rx="4" fill="#1a1a1a"/><rect x="21" y="-15" width="26" height="30" rx="3" fill="#b8860b"/></svg>`;
   tbody.innerHTML=arr.map(m=>{
     const cls=rowColorClass(m);
     const cells=COLS.map(c=>`<td>${c.render(m)}</td>`).join('');
     const actions=showActions?`<td><div class="row-actions"><button onclick="editMatch('${m.id}')">Edit</button><button class="del" onclick="confirmDelete('${m.id}')">Del</button></div></td>`:'<td></td>';
-    return`<tr class="${cls}" data-id="${m.id}">${cells}${actions}</tr>`;
+    // Mobile-only cells
+    const displayName=esc(m.name||m.matchUrl||'—').replace(/\(c\)/gi,beltIcon);
+    const nameEl=m.matchUrl
+      ?`<div class="match-name"><a href="${m.matchUrl}" target="_blank" style="text-decoration:none;color:inherit;">${displayName}</a></div>`
+      :`<div class="match-name inline-field" onclick="inlineEditField(event,'${m.id}','name')" title="Click to edit">${displayName}</div>`;
+    const matchCell=`<td class="col-match">${nameEl}</td>`;
+    const ratingDisp=m.rating?`<span class="mobile-rating">${m.rating}</span>`:`<span style="color:var(--text3);font-size:.8rem;">—</span>`;
+    const mobileRatingEdit=`<td class="col-rating-edit">${ratingDisp}<button class="btn btn-secondary edit-mobile" onclick="editMatch('${m.id}')">Edit</button></td>`;
+    const metaParts=[];
+    if(m.promoAbbr) metaParts.push(`<span class="promo-badge">${esc(m.promoAbbr)}</span>`);
+    if(m.event) metaParts.push(`<span>${esc(m.event)}</span>`);
+    if(m.championship) metaParts.push(`<span class="champ-badge">${beltSm}${esc(m.championship)}</span>`);
+    if(m.score) metaParts.push(`<span>CM ${m.score}</span>`);
+    if(m.value) metaParts.push(`<span>WON ${m.value}</span>`);
+    if(m.tenPlus) metaParts.push(`<span class="flag-10plus">10+</span>`);
+    if(m.sawLive) metaParts.push(`<span class="flag-live">Live</span>`);
+    if(m.rewatch) metaParts.push(`<span style="font-size:.68rem;font-weight:700;padding:1px 5px;border-radius:2px;background:#a855f7;color:#000;">Rewatch</span>`);
+    const metaCell=`<td class="col-meta"><div class="mobile-meta">${metaParts.join('')}</div></td>`;
+    return`<tr class="${cls}" data-id="${m.id}">${matchCell}${mobileRatingEdit}${metaCell}${cells}${actions}</tr>`;
   }).join('');
 }
 
@@ -647,6 +667,8 @@ function filterMatches(arr,overrides){
         if(!isNaN(threshold)){
           if(src==='any'){if(!anyMeetsThreshold(threshold,true))return false;}
           else{const v=getVal(src);if(isNaN(v)||v<threshold)return false;}
+          // 10+ special: also check tenPlus flag when src is mine or any
+          if(threshold>=10&&(src==='mine'||src==='any')&&m.tenPlus) return true;
         }
       }
     }
@@ -661,6 +683,7 @@ const RATING_PILLS_NORMAL=[
   {val:'8.5',label:'8.5+'},
   {val:'9',label:'9+'},
   {val:'9.5',label:'9.5+'},
+  {val:'10',label:'10+'},
 ];
 const RATING_PILLS_WON=[
   {val:'unrated',label:'Unrated'},
