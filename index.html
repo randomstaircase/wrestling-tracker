@@ -180,6 +180,29 @@ textarea{resize:vertical;min-height:70px}
 .rating-pill:hover{border-color:var(--accent);color:var(--accent)}
 .rating-pill.active{background:var(--accent);border-color:var(--accent);color:#000}
 @media(max-width:640px){header{flex-wrap:wrap;height:auto;padding:10px 14px;gap:8px}.header-title{font-size:1.2rem}nav button{font-size:.75rem;padding:5px 10px}main{padding:12px}.form-grid{padding:16px;gap:12px}td,th{padding:7px 8px}.modal{padding:18px}}
+@media(max-width:768px){
+  .top-scroll-mirror{display:none!important}
+  .table-wrap{overflow-x:visible!important}
+  table{width:100%;display:block}
+  thead{display:none}
+  tbody{display:block;width:100%}
+  tbody tr{display:flex;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--border);align-items:flex-start;gap:0;position:relative}
+  tbody tr:last-child{border-bottom:none}
+  tbody td{display:none!important;border:none!important;padding:0!important}
+  tbody td.col-match{display:block!important;flex:1 1 0;min-width:0;padding-right:8px!important}
+  tbody td.col-rating-edit{display:flex!important;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;min-width:60px}
+  tbody td.col-meta{display:block!important;width:100%;margin-top:5px}
+  .mobile-rating{font-size:1.1rem;font-weight:700;color:var(--accent)}
+  .mobile-meta{display:flex;gap:5px;flex-wrap:wrap;align-items:center;font-size:.7rem;color:var(--text2)}
+  .mobile-meta .promo-badge{font-size:.65rem;padding:1px 5px}
+  .mobile-meta .champ-badge{font-size:.65rem;padding:1px 5px}
+  .mobile-meta .flag-10plus,.mobile-meta .flag-live{font-size:.65rem;padding:1px 4px}
+  .edit-mobile{font-size:.68rem!important;padding:3px 8px!important;white-space:nowrap}
+}
+@media(min-width:769px){
+  tbody td.col-match,tbody td.col-rating-edit,tbody td.col-meta{display:table-cell!important}
+  tbody td.col-meta{display:none!important}
+}
 </style>
 </head>
 <body>
@@ -1074,7 +1097,27 @@ async function runEventCardImport(){
     const fresh=data.matches.filter(m=>!existingUrls.has(m.matchUrl));
     const dupes=data.matches.length-fresh.length;
     const yr=parseInt(year)||new Date().getFullYear();
-    const withIds=fresh.map(m=>({...m,id:'ev_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),_sheetName:getTabName(yr)}));
+    const withIds=fresh.map(m=>({
+      id:'ev_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+      matchUrl:   m.matchUrl    ||'',
+      name:       m.name        ||'',
+      promoFull:  m.promoFull   ||'',
+      promoAbbr:  m.promoAbbr   ||'',
+      event:      m.event       ||'',
+      date:       m.date        ||'',
+      matchType:  m.matchType   ||'',
+      championship:m.championship||'',
+      champion:   m.champion    ||'',
+      winner:     m.winner      ||'',
+      titleChange:!!m.titleChange,
+      rating:     m.rating      ||'',
+      tenPlus:    !!m.tenPlus,
+      sawLive:    !!m.sawLive,
+      rewatch:    !!m.rewatch,
+      score:      m.score       ||'',
+      value:      m.value       ||'',
+      _sheetName: getTabName(yr)
+    }));
     saveMatches([...withIds,...existing]);
     renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
     const tc=fresh.filter(m=>m.titleChange).length;
@@ -1095,13 +1138,13 @@ async function runEventCardImport(){
 }
 function exportCSV(){
   const matches=loadMatches();if(!matches.length){toast('No matches to export',true);return;}
-  const headers=['ID','MatchURL','Name','PromoFull','PromoAbbr','Event','Date','MatchType','Championship','Winner','TitleChange','Rating','10Plus','Score','Value'];
-  const rows=matches.map(m=>[m.id,m.matchUrl,m.name,m.promoFull,m.promoAbbr,m.event,m.date,m.matchType,m.championship,m.winner,m.titleChange?'1':'',m.rating,m.tenPlus?'10+':'',m.score,m.value].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
+  const headers=['ID','MatchURL','Name','PromoFull','PromoAbbr','Event','Date','MatchType','Championship','Champion','Winner','TitleChange','Rating','10Plus','SawLive','Rewatch','Score','Value'];
+  const rows=matches.map(m=>[m.id,m.matchUrl,m.name,m.promoFull,m.promoAbbr,m.event,m.date,m.matchType,m.championship,m.champion||'',m.winner,m.titleChange?'1':'',m.rating,m.tenPlus?'10+':'',m.sawLive?'1':'',m.rewatch?'1':'',m.score,m.value].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([[headers.join(','),...rows].join('\n')],{type:'text/csv'}));a.download='matches.csv';a.click();toast('CSV downloaded');
 }
 function importCSV(){
   const file=document.getElementById('import-file').files[0];if(!file){toast('Select a CSV file first',true);return;}
-  const reader=new FileReader();reader.onload=e=>{try{const lines=e.target.result.split('\n').filter(l=>l.trim());const headers=lines[0].split(',').map(h=>h.replace(/"/g,'').trim());const matches=lines.slice(1).map(line=>{const vals=line.match(/(".*?"|[^,]+)(?=,|$)/g)||[];const clean=vals.map(v=>v.replace(/^"|"$/g,'').replace(/""/g,'"'));const obj={};headers.forEach((h,i)=>obj[h]=clean[i]||'');return{id:obj.ID||('m_'+Date.now()+Math.random()),matchUrl:obj.MatchURL,name:obj.Name,promoFull:obj.PromoFull,promoAbbr:obj.PromoAbbr,event:obj.Event,date:obj.Date,matchType:obj.MatchType,championship:obj.Championship,winner:obj.Winner,titleChange:obj.TitleChange==='1',rating:obj.Rating,tenPlus:obj['10Plus']==='10+',score:obj.Score,value:obj.Value};});saveMatches(matches);toast(`Imported ${matches.length} matches`);renderDashboard();}catch(err){toast('Import failed — check CSV format',true);}};reader.readAsText(file);
+  const reader=new FileReader();reader.onload=e=>{try{const lines=e.target.result.split('\n').filter(l=>l.trim());const headers=lines[0].split(',').map(h=>h.replace(/"/g,'').trim());const matches=lines.slice(1).map(line=>{const vals=line.match(/(".*?"|[^,]+)(?=,|$)/g)||[];const clean=vals.map(v=>v.replace(/^"|"$/g,'').replace(/""/g,'"'));const obj={};headers.forEach((h,i)=>obj[h]=clean[i]||'');return{id:obj.ID||('m_'+Date.now()+Math.random()),matchUrl:obj.MatchURL||'',name:obj.Name||'',promoFull:obj.PromoFull||'',promoAbbr:obj.PromoAbbr||'',event:obj.Event||'',date:obj.Date||'',matchType:obj.MatchType||'',championship:obj.Championship||'',champion:obj.Champion||'',winner:obj.Winner||'',titleChange:obj.TitleChange==='1',rating:obj.Rating||'',tenPlus:obj['10Plus']==='10+',sawLive:obj.SawLive==='1',rewatch:obj.Rewatch==='1',score:obj.Score||'',value:obj.Value||''};});saveMatches(matches);toast(`Imported ${matches.length} matches`);renderDashboard();}catch(err){toast('Import failed — check CSV format',true);}};reader.readAsText(file);
 }
 function saveSheetURL(){
   const url=document.getElementById('sheets-url').value.trim();
@@ -1174,9 +1217,25 @@ async function runBatchURLImport(){
       if(!data||!data.name){failed++;continue;}
       const yr=parseInt((data.date||'').split('-')[0])||new Date().getFullYear();
       newMatches.unshift({
-        ...data,
-        id:'batch_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
-        _sheetName:getTabName(yr)
+        id:          'batch_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+        matchUrl:    data.matchUrl    ||url,
+        name:        data.name        ||'',
+        promoFull:   data.promoFull   ||'',
+        promoAbbr:   data.promoAbbr   ||'',
+        event:       data.event       ||'',
+        date:        data.date        ||'',
+        matchType:   data.matchType   ||'',
+        championship:data.championship||'',
+        champion:    data.champion    ||'',
+        winner:      data.winner      ||'',
+        titleChange: !!data.titleChange,
+        rating:      data.rating      ||'',
+        tenPlus:     !!data.tenPlus,
+        sawLive:     !!data.sawLive,
+        rewatch:     !!data.rewatch,
+        score:       data.score       ||'',
+        value:       data.value       ||'',
+        _sheetName:  getTabName(yr)
       });
       existingUrls.add(url);
       imported++;
