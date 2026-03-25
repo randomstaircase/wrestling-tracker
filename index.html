@@ -330,19 +330,6 @@ textarea{resize:vertical;min-height:70px}
   </div>
 
   <!-- PROMOTIONS -->
-  <div id="panel-promotions" class="panel">
-    <div class="section-header"><div class="section-title">Promotion Manager</div></div>
-    <div class="promo-manager">
-      <div class="promo-list" id="promo-list"></div>
-      <div class="add-promo-row">
-        <input type="text" id="new-promo-name" placeholder="Full promotion name"/>
-        <input type="text" id="new-promo-abbr" placeholder="Abbreviation" style="max-width:140px"/>
-        <button class="btn btn-primary" onclick="addPromotion()">Add</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- SHOWS -->
   <div id="panel-shows" class="panel">
     <div class="section-header"><div class="section-title">Shows <span class="tag" id="shows-count">0</span></div></div>
     <div id="shows-filters" style="padding:10px 16px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border);">
@@ -502,6 +489,7 @@ function switchPanel(id){
   if(id==='all'){populateSharedFilterOptions();updateFilterHighlights();updateSharedChips();renderAll();}
   if(id==='shows'){populateShowsFilters();renderShows();}
   if(id==='promotions')renderPromos();
+  if(id==='export'){renderPromos();}
   if(id==='add'){populatePromoDropdowns();setEditingId(null);}
 }
 
@@ -1377,11 +1365,11 @@ function toggleTheme(){
   const btn=document.getElementById('theme-btn');
   if(isDark){
     html.removeAttribute('data-theme');
-    if(btn) btn.innerHTML='☽ Dark';
+    if(btn) btn.innerHTML='☽ Dark Mode';
     localStorage.setItem('wt_theme','light');
   } else {
     html.setAttribute('data-theme','stardom-dark');
-    if(btn) btn.innerHTML='☀ Light';
+    if(btn) btn.innerHTML='☀ Light Mode';
     localStorage.setItem('wt_theme','dark');
   }
 }
@@ -1390,11 +1378,10 @@ function toggleTheme(){
   // Load saved theme (default is light)
   if(localStorage.getItem('wt_theme')==='dark'){
     document.documentElement.setAttribute('data-theme','stardom-dark');
-    const tb=document.getElementById('theme-btn');if(tb)tb.innerHTML='☀ Light';
+    const tb=document.getElementById('theme-btn');if(tb)tb.innerHTML='☀ Light Mode';
+  } else {
+    const tb=document.getElementById('theme-btn');if(tb)tb.innerHTML='☽ Dark Mode';
   }
-  // Also ensure nav button starts with correct label
-  const _tb=document.getElementById('theme-btn');
-  if(_tb&&!localStorage.getItem('wt_theme')) _tb.innerHTML='☽ Dark';
   const savedUrl=localStorage.getItem('sheets_url_2026');
   if(savedUrl)document.getElementById('sheets-url').value=savedUrl;
   populatePromoDropdowns();populateSharedFilterOptions();renderDashboard();
