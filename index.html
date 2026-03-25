@@ -212,14 +212,13 @@ textarea{resize:vertical;min-height:70px}
   <div class="header-title">Wrestling <span>Match Tracker</span></div>
   <nav>
     <button class="active" onclick="switchPanel('dashboard')">Dashboard</button>
-    <button onclick="switchPanel('add')">+ Add Match</button>
+    <button onclick="switchPanel('add')">+ Add</button>
     <button onclick="switchPanel('best')">Favs</button>
     <button onclick="switchPanel('watch')">To Watch</button>
     <button onclick="switchPanel('rewatch')">Rewatch</button>
     <button onclick="switchPanel('all')">All Matches</button>
-    <button onclick="switchPanel('promotions')">Promotions</button>
-    <button onclick="switchPanel('export')">Export</button>
-    <button id="theme-btn" onclick="toggleTheme()" style="border-color:var(--accent);color:var(--accent);">&#9790; Dark</button>
+    <button onclick="switchPanel('shows')">Shows</button>
+    <button onclick="switchPanel('export')" title="Settings &amp; Export" style="font-size:1.15rem;padding:5px 12px;line-height:1;">&#9881;</button>
   </nav>
 </header>
 
@@ -341,7 +340,31 @@ textarea{resize:vertical;min-height:70px}
 
     <!-- EXPORT -->
   <div id="panel-export" class="panel">
-    <div class="section-header"><div class="section-title">Export &amp; Import</div></div>
+    <div class="section-header"><div class="section-title">&#9881; Settings &amp; Export</div></div>
+
+    <div class="export-section">
+      <h3>&#127775; Theme</h3>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button id="theme-btn" onclick="toggleTheme()" class="btn btn-secondary" style="min-width:130px;">&#9790; Dark Mode</button>
+        <span style="font-size:.82rem;color:var(--text2);">Stardom Light / Dark</span>
+      </div>
+    </div>
+
+    <div class="export-section">
+      <h3>&#127959; Promotions</h3>
+      <div id="promo-list" style="margin-bottom:12px;display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+        <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:180px;">
+          <label class="form-label">Full Name</label>
+          <input type="text" id="new-promo-name" placeholder="e.g. World Wonder Ring Stardom"/>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label class="form-label">Abbreviation</label>
+          <input type="text" id="new-promo-abbr" placeholder="e.g. STARDOM" style="width:120px;"/>
+        </div>
+        <button class="btn btn-secondary" onclick="addPromotion()">+ Add</button>
+      </div>
+    </div>
 
     <div class="export-section">
       <h3>&#128190; JSON Backup</h3>
@@ -1363,15 +1386,8 @@ function toggleTheme(){
   const html=document.documentElement;
   const isDark=html.getAttribute('data-theme')==='stardom-dark';
   const btn=document.getElementById('theme-btn');
-  if(isDark){
-    html.removeAttribute('data-theme');
-    if(btn) btn.innerHTML='☽ Dark Mode';
-    localStorage.setItem('wt_theme','light');
-  } else {
-    html.setAttribute('data-theme','stardom-dark');
-    if(btn) btn.innerHTML='☀ Light Mode';
-    localStorage.setItem('wt_theme','dark');
-  }
+  if(isDark){html.removeAttribute('data-theme');if(btn)btn.innerHTML='☽ Dark Mode';localStorage.setItem('wt_theme','light');}
+  else{html.setAttribute('data-theme','stardom-dark');if(btn)btn.innerHTML='☀ Light Mode';localStorage.setItem('wt_theme','dark');}
 }
 
 (function init(){
