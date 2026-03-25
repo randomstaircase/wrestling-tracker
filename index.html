@@ -49,11 +49,30 @@ main{padding:20px;max-width:1800px;margin:0 auto}
 .filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent)}
 .filter-bar input{flex:1;min-width:160px}
 /* top scroll mirror */
-.top-scroll-mirror{overflow-x:auto;overflow-y:hidden;height:12px;border-radius:0;border:none;border-top:1px solid var(--border);border-bottom:1px solid var(--border2);background:var(--bg3);margin-bottom:-1px;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg3);position:sticky;top:0;z-index:80;}
+.top-scroll-mirror{display:none;}
 .top-scroll-mirror::-webkit-scrollbar{height:10px}
 .top-scroll-mirror::-webkit-scrollbar-track{background:var(--bg3);border-radius:6px 6px 0 0}
 .top-scroll-mirror::-webkit-scrollbar-thumb{background:var(--accent);border-radius:5px;border:2px solid var(--bg3)}
-.table-wrap{overflow-x:auto;border-radius:0 0 6px 6px;border:1px solid var(--border);background:var(--bg2);scrollbar-width:thin;scrollbar-color:var(--border2) var(--bg3)}
+.table-wrap{position:relative;}
+.match-cards{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.match-card{display:grid;grid-template-columns:1fr auto;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg2);align-items:start;gap:0;}
+.match-card:last-child{border-bottom:none;}
+.match-card:hover{background:var(--bg3);}
+.match-card.row-best{border-left:3px solid var(--teal);}
+.match-card.row-best-10plus{border-left:3px solid var(--accent);}
+.match-card.row-watch-hi,.match-card.row-watch-lo{border-left:3px solid var(--blue-hi);}
+.card-left{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.card-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;padding-left:12px;min-width:60px;}
+.card-name{font-weight:600;font-size:.88rem;color:var(--text);line-height:1.35;}
+.card-name a{color:inherit;text-decoration:none;}
+.card-name a:hover{color:var(--accent);}
+.card-meta{display:flex;gap:5px;flex-wrap:wrap;align-items:center;font-size:.72rem;color:var(--text2);}
+.card-meta2{display:flex;gap:5px;flex-wrap:wrap;align-items:center;font-size:.7rem;color:var(--text3);}
+.card-rating{font-size:1.1rem;font-weight:700;color:var(--accent);line-height:1;white-space:nowrap;}
+.card-rating.empty{font-size:.78rem;color:var(--text3);font-weight:400;}
+.card-scores{font-size:.7rem;color:var(--text3);white-space:nowrap;}
+.card-actions{display:flex;gap:4px;flex-shrink:0;}
+.card-actions button{font-size:.68rem;padding:3px 8px;}
 .table-wrap::-webkit-scrollbar{height:10px}
 .table-wrap::-webkit-scrollbar-track{background:var(--bg3)}
 .table-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:5px;border:2px solid var(--bg3)}
@@ -180,27 +199,7 @@ textarea{resize:vertical;min-height:70px}
 .rating-pill:hover{border-color:var(--accent);color:var(--accent)}
 .rating-pill.active{background:var(--accent);border-color:var(--accent);color:#000}
 @media(max-width:640px){header{flex-wrap:wrap;height:auto;padding:10px 14px;gap:8px}.header-title{font-size:1.2rem}nav button{font-size:.75rem;padding:5px 10px}main{padding:12px}.form-grid{padding:16px;gap:12px}td,th{padding:7px 8px}.modal{padding:18px}}
-@media(max-width:768px){
-  .top-scroll-mirror{display:none!important}
-  .table-wrap{overflow-x:visible!important}
-  table{width:100%;display:block}
-  thead{display:none}
-  tbody{display:block;width:100%}
-  tbody tr{display:flex;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--border);align-items:flex-start;gap:0;position:relative}
-  tbody tr:last-child{border-bottom:none}
-  tbody td{display:none!important;border:none!important;padding:0!important}
-  tbody td.col-match{display:block!important;flex:1 1 0;min-width:0;padding-right:8px!important}
-  tbody td.col-rating-edit{display:flex!important;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;min-width:60px}
-  tbody td.col-meta{display:block!important;width:100%;margin-top:5px}
-  .mobile-rating{font-size:1.1rem;font-weight:700;color:var(--accent)}
-  .mobile-meta{display:flex;gap:5px;flex-wrap:wrap;align-items:center;font-size:.7rem;color:var(--text2)}
-  .mobile-meta .promo-badge{font-size:.65rem;padding:1px 5px}
-  .mobile-meta .champ-badge{font-size:.65rem;padding:1px 5px}
-  .mobile-meta .flag-10plus,.mobile-meta .flag-live{font-size:.65rem;padding:1px 4px}
-  .edit-mobile{font-size:.68rem!important;padding:3px 8px!important;white-space:nowrap}
-}
-@media(min-width:769px){
-  tbody td.col-match,tbody td.col-rating-edit,tbody td.col-meta{display:table-cell!important}
+/* card layout is responsive by default */
   tbody td.col-meta{display:none!important}
 }
 </style>
@@ -255,7 +254,7 @@ textarea{resize:vertical;min-height:70px}
     </div>
     <div class="filter-chips" id="dash-chips"></div>
     <div id="dash-scroll-top"></div>
-    <div class="table-wrap" id="dash-wrap"><table><thead><tr id="recent-head"></tr></thead><tbody id="recent-body"></tbody></table></div>
+    <div class="table-wrap" id="dash-wrap"><div id="recent-body"></div></div>
   </div>
 
   <!-- ADD / EDIT -->
@@ -306,29 +305,25 @@ textarea{resize:vertical;min-height:70px}
   <!-- BEST -->
   <div id="panel-best" class="panel">
     <div class="section-header"><div class="section-title">Favorite Matches <span class="tag" id="best-count">0</span></div></div>
-    <div id="best-scroll-top"></div>
-    <div class="table-wrap" id="best-wrap"><table><thead><tr id="best-head"></tr></thead><tbody id="best-body"></tbody></table></div>
+    <div class="table-wrap" id="best-wrap"><div id="best-body"></div></div>
   </div>
 
   <!-- WATCH -->
   <div id="panel-watch" class="panel">
     <div class="section-header"><div class="section-title">To Watch <span class="tag" id="watch-count">0</span></div></div>
-    <div id="watch-scroll-top"></div>
-    <div class="table-wrap" id="watch-wrap"><table><thead><tr id="watch-head"></tr></thead><tbody id="watch-body"></tbody></table></div>
+    <div class="table-wrap" id="watch-wrap"><div id="watch-body"></div></div>
   </div>
 
   <!-- REWATCH -->
   <div id="panel-rewatch" class="panel">
     <div class="section-header"><div class="section-title">Rewatch <span class="tag" id="rewatch-count">0</span></div></div>
-    <div id="rewatch-scroll-top"></div>
-    <div class="table-wrap" id="rewatch-wrap"><table><thead><tr id="rewatch-head"></tr></thead><tbody id="rewatch-body"></tbody></table></div>
+    <div class="table-wrap" id="rewatch-wrap"><div id="rewatch-body"></div></div>
   </div>
 
   <!-- ALL -->
   <div id="panel-all" class="panel">
     <div class="section-header"><div class="section-title">All Matches <span class="tag" id="all-count">0</span></div></div>
-    <div id="all-scroll-top"></div>
-    <div class="table-wrap" id="all-wrap"><table><thead><tr id="all-head"></tr></thead><tbody id="all-body"></tbody></table></div>
+    <div class="table-wrap" id="all-wrap"><div id="all-body"></div></div>
   </div>
 
   <!-- PROMOTIONS -->
@@ -344,7 +339,17 @@ textarea{resize:vertical;min-height:70px}
     </div>
   </div>
 
-  <!-- EXPORT -->
+  <!-- SHOWS -->
+  <div id="panel-shows" class="panel">
+    <div class="section-header"><div class="section-title">Shows <span class="tag" id="shows-count">0</span></div></div>
+    <div id="shows-filters" style="padding:10px 16px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border);">
+      <select id="shows-year" onchange="renderShows()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:6px 10px;border-radius:4px;outline:none;"><option value="">All Years</option></select>
+      <select id="shows-promo" onchange="renderShows()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:6px 10px;border-radius:4px;outline:none;"><option value="">All Promotions</option></select>
+    </div>
+    <div class="table-wrap" id="shows-wrap"><div id="shows-body"></div></div>
+  </div>
+
+    <!-- EXPORT -->
   <div id="panel-export" class="panel">
     <div class="section-header"><div class="section-title">Export &amp; Import</div></div>
 
@@ -492,6 +497,7 @@ function switchPanel(id){
   if(id==='watch'){populateSharedFilterOptions();updateFilterHighlights();updateSharedChips();renderWatch();}
   if(id==='rewatch'){populateSharedFilterOptions();updateFilterHighlights();updateSharedChips();renderRewatch();}
   if(id==='all'){populateSharedFilterOptions();updateFilterHighlights();updateSharedChips();renderAll();}
+  if(id==='shows'){populateShowsFilters();renderShows();}
   if(id==='promotions')renderPromos();
   if(id==='add'){populatePromoDropdowns();setEditingId(null);}
 }
@@ -617,33 +623,65 @@ function normaliseSortVal(key,m){
 function sortMatches(arr){return[...arr].sort((a,b)=>{const va=normaliseSortVal(sortKey,a),vb=normaliseSortVal(sortKey,b);if(va<vb)return-sortDir;if(va>vb)return sortDir;return 0;});}
 
 function buildRows(arr,tbody,showActions=true){
-  if(!arr.length){tbody.innerHTML=`<tr><td colspan="${COLS.length+1}" class="empty-state">No matches found</td></tr>`;return;}
-  const beltIcon=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="-55 -30 110 60" width="16" height="16" style="display:inline-block;vertical-align:middle;flex-shrink:0;margin-right:2px;"><rect x="-50" y="-18" width="32" height="36" rx="4" fill="#1a1a1a"/><rect x="-47" y="-15" width="26" height="30" rx="3" fill="#b8860b"/><ellipse cx="-34" cy="0" rx="8" ry="8" fill="#1a1a1a"/><ellipse cx="-34" cy="0" rx="5" ry="5" fill="#e8c840"/><circle cx="-34" cy="0" r="2" fill="#1a1a1a"/><rect x="-22" y="-28" width="44" height="56" rx="5" fill="#1a1a1a"/><rect x="-19" y="-25" width="38" height="50" rx="4" fill="#c9a030"/><rect x="-14" y="-20" width="28" height="40" rx="3" fill="#1a1a1a"/><rect x="-11" y="-17" width="22" height="34" rx="2" fill="#e8c840"/><polygon points="0,-10 3,-3 10,-3 4,2 7,9 0,5 -7,9 -4,2 -10,-3 -3,-3" fill="#1a1a1a"/><rect x="18" y="-18" width="32" height="36" rx="4" fill="#1a1a1a"/><rect x="21" y="-15" width="26" height="30" rx="3" fill="#b8860b"/><ellipse cx="34" cy="0" rx="8" ry="8" fill="#1a1a1a"/><ellipse cx="34" cy="0" rx="5" ry="5" fill="#e8c840"/><circle cx="34" cy="0" r="2" fill="#1a1a1a"/></svg>`;
+  if(!arr.length){
+    tbody.innerHTML='';
+    const empty=document.createElement('div');
+    empty.className='match-cards';
+    empty.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3);">No matches found</div>';
+    tbody.appendChild(empty);
+    return;
+  }
+  const beltFull=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="-55 -30 110 60" width="16" height="16" style="display:inline-block;vertical-align:middle;flex-shrink:0;margin-right:2px;"><rect x="-50" y="-18" width="32" height="36" rx="4" fill="#1a1a1a"/><rect x="-47" y="-15" width="26" height="30" rx="3" fill="#b8860b"/><ellipse cx="-34" cy="0" rx="8" ry="8" fill="#1a1a1a"/><ellipse cx="-34" cy="0" rx="5" ry="5" fill="#e8c840"/><circle cx="-34" cy="0" r="2" fill="#1a1a1a"/><rect x="-22" y="-28" width="44" height="56" rx="5" fill="#1a1a1a"/><rect x="-19" y="-25" width="38" height="50" rx="4" fill="#c9a030"/><rect x="-14" y="-20" width="28" height="40" rx="3" fill="#1a1a1a"/><rect x="-11" y="-17" width="22" height="34" rx="2" fill="#e8c840"/><polygon points="0,-10 3,-3 10,-3 4,2 7,9 0,5 -7,9 -4,2 -10,-3 -3,-3" fill="#1a1a1a"/><rect x="18" y="-18" width="32" height="36" rx="4" fill="#1a1a1a"/><rect x="21" y="-15" width="26" height="30" rx="3" fill="#b8860b"/><ellipse cx="34" cy="0" rx="8" ry="8" fill="#1a1a1a"/><ellipse cx="34" cy="0" rx="5" ry="5" fill="#e8c840"/><circle cx="34" cy="0" r="2" fill="#1a1a1a"/></svg>`;
   const beltSm=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="-55 -30 110 60" width="12" height="12" style="display:inline-block;vertical-align:middle;margin-right:2px;"><rect x="-50" y="-18" width="32" height="36" rx="4" fill="#1a1a1a"/><rect x="-47" y="-15" width="26" height="30" rx="3" fill="#b8860b"/><rect x="-22" y="-28" width="44" height="56" rx="5" fill="#1a1a1a"/><rect x="-19" y="-25" width="38" height="50" rx="4" fill="#c9a030"/><rect x="-11" y="-17" width="22" height="34" rx="2" fill="#e8c840"/><rect x="18" y="-18" width="32" height="36" rx="4" fill="#1a1a1a"/><rect x="21" y="-15" width="26" height="30" rx="3" fill="#b8860b"/></svg>`;
-  tbody.innerHTML=arr.map(m=>{
+  tbody.innerHTML='';
+  const cards=document.createElement('div');
+  cards.className='match-cards';
+  cards.innerHTML=arr.map(m=>{
     const cls=rowColorClass(m);
-    const cells=COLS.map(c=>`<td>${c.render(m)}</td>`).join('');
-    const actions=showActions?`<td><div class="row-actions"><button onclick="editMatch('${m.id}')">Edit</button><button class="del" onclick="confirmDelete('${m.id}')">Del</button></div></td>`:'<td></td>';
-    // Mobile-only cells
-    const displayName=esc(m.name||m.matchUrl||'—').replace(/\(c\)/gi,beltIcon);
+    // Name
+    const displayName=esc(m.name||m.matchUrl||'—').replace(/\(c\)/gi,beltFull);
     const nameEl=m.matchUrl
-      ?`<div class="match-name"><a href="${m.matchUrl}" target="_blank" style="text-decoration:none;color:inherit;">${displayName}</a></div>`
-      :`<div class="match-name inline-field" onclick="inlineEditField(event,'${m.id}','name')" title="Click to edit">${displayName}</div>`;
-    const matchCell=`<td class="col-match">${nameEl}</td>`;
-    const ratingDisp=m.rating?`<span class="mobile-rating">${m.rating}</span>`:`<span style="color:var(--text3);font-size:.8rem;">—</span>`;
-    const mobileRatingEdit=`<td class="col-rating-edit">${ratingDisp}<button class="btn btn-secondary edit-mobile" onclick="editMatch('${m.id}')">Edit</button></td>`;
-    const metaParts=[];
-    if(m.promoAbbr) metaParts.push(`<span class="promo-badge">${esc(m.promoAbbr)}</span>`);
-    if(m.event) metaParts.push(`<span>${esc(m.event)}</span>`);
-    if(m.championship) metaParts.push(`<span class="champ-badge">${beltSm}${esc(m.championship)}</span>`);
-    if(m.score) metaParts.push(`<span>CM ${m.score}</span>`);
-    if(m.value) metaParts.push(`<span>WON ${m.value}</span>`);
-    if(m.tenPlus) metaParts.push(`<span class="flag-10plus">10+</span>`);
-    if(m.sawLive) metaParts.push(`<span class="flag-live">Live</span>`);
-    if(m.rewatch) metaParts.push(`<span style="font-size:.68rem;font-weight:700;padding:1px 5px;border-radius:2px;background:#a855f7;color:#000;">Rewatch</span>`);
-    const metaCell=`<td class="col-meta"><div class="mobile-meta">${metaParts.join('')}</div></td>`;
-    return`<tr class="${cls}" data-id="${m.id}">${matchCell}${mobileRatingEdit}${metaCell}${cells}${actions}</tr>`;
+      ?`<a href="${m.matchUrl}" target="_blank">${displayName}</a>`
+      :`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','name')" title="Click to edit">${displayName}</span>`;
+    // Meta row 1: promo · event · date
+    const meta1=[];
+    if(m.promoAbbr) meta1.push(`<span class="promo-badge">${esc(m.promoAbbr)}</span>`);
+    if(m.event) meta1.push(`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','event')" title="Click to edit">${esc(m.event)}</span>`);
+    if(m.date) meta1.push(`<span style="color:var(--text3)">${fmtDate(m.date)}</span>`);
+    if(m.matchType) meta1.push(`<span style="color:var(--text3)">${esc(m.matchType)}</span>`);
+    // Meta row 2: championship · winner · flags · scores
+    const meta2=[];
+    if(m.championship) meta2.push(`<span class="champ-badge inline-field" onclick="inlineEditField(event,'${m.id}','championship')" title="Click to edit">${beltSm}${esc(m.championship.replace(/\(c\)/gi,''))}</span>`);
+    if(m.winner) meta2.push(`<span style="${m.titleChange?'color:var(--accent);font-weight:700':''}">${esc(m.winner)}${m.titleChange?' ★':''}</span>`);
+    if(m.tenPlus) meta2.push(`<span class="flag-10plus">10+</span>`);
+    if(m.sawLive) meta2.push(`<span class="flag-live">Live</span>`);
+    if(m.rewatch) meta2.push(`<span style="font-size:.68rem;font-weight:700;padding:1px 5px;border-radius:2px;background:#a855f7;color:#000;">Rewatch</span>`);
+    if(m.score) meta2.push(`<span>CM ${m.score}</span>`);
+    if(m.value) meta2.push(`<span>WON ${m.value}</span>`);
+    // Rating
+    const ratingEl=m.rating
+      ?`<div class="card-rating inline-field" onclick="inlineEditRating(event,'${m.id}')" title="Click to edit rating">${m.rating}</div>`
+      :`<div class="card-rating empty inline-field" onclick="inlineEditRating(event,'${m.id}')" title="Click to set rating">—</div>`;
+    // Flags toggle
+    const flagsEl=`<div class="card-flags" onclick="inlineToggleFlagMenu(event,'${m.id}')" style="cursor:pointer;font-size:.68rem;color:var(--text3);white-space:nowrap;" title="Toggle flags">flags</div>`;
+    // Actions
+    const actionsEl=showActions
+      ?`<div class="card-actions"><button onclick="editMatch('${m.id}')">Edit</button><button class="del" onclick="confirmDelete('${m.id}')">Del</button></div>`
+      :'';
+    return`<div class="match-card ${cls}" data-id="${m.id}">
+      <div class="card-left">
+        <div class="card-name">${nameEl}</div>
+        ${meta1.length?`<div class="card-meta">${meta1.join('')}</div>`:''}
+        ${meta2.length?`<div class="card-meta2">${meta2.join('')}</div>`:''}
+      </div>
+      <div class="card-right">
+        ${ratingEl}
+        <div class="card-scores">${[m.score?'CM '+m.score:'',m.value?'WON '+m.value:''].filter(Boolean).join(' · ')}</div>
+        ${actionsEl}
+      </div>
+    </div>`;
   }).join('');
+  tbody.appendChild(cards);
 }
 
 const sharedFilters={search:'',year:'',promo:'',champ:'',rating:'',ratingSrc:'any',titleOnly:false};
@@ -837,9 +875,7 @@ function renderDashboard(){
   if(ds||dy||dp)recent=filterMatches(recent,{search:ds,year:dy,promo:dp,champ:'',titleOnly:false});
   recent=recent.slice(0,20);
   document.getElementById('recent-count').textContent=recent.length;
-  buildHead(document.getElementById('recent-head'));
   buildRows(recent,document.getElementById('recent-body'));
-  addTopScroll('dash-wrap','dash-scroll-top');
   const dc=document.getElementById('dash-chips');
   if(dc){const p=[];if(ds)p.push(`<span class="filter-active-badge">Search: "${esc(ds)}"</span>`);if(dy)p.push(`<span class="filter-active-badge">Year: ${esc(dy)}</span>`);if(dp)p.push(`<span class="filter-active-badge">Promo: ${esc(dp)}</span>`);dc.innerHTML=p.join('');}
 }
@@ -848,28 +884,104 @@ function renderBest(){
   const best=filterMatches(sortMatches(loadMatches().filter(m=>classifyMatch(m).startsWith('best'))));
   document.getElementById('best-count').textContent=best.length;
   buildHead(document.getElementById('best-head'));buildRows(best,document.getElementById('best-body'));
-  addTopScroll('best-wrap','best-scroll-top');
 }
 function renderWatch(){
   const watch=filterMatches(sortMatches(loadMatches().filter(m=>classifyMatch(m)==='watch')));
   document.getElementById('watch-count').textContent=watch.length;
   buildHead(document.getElementById('watch-head'));buildRows(watch,document.getElementById('watch-body'));
-  addTopScroll('watch-wrap','watch-scroll-top');
 }
 function renderRewatch(){
   const matches=loadMatches();
   const rw=filterMatches(sortMatches(matches.filter(m=>m.rewatch)));
   document.getElementById('rewatch-count').textContent=rw.length;
-  buildHead(document.getElementById('rewatch-head'));
   buildRows(rw,document.getElementById('rewatch-body'));
-  addTopScroll('rewatch-wrap','rewatch-scroll-top');
+}
+
+function populateShowsFilters(){
+  const matches=loadMatches();
+  const years=[...new Set(matches.map(m=>(m.date||'').split('-')[0]).filter(Boolean))].sort((a,b)=>b-a);
+  const promos=[...new Set(matches.map(m=>m.promoAbbr).filter(Boolean))].sort();
+  function fill(id,blank,opts){const s=document.getElementById(id);if(!s)return;const v=s.value;s.innerHTML=`<option value="">${blank}</option>`+opts;s.value=v;}
+  fill('shows-year','All Years',years.map(y=>`<option value="${y}">${y}</option>`).join(''));
+  fill('shows-promo','All Promotions',promos.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join(''));
+}
+
+function renderShows(){
+  const matches=loadMatches();
+  const yr=(document.getElementById('shows-year')||{value:''}).value;
+  const promo=(document.getElementById('shows-promo')||{value:''}).value;
+
+  // Group matches by event+date
+  const eventMap={};
+  matches.forEach(m=>{
+    if(!m.event)return;
+    const yMatch=(m.date||'').split('-')[0];
+    if(yr&&yMatch!==yr)return;
+    if(promo&&m.promoAbbr!==promo)return;
+    const key=(m.event||'')+'__'+(m.date||'');
+    if(!eventMap[key]){
+      eventMap[key]={event:m.event,date:m.date,promoAbbr:m.promoAbbr,promoFull:m.promoFull,matches:[],topRating:0};
+    }
+    eventMap[key].matches.push(m);
+    const r=parseFloat(m.rating)||0;
+    if(r>eventMap[key].topRating)eventMap[key].topRating=r;
+  });
+
+  const events=Object.values(eventMap).sort((a,b)=>{
+    if(b.date&&a.date)return b.date.localeCompare(a.date);
+    return (b.event||'').localeCompare(a.event||'');
+  });
+
+  const countEl=document.getElementById('shows-count');
+  if(countEl)countEl.textContent=events.length;
+
+  const body=document.getElementById('shows-body');
+  if(!body)return;
+  body.innerHTML='';
+
+  if(!events.length){
+    body.innerHTML='<div class="match-cards"><div style="padding:40px;text-align:center;color:var(--text3);">No shows found</div></div>';
+    return;
+  }
+
+  const cards=document.createElement('div');
+  cards.className='match-cards';
+  cards.innerHTML=events.map(ev=>{
+    const rated=ev.matches.filter(m=>m.rating);
+    const avgRating=rated.length?(rated.reduce((s,m)=>s+parseFloat(m.rating),0)/rated.length).toFixed(2):'';
+    const titleChanges=ev.matches.filter(m=>m.titleChange).length;
+    const topMatches=ev.matches.filter(m=>m.tenPlus||(parseFloat(m.rating)||0)>=9);
+    return`<div class="match-card" style="cursor:pointer;" onclick="filterShowMatches('${esc(ev.event)}','${esc(ev.date||'')}')">
+      <div class="card-left">
+        <div class="card-name">${esc(ev.event)}</div>
+        <div class="card-meta">
+          ${ev.promoAbbr?`<span class="promo-badge">${esc(ev.promoAbbr)}</span>`:''}
+          ${ev.date?`<span style="color:var(--text3)">${fmtDate(ev.date)}</span>`:''}
+          <span style="color:var(--text3)">${ev.matches.length} match${ev.matches.length!==1?'es':''}</span>
+          ${titleChanges?`<span class="flag-10plus">&#127942; ${titleChanges} title change${titleChanges!==1?'s':''}</span>`:''}
+          ${topMatches.length?`<span class="flag-10plus">&#9733; ${topMatches.length} top match${topMatches.length!==1?'es':''}</span>`:''}
+        </div>
+      </div>
+      <div class="card-right">
+        ${avgRating?`<div class="card-rating">${avgRating}</div><div class="card-scores" style="font-size:.65rem;">avg rating</div>`:'<div class="card-rating empty">unrated</div>'}
+      </div>
+    </div>`;
+  }).join('');
+  body.appendChild(cards);
+}
+
+function filterShowMatches(eventName,date){
+  // Jump to All Matches filtered by this event
+  switchPanel('all');
+  const se=document.getElementById('shared-search');
+  if(se){se.value=eventName;sharedFilters.search=eventName;}
+  renderAll();updateSharedChips();updateFilterHighlights();
 }
 
 function renderAll(){
   const filtered=filterMatches(sortMatches(loadMatches()));
   document.getElementById('all-count').textContent=filtered.length;
   buildHead(document.getElementById('all-head'));buildRows(filtered,document.getElementById('all-body'));
-  addTopScroll('all-wrap','all-scroll-top');
 }
 function renderPromos(){
   const promos=loadPromos();
