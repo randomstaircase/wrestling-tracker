@@ -619,6 +619,12 @@ const COLS=[
 ];
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function decodeEntities(s){
+  if(!s)return'';
+  return s.replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&apos;/g,"'")
+          .replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+          .replace(/"/g,'').replace(/“/g,'').replace(/”/g,'');
+}
 function fmtDate(d){if(!d)return'&mdash;';const p=d.split('-');return p.length===3?`${p[1]}/${p[2]}/${p[0]}`:d;}
 
 function buildHead(trEl){
@@ -660,7 +666,11 @@ function buildRows(arr,tbody,showActions=true){
     // Meta row 1: promo · event · date
     const meta1=[];
     if(m.promoAbbr) meta1.push(`<span class="promo-badge">${esc(m.promoAbbr)}</span>`);
-    if(m.event) meta1.push(`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','event')" title="Click to edit">${esc(m.event)}</span>`);
+    if(m.event){
+      const evClean=decodeEntities(m.event);
+      const evUrl=m.eventUrl?`<a href="${esc(m.eventUrl)}" target="_blank" style="color:var(--text2);text-decoration:none;" title="View event card">${esc(evClean)}</a>`:`<span>${esc(evClean)}</span>`;
+      meta1.push(evUrl);
+    }
     if(m.date) meta1.push(`<span style="color:var(--text3)">${fmtDate(m.date)}</span>`);
     if(m.matchType) meta1.push(`<span style="color:var(--text3)">${esc(m.matchType)}</span>`);
     // Meta row 2: championship · winner · flags · scores
@@ -1021,6 +1031,9 @@ async function fetchMatchData(){
     if(data.matchType)document.getElementById('f-matchtype').value=data.matchType;
     if(data.championship)document.getElementById('f-champ').value=data.championship;
     if(data.champion)document.getElementById('f-champion').value=data.champion;
+    if(data.winner)document.getElementById('f-winner').value=data.winner;
+    if(data.titleChange)document.getElementById('f-title-change').checked=!!data.titleChange;
+    if(data.eventUrl)document.getElementById('f-event-url').value=data.eventUrl;
     if(data.score)document.getElementById('f-score').value=data.score;
     if(data.value)document.getElementById('f-value').value=data.value;
     if(data.promoFull||data.promoAbbr){
@@ -1038,13 +1051,17 @@ function setFetchStatus(msg,type){const el=document.getElementById('fetch-status
 let editingId=null;
 let prevPanel='dashboard'; // panel to return to after save
 function setEditingId(id){editingId=id;document.getElementById('form-title').textContent=id?'Edit Match':'Add New Match';document.getElementById('delete-btn').style.display=id?'inline-block':'none';}
-function getFormData(){return{id:editingId||('m_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)),matchUrl:document.getElementById('f-url').value.trim(),name:document.getElementById('f-name').value.trim(),promoFull:document.getElementById('f-promo-full').value,promoAbbr:document.getElementById('f-promo-abbr').value.trim(),event:document.getElementById('f-event').value.trim(),date:document.getElementById('f-date').value,matchType:document.getElementById('f-matchtype').value.trim(),championship:document.getElementById('f-champ').value.trim(),
+function getFormData(){return{id:editingId||('m_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)),matchUrl:document.getElementById('f-url').value.trim(),name:document.getElementById('f-name').value.trim(),promoFull:document.getElementById('f-promo-full').value,promoAbbr:document.getElementById('f-promo-abbr').value.trim(),event:document.getElementById('f-event').value.trim(),
+    eventUrl:document.getElementById('f-event-url').value.trim(),date:document.getElementById('f-date').value,matchType:document.getElementById('f-matchtype').value.trim(),championship:document.getElementById('f-champ').value.trim(),
     champion:document.getElementById('f-champion').value.trim(),winner:document.getElementById('f-winner').value.trim(),titleChange:document.getElementById('f-title-change').checked,rating:document.getElementById('f-rating').value,tenPlus:document.getElementById('f-10plus').checked,sawLive:document.getElementById('f-saw-live').checked,rewatch:document.getElementById('f-rewatch').checked,score:document.getElementById('f-score').value,value:document.getElementById('f-value').value};}
-function fillForm(m){document.getElementById('f-url').value=m.matchUrl||'';document.getElementById('f-name').value=m.name||'';populatePromoDropdowns();document.getElementById('f-promo-full').value=m.promoFull||'';document.getElementById('f-promo-abbr').value=m.promoAbbr||'';document.getElementById('f-event').value=m.event||'';document.getElementById('f-date').value=m.date||'';document.getElementById('f-matchtype').value=m.matchType||'';document.getElementById('f-champ').value=m.championship||'';
+function fillForm(m){document.getElementById('f-url').value=m.matchUrl||'';document.getElementById('f-name').value=m.name||'';populatePromoDropdowns();document.getElementById('f-promo-full').value=m.promoFull||'';document.getElementById('f-promo-abbr').value=m.promoAbbr||'';document.getElementById('f-event').value=m.event||'';document.getElementById('f-event-url').value=m.eventUrl||'';document.getElementById('f-date').value=m.date||'';document.getElementById('f-matchtype').value=m.matchType||'';document.getElementById('f-champ').value=m.championship||'';
   document.getElementById('f-champion').value=m.champion||'';document.getElementById('f-winner').value=m.winner||'';document.getElementById('f-title-change').checked=!!m.titleChange;document.getElementById('f-rating').value=m.rating||'';document.getElementById('f-10plus').checked=!!m.tenPlus;document.getElementById('f-saw-live').checked=!!m.sawLive;document.getElementById('f-rewatch').checked=!!m.rewatch;document.getElementById('f-score').value=m.score||'';document.getElementById('f-value').value=m.value||'';setFetchStatus('');}
-function clearForm(){['f-url','f-name','f-event','f-matchtype','f-champ','f-champion','f-winner','f-rating','f-score','f-value','f-date','f-promo-abbr'].forEach(id=>document.getElementById(id).value='');document.getElementById('f-promo-full').value='';document.getElementById('f-10plus').checked=false;document.getElementById('f-saw-live').checked=false;document.getElementById('f-rewatch').checked=false;document.getElementById('f-title-change').checked=false;setFetchStatus('');setEditingId(null);}
+function clearForm(){['f-url','f-name','f-event','f-event-url','f-matchtype','f-champ','f-champion','f-winner','f-rating','f-score','f-value','f-date','f-promo-abbr'].forEach(id=>document.getElementById(id).value='');document.getElementById('f-promo-full').value='';document.getElementById('f-10plus').checked=false;document.getElementById('f-saw-live').checked=false;document.getElementById('f-rewatch').checked=false;document.getElementById('f-title-change').checked=false;setFetchStatus('');setEditingId(null);}
 function saveMatch(){
-  const data=getFormData();if(!data.name){toast('Match name is required',true);return;}
+  const data=getFormData();
+  // Strip quotes from event name on save
+  if(data.event) data.event=data.event.replace(/&quot;/g,'').replace(/"/g,'').replace(/“/g,'').replace(/”/g,'').trim();
+  if(!data.name){toast('Match name is required',true);return;}
   if(data.date){const y=data.date.split('-')[0];if(y)data._sheetName=getTabName(parseInt(y));}
   const matches=loadMatches();const idx=matches.findIndex(m=>m.id===editingId);
   if(idx>=0)matches[idx]=data;else matches.unshift(data);
@@ -1270,7 +1287,7 @@ function exportCSV(){
 }
 function importCSV(){
   const file=document.getElementById('import-file').files[0];if(!file){toast('Select a CSV file first',true);return;}
-  const reader=new FileReader();reader.onload=e=>{try{const lines=e.target.result.split('\n').filter(l=>l.trim());const headers=lines[0].split(',').map(h=>h.replace(/"/g,'').trim());const matches=lines.slice(1).map(line=>{const vals=line.match(/(".*?"|[^,]+)(?=,|$)/g)||[];const clean=vals.map(v=>v.replace(/^"|"$/g,'').replace(/""/g,'"'));const obj={};headers.forEach((h,i)=>obj[h]=clean[i]||'');return{id:obj.ID||('m_'+Date.now()+Math.random()),matchUrl:obj.MatchURL||'',name:obj.Name||'',promoFull:obj.PromoFull||'',promoAbbr:obj.PromoAbbr||'',event:obj.Event||'',date:obj.Date||'',matchType:obj.MatchType||'',championship:obj.Championship||'',champion:obj.Champion||'',winner:obj.Winner||'',titleChange:obj.TitleChange==='1',rating:obj.Rating||'',tenPlus:obj['10Plus']==='10+',sawLive:obj.SawLive==='1',rewatch:obj.Rewatch==='1',score:obj.Score||'',value:obj.Value||''};});saveMatches(matches);toast(`Imported ${matches.length} matches`);renderDashboard();}catch(err){toast('Import failed — check CSV format',true);}};reader.readAsText(file);
+  const reader=new FileReader();reader.onload=e=>{try{const lines=e.target.result.split('\n').filter(l=>l.trim());const headers=lines[0].split(',').map(h=>h.replace(/"/g,'').trim());const matches=lines.slice(1).map(line=>{const vals=line.match(/(".*?"|[^,]+)(?=,|$)/g)||[];const clean=vals.map(v=>v.replace(/^"|"$/g,'').replace(/""/g,'"'));const obj={};headers.forEach((h,i)=>obj[h]=clean[i]||'');return{id:obj.ID||('m_'+Date.now()+Math.random()),matchUrl:obj.MatchURL||'',name:obj.Name||'',promoFull:obj.PromoFull||'',promoAbbr:obj.PromoAbbr||'',event:(obj.Event||'').replace(/"/g,''),date:obj.Date||'',matchType:obj.MatchType||'',championship:obj.Championship||'',champion:obj.Champion||'',winner:obj.Winner||'',titleChange:obj.TitleChange==='1',rating:obj.Rating||'',tenPlus:obj['10Plus']==='10+',sawLive:obj.SawLive==='1',rewatch:obj.Rewatch==='1',score:obj.Score||'',value:obj.Value||''};});saveMatches(matches);toast(`Imported ${matches.length} matches`);renderDashboard();}catch(err){toast('Import failed — check CSV format',true);}};reader.readAsText(file);
 }
 function saveSheetURL(){
   const url=document.getElementById('sheets-url').value.trim();
@@ -1349,6 +1366,7 @@ async function runBatchURLImport(){
         promoFull:   data.promoFull   ||'',
         promoAbbr:   data.promoAbbr   ||'',
         event:       data.event       ||'',
+      eventUrl:    data.eventUrl    ||'',
         date:        data.date        ||'',
         matchType:   data.matchType   ||'',
         championship:data.championship||'',
