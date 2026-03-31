@@ -343,27 +343,42 @@ textarea{resize:vertical;min-height:70px}
     <div class="section-header"><div class="section-title">&#9881; Settings &amp; Export</div></div>
 
     <div class="export-section">
-      <h3>&#127775; Theme</h3>
-      <div style="display:flex;gap:10px;align-items:center;">
-        <button id="theme-btn" onclick="toggleTheme()" class="btn btn-secondary" style="min-width:130px;">&#9790; Dark Mode</button>
-        <span style="font-size:.82rem;color:var(--text2);">Stardom Light / Dark</span>
+      <h3>&#127915; Event Card Import</h3>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste a cagematch event card URL (ending in page=3) to import all matches from a show at once. Requires Apps Script URL above. Auto-detects <strong style="color:var(--text)">TITLE CHANGE !!!</strong></p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;">
+        <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:6px;">
+          <label class="form-label">Event Card URL</label>
+          <input type="url" id="event-card-url" placeholder="https://www.cagematch.net/?id=1&amp;nr=...&amp;page=3"/>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label class="form-label">Year</label>
+          <input type="text" id="event-card-year" placeholder="2026" maxlength="4" style="width:80px;text-align:center;" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,4)"/>
+        </div>
+        <button class="btn btn-primary" id="event-import-btn" onclick="runEventCardImport()">&#127915; Import Event</button>
+      </div>
+      <div id="event-import-status" style="display:none;background:var(--bg3);border-radius:4px;padding:10px 14px;font-size:.82rem;line-height:1.8;"></div>
+    </div>
+
+    <div class="export-section">
+      <h3>&#128279; Individual Match Import</h3>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste one or more cagematch match URLs (one per line) to import them individually. Requires Apps Script URL above.</p>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <textarea id="batch-urls" rows="5" placeholder="https://www.cagematch.net/?id=111&nr=134917&#10;https://www.cagematch.net/?id=111&nr=69051" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:monospace;font-size:.78rem;padding:8px;border-radius:4px;resize:vertical;outline:none;"></textarea>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="btn btn-primary" id="batch-import-btn" onclick="runBatchURLImport()">&#8595; Import URLs</button>
+          <div id="batch-import-status" style="font-size:.78rem;color:var(--text3);"></div>
+        </div>
       </div>
     </div>
 
     <div class="export-section">
-      <h3>&#127959; Promotions</h3>
-      <div id="promo-list" style="margin-bottom:12px;display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
-        <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:180px;">
-          <label class="form-label">Full Name</label>
-          <input type="text" id="new-promo-name" placeholder="e.g. World Wonder Ring Stardom"/>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:4px;">
-          <label class="form-label">Abbreviation</label>
-          <input type="text" id="new-promo-abbr" placeholder="e.g. STARDOM" style="width:120px;"/>
-        </div>
-        <button class="btn btn-secondary" onclick="addPromotion()">+ Add</button>
+      <h3>&#9889; Auto-Fill (cagematch)</h3>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:10px;">Auto-Fill and Event Card Import require a Google Apps Script Web App. Set the URL once — it handles both features. No Sheets sync needed.</p>
+      <div class="sheets-url-row">
+        <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/..."/>
+        <button class="btn btn-secondary" onclick="saveSheetURL()">Save URL</button>
       </div>
+      <div id="autofill-status" style="font-size:.78rem;color:var(--text3);margin-top:6px;min-height:16px;"></div>
     </div>
 
     <div class="export-section">
@@ -391,41 +406,26 @@ textarea{resize:vertical;min-height:70px}
     </div>
 
     <div class="export-section">
-      <h3>&#9889; Auto-Fill (cagematch)</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:10px;">Auto-Fill and Event Card Import require a Google Apps Script Web App. Set the URL once — it handles both features. No Sheets sync needed.</p>
-      <div class="sheets-url-row">
-        <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/..."/>
-        <button class="btn btn-secondary" onclick="saveSheetURL()">Save URL</button>
+      <h3>&#127775; Theme</h3>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button id="theme-btn" onclick="toggleTheme()" class="btn btn-secondary" style="min-width:130px;">&#9790; Dark Mode</button>
+        <span style="font-size:.82rem;color:var(--text2);">Stardom Light / Dark</span>
       </div>
-      <div id="autofill-status" style="font-size:.78rem;color:var(--text3);margin-top:6px;min-height:16px;"></div>
     </div>
 
     <div class="export-section">
-      <h3>&#127915; Event Card Import</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste a cagematch event card URL (ending in page=3) to import all matches from a show at once. Requires Apps Script URL above. Auto-detects <strong style="color:var(--text)">TITLE CHANGE !!!</strong></p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;">
-        <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:6px;">
-          <label class="form-label">Event Card URL</label>
-          <input type="url" id="event-card-url" placeholder="https://www.cagematch.net/?id=1&amp;nr=...&amp;page=3"/>
+      <h3>&#127959; Promotions</h3>
+      <div id="promo-list" style="margin-bottom:12px;display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+        <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:180px;">
+          <label class="form-label">Full Name</label>
+          <input type="text" id="new-promo-name" placeholder="e.g. World Wonder Ring Stardom"/>
         </div>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <label class="form-label">Year</label>
-          <input type="text" id="event-card-year" placeholder="2026" maxlength="4" style="width:80px;text-align:center;" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,4)"/>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label class="form-label">Abbreviation</label>
+          <input type="text" id="new-promo-abbr" placeholder="e.g. STARDOM" style="width:120px;"/>
         </div>
-        <button class="btn btn-primary" id="event-import-btn" onclick="runEventCardImport()">&#127915; Import Event</button>
-      </div>
-      <div id="event-import-status" style="display:none;background:var(--bg3);border-radius:4px;padding:10px 14px;font-size:.82rem;line-height:1.8;"></div>
-    </div>
-
-    <div class="export-section">
-      <h3>&#128279; Individual Match Import</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste one or more cagematch match URLs (one per line) to import them individually. Requires Apps Script URL above.</p>
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        <textarea id="batch-urls" rows="5" placeholder="https://www.cagematch.net/?id=111&nr=134917&#10;https://www.cagematch.net/?id=111&nr=69051" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:monospace;font-size:.78rem;padding:8px;border-radius:4px;resize:vertical;outline:none;"></textarea>
-        <div style="display:flex;gap:10px;align-items:center;">
-          <button class="btn btn-primary" id="batch-import-btn" onclick="runBatchURLImport()">&#8595; Import URLs</button>
-          <div id="batch-import-status" style="font-size:.78rem;color:var(--text3);"></div>
-        </div>
+        <button class="btn btn-secondary" onclick="addPromotion()">+ Add</button>
       </div>
     </div>
 
@@ -983,9 +983,12 @@ function renderShows(){
     const avgRating=rated.length?(rated.reduce((s,m)=>s+parseFloat(m.rating),0)/rated.length).toFixed(2):'';
     const titleChanges=ev.matches.filter(m=>m.titleChange).length;
     const topMatches=ev.matches.filter(m=>m.tenPlus||(parseFloat(m.rating)||0)>=9);
-    return`<div class="match-card" style="cursor:pointer;" onclick="filterShowMatches('${esc(ev.event)}','${esc(ev.date||'')}')">
+    const showKey=encodeURIComponent((ev.event||'')+'__'+(ev.date||''));
+    return`<div class="match-card" style="cursor:pointer;" onclick="filterShowMatches(decodeURIComponent('${showKey}'))">
       <div class="card-left">
-        <div class="card-name">${esc(decodeEntities(ev.event||""))}</div>
+        <div class="card-name">${ev.eventUrl
+          ?`<a href="${esc(ev.eventUrl)}" target="_blank" style="color:inherit;text-decoration:none;" title="View event card">${esc(decodeEntities(ev.event||''))}</a>`
+          :esc(decodeEntities(ev.event||''))}</div>
         <div class="card-meta">
           ${ev.promoAbbr?`<span class="promo-badge">${esc(ev.promoAbbr)}</span>`:''}
           ${ev.date?`<span style="color:var(--text3)">${fmtDate(ev.date)}</span>`:''}
@@ -1002,8 +1005,10 @@ function renderShows(){
   body.appendChild(cards);
 }
 
-function filterShowMatches(eventName,date){
-  // Jump to All Matches filtered by this event
+function filterShowMatches(key){
+  // key is "eventName__date" or just eventName
+  const parts=key.split('__');
+  const eventName=parts[0]||key;
   switchPanel('all');
   const se=document.getElementById('shared-search');
   if(se){se.value=eventName;sharedFilters.search=eventName;}
@@ -1255,6 +1260,7 @@ async function runEventCardImport(){
       promoFull:  m.promoFull   ||'',
       promoAbbr:  m.promoAbbr   ||'',
       event:      m.event       ||'',
+      eventUrl:   m.eventUrl    ||'',
       date:       m.date        ||'',
       matchType:  m.matchType   ||'',
       championship:m.championship||'',
