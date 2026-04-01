@@ -487,8 +487,8 @@ function classifyMatch(m){
   const hasRating=!isNaN(vI)&&m.rating!==''&&m.rating!==null&&m.rating!==undefined;
   const vK=parseFloat(m.score)||'',vL=parseFloat(m.value)||'';
   const best=(hasRating&&vI>=9)||m.tenPlus;
-  // To Watch: no rating entered AND not flagged as rewatch
-  const watch=!hasRating&&!m.rewatch;
+  // To Watch: no rating entered (rewatch can also appear in To Watch)
+  const watch=!hasRating;
   if(best&&m.tenPlus)return'best-10plus';if(best)return'best';if(watch)return'watch';return'none';
 }
 function rowColorClass(m){
@@ -1073,7 +1073,12 @@ function clearForm(){['f-url','f-name','f-event','f-event-url','f-matchtype','f-
 function saveMatch(){
   const data=getFormData();
   // Strip quotes from event name on save
-  if(data.event) data.event=data.event.replace(/&quot;/g,'').replace(/"/g,'').replace(/“/g,'').replace(/”/g,'').trim();
+  if(data.event){
+    data.event=data.event
+      .replace(/&quot;/g,'').replace(/"/g,'').replace(/“/g,'').replace(/”/g,'')
+      .replace(/-\s*Tag\s+(\d+)\b/gi,'- Night $1')
+      .replace(/\s{2,}/g,' ').trim();
+  }
   if(!data.name){toast('Match name is required',true);return;}
   if(data.date){const y=data.date.split('-')[0];if(y)data._sheetName=getTabName(parseInt(y));}
   const matches=loadMatches();const idx=matches.findIndex(m=>m.id===editingId);
