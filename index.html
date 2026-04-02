@@ -676,8 +676,8 @@ function buildRows(arr,tbody,showActions=true){
     if(m.promoAbbr) meta1.push(`<span class="promo-badge">${esc(m.promoAbbr)}</span>`);
     if(m.event){
       const evClean=decodeEntities(m.event);
-      const evUrl=m.eventUrl?`<a href="${esc(m.eventUrl)}" target="_blank" style="color:var(--text2);text-decoration:none;" title="View event card">${esc(evClean)}</a>`:`<span>${esc(evClean)}</span>`;
-      meta1.push(evUrl);
+      const evKey=encodeURIComponent(evClean+'__'+(m.date||''));
+      meta1.push(`<span style="cursor:pointer;color:var(--text2);text-decoration:underline;text-decoration-style:dotted;" onclick="filterShowMatches(decodeURIComponent('${evKey}'))" title="View all matches from this event">${esc(evClean)}</span>`);
     }
     if(m.date) meta1.push(`<span style="color:var(--text3)">${fmtDate(m.date)}</span>`);
     if(m.matchType) meta1.push(`<span style="color:var(--text3)">${esc(m.matchType)}</span>`);
@@ -688,7 +688,9 @@ function buildRows(arr,tbody,showActions=true){
     if(m.tenPlus) meta2.push(`<span class="flag-10plus">10+</span>`);
     if(m.sawLive) meta2.push(`<span class="flag-live">Live</span>`);
     if(m.rewatch) meta2.push(`<span style="font-size:.68rem;font-weight:700;padding:1px 5px;border-radius:2px;background:#a855f7;color:#000;">Rewatch</span>`);
-    if(m.score) meta2.push(`<span>CM ${m.score}</span>`);
+    if(m.score) meta2.push(m.matchUrl
+      ?`<a href="${m.matchUrl}" target="_blank" style="color:var(--text3);text-decoration:none;" title="View on cagematch">CM ${m.score}</a>`
+      :`<span>CM ${m.score}</span>`);
     if(m.value) meta2.push(`<span>WON ${m.value}</span>`);
     // Rating
     const ratingEl=m.rating
@@ -708,7 +710,10 @@ function buildRows(arr,tbody,showActions=true){
       </div>
       <div class="card-right">
         ${ratingEl}
-        <div class="card-scores">${[m.score?'CM '+m.score:'',m.value?'WON '+m.value:''].filter(Boolean).join(' · ')}</div>
+        <div class="card-scores">${[
+          m.score?(m.matchUrl?`<a href="${m.matchUrl}" target="_blank" style="color:var(--text3);text-decoration:none;" title="View on cagematch">CM ${m.score}</a>`:'CM '+m.score):'',
+          m.value?'WON '+m.value:''
+        ].filter(Boolean).join(' · ')}</div>
         ${actionsEl}
       </div>
     </div>`;
