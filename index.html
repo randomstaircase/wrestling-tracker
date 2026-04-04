@@ -633,6 +633,20 @@ function decodeEntities(s){
     .replace(/\s{2,}/g,' ')
     .trim();
 }
+function fmtWON(v){
+  if(!v)return'';
+  const n=parseFloat(v);
+  if(isNaN(n))return'';
+  const full=Math.floor(n);
+  const half=(n-full)>=0.4&&(n-full)<0.9;
+  const quarter=(n-full)>=0.1&&(n-full)<0.4;
+  const threeQ=(n-full)>=0.6;
+  let stars='★'.repeat(Math.min(full,5));
+  if(threeQ) stars+='¾';
+  else if(half) stars+='½';
+  else if(quarter) stars+='¼';
+  return stars||'★';
+}
 function fmtDate(d){if(!d)return'&mdash;';const p=d.split('-');return p.length===3?`${p[1]}/${p[2]}/${p[0]}`:d;}
 
 function buildHead(trEl){
@@ -688,10 +702,8 @@ function buildRows(arr,tbody,showActions=true){
     if(m.tenPlus) meta2.push(`<span class="flag-10plus">10+</span>`);
     if(m.sawLive) meta2.push(`<span class="flag-live">Live</span>`);
     if(m.rewatch) meta2.push(`<span style="font-size:.68rem;font-weight:700;padding:1px 5px;border-radius:2px;background:#a855f7;color:#000;">Rewatch</span>`);
-    if(m.score) meta2.push(m.matchUrl
-      ?`<a href="${m.matchUrl}" target="_blank" style="color:var(--text3);text-decoration:none;" title="View on cagematch">CM ${m.score}</a>`
-      :`<span>CM ${m.score}</span>`);
-    if(m.value) meta2.push(`<span>WON ${m.value}</span>`);
+
+    // WON shown on right side as stars — removed from meta row
     // Rating
     const ratingEl=m.rating
       ?`<div class="card-rating inline-field" onclick="inlineEditRating(event,'${m.id}')" title="Click to edit rating">${m.rating}</div>`
@@ -710,10 +722,8 @@ function buildRows(arr,tbody,showActions=true){
       </div>
       <div class="card-right">
         ${ratingEl}
-        <div class="card-scores">${[
-          m.score?(m.matchUrl?`<a href="${m.matchUrl}" target="_blank" style="color:var(--text3);text-decoration:none;" title="View on cagematch">CM ${m.score}</a>`:'CM '+m.score):'',
-          m.value?'WON '+m.value:''
-        ].filter(Boolean).join(' · ')}</div>
+        <div class="card-scores" style="text-align:right;">${m.score?(m.matchUrl?`<a href="${m.matchUrl}" target="_blank" style="color:var(--text3);text-decoration:none;display:block;" title="View on cagematch">CM ${m.score}</a>`:`<span style="display:block;">CM ${m.score}</span>`):''
+        }${m.value?`<span style="display:block;letter-spacing:.05em;" title="WON: ${m.value}">${fmtWON(m.value)}</span>`:''}</div>
         ${actionsEl}
       </div>
     </div>`;
