@@ -587,7 +587,10 @@ const COLS=[
     if(m.matchUrl) return`<div class="match-name"><a href="${m.matchUrl}" target="_blank" style="text-decoration:none;color:inherit;">${displayName}</a></div>`;
     return`<div class="match-name inline-field" onclick="inlineEditField(event,'${m.id}','name')" title="Click to edit">${displayName}</div>`;
   }},
-  {key:'promoAbbr',label:'Promo',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','promoAbbr')" title="Click to edit">${m.promoAbbr?`<span class="promo-badge">${esc(m.promoAbbr)}</span>`:'<span class="rating-empty">&mdash;</span>'}</span>`},
+  {key:'promoAbbr',label:'Promo',render:m=>{
+    const badges=m.promoAbbr?(m.promoAbbr.split('/').map(p=>p.trim()).filter(Boolean).map(p=>`<span class="promo-badge">${esc(p)}</span>`).join(' ')):null;
+    return`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','promoAbbr')" title="Click to edit">${badges||'<span class="rating-empty">&mdash;</span>'}</span>`;
+  }},
   {key:'event',label:'Event',render:m=>`<div class="event-name inline-field" onclick="inlineEditField(event,'${m.id}','event')" title="Click to edit">${esc(m.event||'&mdash;')}</div>`},
   {key:'date',label:'Date',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','date')" title="Click to edit">${m.date?fmtDate(m.date):'&mdash;'}</span>`},
   {key:'matchType',label:'Type',render:m=>`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','matchType')" title="Click to edit">${esc(m.matchType||'&mdash;')}</span>`},
@@ -687,7 +690,7 @@ function buildRows(arr,tbody,showActions=true){
       :`<span class="inline-field" onclick="inlineEditField(event,'${m.id}','name')" title="Click to edit">${displayName}</span>`;
     // Meta row 1: promo · event · date
     const meta1=[];
-    if(m.promoAbbr) meta1.push(`<span class="promo-badge">${esc(m.promoAbbr)}</span>`);
+    if(m.promoAbbr)(m.promoAbbr.split('/').map(p=>p.trim()).filter(Boolean)).forEach(p=>meta1.push(`<span class="promo-badge">${esc(p)}</span>`));
     if(m.event){
       const evClean=decodeEntities(m.event);
       const evKey=encodeURIComponent(evClean+'__'+(m.date||''));
@@ -697,7 +700,8 @@ function buildRows(arr,tbody,showActions=true){
     if(m.matchType) meta1.push(`<span style="color:var(--text3)">${esc(m.matchType)}</span>`);
     // Meta row 2: championship · winner · flags · scores
     const meta2=[];
-    if(m.championship) meta2.push(`<span class="champ-badge inline-field" onclick="inlineEditField(event,'${m.id}','championship')" title="Click to edit">${beltSm}${esc(m.championship.replace(/\(c\)/gi,''))}</span>`);
+    if(m.championship)(m.championship.split('/').map(c=>c.trim()).filter(Boolean)).forEach(ch=>
+      meta2.push(`<span class="champ-badge inline-field" onclick="inlineEditField(event,'${m.id}','championship')" title="Click to edit">${beltSm}${esc(ch.replace(/\(c\)/gi,''))}</span>`));
     if(m.winner) meta2.push(`<span style="${m.titleChange?'color:var(--accent);font-weight:700':''}">${esc(m.winner)}${m.titleChange?' ★':''}</span>`);
     if(m.tenPlus) meta2.push(`<span class="flag-10plus">10+</span>`);
     if(m.sawLive) meta2.push(`<span class="flag-live">Live</span>`);
@@ -742,7 +746,7 @@ function filterMatches(arr,overrides){
     if(q&&![m.name,m.event,m.championship,m.champion,m.winner,m.matchType,m.promoAbbr,m.promoFull].some(v=>(v||'').toLowerCase().includes(q)))return false;
     if(f.year&&getMatchTab(m)!==f.year)return false;
     if(f.promo&&m.promoAbbr!==f.promo&&m.promoFull!==f.promo)return false;
-    if(f.champ&&(m.championship||'').toLowerCase()!==f.champ.toLowerCase())return false;
+    if(f.champ&&!(m.championship||'').toLowerCase().split('/').map(c=>c.trim()).some(c=>c===f.champ.toLowerCase()))return false;
     if(f.titleOnly&&!m.championship)return false;
     // rating filter
     if(f.rating){
@@ -1005,7 +1009,7 @@ function renderShows(){
           ?`<a href="${esc(ev.eventUrl)}" target="_blank" style="color:inherit;text-decoration:none;" title="View event card">${esc(decodeEntities(ev.event||''))}</a>`
           :esc(decodeEntities(ev.event||''))}</div>
         <div class="card-meta">
-          ${ev.promoAbbr?`<span class="promo-badge">${esc(ev.promoAbbr)}</span>`:''}
+          ${ev.promoAbbr?(ev.promoAbbr.split('/').map(p=>p.trim()).filter(Boolean).map(p=>`<span class="promo-badge">${esc(p)}</span>`).join(' ')):''}
           ${ev.date?`<span style="color:var(--text3)">${fmtDate(ev.date)}</span>`:''}
           <span style="color:var(--text3)">${ev.matches.length} match${ev.matches.length!==1?'es':''}</span>
           ${titleChanges?`<span class="flag-10plus">&#127942; ${titleChanges} title change${titleChanges!==1?'s':''}</span>`:''}
@@ -1042,7 +1046,7 @@ function renderPromos(){
 
 function populatePromoDropdowns(){const promos=loadPromos();const sel=document.getElementById('f-promo-full');const cur=sel.value;sel.innerHTML='<option value="">&#8212; Select &#8212;</option>'+promos.map(p=>`<option value="${esc(p[0])}">${esc(p[0])}</option>`).join('');sel.value=cur;}
 function onPromoChange(){const promos=loadPromos();const full=document.getElementById('f-promo-full').value;const match=promos.find(p=>p[0]===full);document.getElementById('f-promo-abbr').value=match?match[1]:'';}
-function addPromotion(){const name=document.getElementById('new-promo-name').value.trim();const abbr=document.getElementById('new-promo-abbr').value.trim();if(!name||!abbr){toast('Enter both name and abbreviation',true);return;}const promos=loadPromos();if(promos.find(p=>p[0].toLowerCase()===name.toLowerCase())){toast('Promotion already exists',true);return;}promos.push([name,abbr]);savePromos(promos);document.getElementById('new-promo-name').value='';document.getElementById('new-promo-abbr').value='';renderPromos();toast('Promotion added');}
+function addPromotion(){const name=document.getElementById('new-promo-name').value.trim();const abbr=document.getElementById('new-promo-abbr').value.trim();if(!name||!abbr){toast('Enter both name and abbreviation',true);return;}const promos=loadPromos();if(promos.find(p=>p[0].toLowerCase()===name.toLowerCase())){toast('Promotion already exists',true);return;}promos.push([name,abbr]);promos.sort((a,b)=>a[0].localeCompare(b[0]));savePromos(promos);document.getElementById('new-promo-name').value='';document.getElementById('new-promo-abbr').value='';renderPromos();toast('Promotion added');}
 function deletePromo(idx){const promos=loadPromos();promos.splice(idx,1);savePromos(promos);renderPromos();toast('Promotion removed');}
 
 async function fetchMatchData(){
