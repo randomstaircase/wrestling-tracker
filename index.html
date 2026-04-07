@@ -272,8 +272,16 @@ textarea{resize:vertical;min-height:70px}
         <div class="fetch-status" id="fetch-status"></div>
       </div>
       <div class="form-group full"><label>Match / Wrestlers <span class="required">*</span></label><input type="text" id="f-name" placeholder="e.g. Jon Moxley vs. Konosuke Takeshita"/></div>
-      <div class="form-group"><label>Promotion (full name) <span class="required">*</span></label><select id="f-promo-full" onchange="onPromoChange()"><option value="">&#8212; Select &#8212;</option></select></div>
-      <div class="form-group"><label>Promotion Abbreviation</label><input type="text" id="f-promo-abbr" placeholder="Auto-filled" readonly style="opacity:.6"/></div>
+      <div class="form-group full">
+        <label>Promotions <span class="hint">(click to add, click tag to remove)</span></label>
+        <div id="promo-tag-container" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:36px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:6px 8px;cursor:pointer;" onclick="openPromoDropdown()">
+          <div id="promo-tags" style="display:flex;flex-wrap:wrap;gap:4px;flex:1;"></div>
+          <span style="font-size:.78rem;color:var(--text3);" id="promo-placeholder">Click to select promotions&hellip;</span>
+        </div>
+        <div id="promo-dropdown" style="display:none;position:absolute;z-index:200;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,.3);max-height:220px;overflow-y:auto;min-width:280px;"></div>
+        <input type="hidden" id="f-promo-full"/>
+        <input type="hidden" id="f-promo-abbr"/>
+      </div>
       <div class="form-group full"><label>Event Name <span class="hint">(auto-filled or override)</span></label><input type="text" id="f-event" placeholder="e.g. AEW Revolution 2026"/><input type="hidden" id="f-event-url"/></div>
       <div class="form-group"><label>Date</label><input type="date" id="f-date"/></div>
       <div class="form-group"><label>Match Type <span class="hint">(auto-filled or override)</span></label><input type="text" id="f-matchtype" placeholder="e.g. No Time Limit"/></div>
@@ -1044,8 +1052,94 @@ function renderPromos(){
   document.getElementById('promo-list').innerHTML=promos.map((p,i)=>`<div class="promo-item"><span class="promo-item-name">${esc(p[0])}</span><span class="promo-item-abbr">${esc(p[1])}</span><button class="promo-item-del" onclick="deletePromo(${i})" title="Delete">&#10005;</button></div>`).join('');
 }
 
-function populatePromoDropdowns(){const promos=loadPromos();const sel=document.getElementById('f-promo-full');const cur=sel.value;sel.innerHTML='<option value="">&#8212; Select &#8212;</option>'+promos.map(p=>`<option value="${esc(p[0])}">${esc(p[0])}</option>`).join('');sel.value=cur;}
-function onPromoChange(){const promos=loadPromos();const full=document.getElementById('f-promo-full').value;const match=promos.find(p=>p[0]===full);document.getElementById('f-promo-abbr').value=match?match[1]:'';}
+// ── Multi-promo tag selector ──
+let _selectedPromos=[]; // [{full,abbr}]
+
+function populatePromoDropdowns(){renderPromoTags();}
+function onPromoChange(){}
+
+function openPromoDropdown(){
+  const dd=document.getElementById('promo-dropdown');
+  if(dd.style.display!=='none'){dd.style.display='none';return;}
+  const promos=loadPromos().slice().sort((a,b)=>a[0].localeCompare(b[0]));
+  dd.innerHTML=`<input class="promo-dd-search" id="promo-dd-search" placeholder="Search promotions..." oninput="filterPromoDropdown()" autofocus/>`;
+  promos.forEach(p=>{
+    const sel=_selectedPromos.some(s=>s.full===p[0]);
+    const item=document.createElement('div');
+    item.className='promo-dd-item'+(sel?' selected':'');
+    item.innerHTML=`<span>${esc(p[0])}</span><span style="font-size:.72rem;color:var(--text3)">${esc(p[1])}</span>`;
+    item.onclick=function(e){e.stopPropagation();togglePromo(p[0],p[1]);};
+    dd.appendChild(item);
+  });
+  // Position below container
+  const cont=document.getElementById('promo-tag-container');
+  const rect=cont.getBoundingClientRect();
+  dd.style.display='block';
+  dd.style.top=(rect.bottom+window.scrollY+4)+'px';
+  dd.style.left=(rect.left+window.scrollX)+'px';
+  dd.style.width=rect.width+'px';
+  dd.style.position='absolute';
+  document.body.appendChild(dd);
+  setTimeout(()=>{
+    const s=document.getElementById('promo-dd-search');if(s)s.focus();
+    function closeDD(e){if(!dd.contains(e.target)&&e.target.id!=='promo-tag-container'){dd.style.display='none';document.removeEventListener('click',closeDD);}}
+    document.addEventListener('click',closeDD);
+  },10);
+}
+
+function filterPromoDropdown(){
+  const q=(document.getElementById('promo-dd-search').value||'').toLowerCase();
+  const dd=document.getElementById('promo-dropdown');
+  [...dd.querySelectorAll('.promo-dd-item')].forEach(el=>{
+    el.style.display=el.textContent.toLowerCase().includes(q)?'':'none';
+  });
+}
+
+function togglePromo(full,abbr){
+  const idx=_selectedPromos.findIndex(s=>s.full===full);
+  if(idx>=0) _selectedPromos.splice(idx,1);
+  else _selectedPromos.push({full,abbr});
+  renderPromoTags();
+  // Refresh dropdown
+  const dd=document.getElementById('promo-dropdown');
+  [...dd.querySelectorAll('.promo-dd-item')].forEach(el=>{
+    const isSel=_selectedPromos.some(s=>el.querySelector('span').textContent===s.full);
+    el.classList.toggle('selected',isSel);
+  });
+}
+
+function removePromo(full){
+  _selectedPromos=_selectedPromos.filter(s=>s.full!==full);
+  renderPromoTags();
+}
+
+function renderPromoTags(){
+  const tags=document.getElementById('promo-tags');
+  const ph=document.getElementById('promo-placeholder');
+  if(!tags)return;
+  tags.innerHTML=_selectedPromos.map(p=>
+    `<span class="promo-tag">${esc(p.abbr)}<span class="rm" onclick="event.stopPropagation();removePromo('${esc(p.full).replace(/'/g,"\\'")}')">&#10005;</span></span>`
+  ).join('');
+  if(ph) ph.style.display=_selectedPromos.length?'none':'';
+  // Update hidden fields
+  const fullEl=document.getElementById('f-promo-full');
+  const abbrEl=document.getElementById('f-promo-abbr');
+  if(fullEl) fullEl.value=_selectedPromos.map(p=>p.full).join(' / ');
+  if(abbrEl) abbrEl.value=_selectedPromos.map(p=>p.abbr).join(' / ');
+}
+
+function setSelectedPromos(fullStr,abbrStr){
+  _selectedPromos=[];
+  if(!fullStr)return;
+  const fulls=(fullStr||'').split('/').map(s=>s.trim()).filter(Boolean);
+  const abbrs=(abbrStr||'').split('/').map(s=>s.trim()).filter(Boolean);
+  const promos=loadPromos();
+  fulls.forEach((f,i)=>{
+    const abbr=abbrs[i]||(promos.find(p=>p[0]===f)||[f,''])[1]||f.slice(0,6).toUpperCase();
+    _selectedPromos.push({full:f,abbr});
+  });
+  renderPromoTags();
+}
 function addPromotion(){const name=document.getElementById('new-promo-name').value.trim();const abbr=document.getElementById('new-promo-abbr').value.trim();if(!name||!abbr){toast('Enter both name and abbreviation',true);return;}const promos=loadPromos();if(promos.find(p=>p[0].toLowerCase()===name.toLowerCase())){toast('Promotion already exists',true);return;}promos.push([name,abbr]);promos.sort((a,b)=>a[0].localeCompare(b[0]));savePromos(promos);document.getElementById('new-promo-name').value='';document.getElementById('new-promo-abbr').value='';renderPromos();toast('Promotion added');}
 function deletePromo(idx){const promos=loadPromos();promos.splice(idx,1);savePromos(promos);renderPromos();toast('Promotion removed');}
 
@@ -1068,11 +1162,7 @@ async function fetchMatchData(){
     if(data.eventUrl)document.getElementById('f-event-url').value=data.eventUrl;
     if(data.score)document.getElementById('f-score').value=data.score;
     if(data.value)document.getElementById('f-value').value=data.value;
-    if(data.promoFull||data.promoAbbr){
-      populatePromoDropdowns();const sel=document.getElementById('f-promo-full');let matched=false;
-      for(const opt of sel.options){if(data.promoFull&&opt.value.toLowerCase()===data.promoFull.toLowerCase()){sel.value=opt.value;onPromoChange();matched=true;break;}}
-      if(!matched&&data.promoAbbr){const p=loadPromos().find(x=>x[1].toLowerCase()===data.promoAbbr.toLowerCase());if(p){sel.value=p[0];onPromoChange();}else document.getElementById('f-promo-abbr').value=data.promoAbbr;}
-    }
+    if(data.promoFull||data.promoAbbr) setSelectedPromos(data.promoFull||'',data.promoAbbr||'');
     const filled=[data.name&&'wrestlers',data.promoFull&&'promotion',data.event&&'event',data.date&&'date',data.matchType&&'match type',data.championship&&'championship',data.score&&'score'].filter(Boolean);
     setFetchStatus('\u2713 Auto-filled: '+filled.join(', '),'ok');
   }catch(e){setFetchStatus('\u2717 '+(e.message.includes('No Web App URL')?'Set your Apps Script URL in Export \u2192 Sync first.':'Auto-fill failed: '+e.message),'err');}
@@ -1086,9 +1176,9 @@ function setEditingId(id){editingId=id;document.getElementById('form-title').tex
 function getFormData(){return{id:editingId||('m_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)),matchUrl:document.getElementById('f-url').value.trim(),name:document.getElementById('f-name').value.trim(),promoFull:document.getElementById('f-promo-full').value,promoAbbr:document.getElementById('f-promo-abbr').value.trim(),event:document.getElementById('f-event').value.trim(),
     eventUrl:document.getElementById('f-event-url').value.trim(),date:document.getElementById('f-date').value,matchType:document.getElementById('f-matchtype').value.trim(),championship:document.getElementById('f-champ').value.trim(),
     champion:document.getElementById('f-champion').value.trim(),winner:document.getElementById('f-winner').value.trim(),titleChange:document.getElementById('f-title-change').checked,rating:document.getElementById('f-rating').value,tenPlus:document.getElementById('f-10plus').checked,sawLive:document.getElementById('f-saw-live').checked,rewatch:document.getElementById('f-rewatch').checked,score:document.getElementById('f-score').value,value:document.getElementById('f-value').value};}
-function fillForm(m){document.getElementById('f-url').value=m.matchUrl||'';document.getElementById('f-name').value=m.name||'';populatePromoDropdowns();document.getElementById('f-promo-full').value=m.promoFull||'';document.getElementById('f-promo-abbr').value=m.promoAbbr||'';document.getElementById('f-event').value=m.event||'';document.getElementById('f-event-url').value=m.eventUrl||'';document.getElementById('f-date').value=m.date||'';document.getElementById('f-matchtype').value=m.matchType||'';document.getElementById('f-champ').value=m.championship||'';
+function fillForm(m){document.getElementById('f-url').value=m.matchUrl||'';document.getElementById('f-name').value=m.name||'';setSelectedPromos(m.promoFull||'',m.promoAbbr||'');document.getElementById('f-event').value=m.event||'';document.getElementById('f-event-url').value=m.eventUrl||'';document.getElementById('f-date').value=m.date||'';document.getElementById('f-matchtype').value=m.matchType||'';document.getElementById('f-champ').value=m.championship||'';
   document.getElementById('f-champion').value=m.champion||'';document.getElementById('f-winner').value=m.winner||'';document.getElementById('f-title-change').checked=!!m.titleChange;document.getElementById('f-rating').value=m.rating||'';document.getElementById('f-10plus').checked=!!m.tenPlus;document.getElementById('f-saw-live').checked=!!m.sawLive;document.getElementById('f-rewatch').checked=!!m.rewatch;document.getElementById('f-score').value=m.score||'';document.getElementById('f-value').value=m.value||'';setFetchStatus('');}
-function clearForm(){['f-url','f-name','f-event','f-event-url','f-matchtype','f-champ','f-champion','f-winner','f-rating','f-score','f-value','f-date','f-promo-abbr'].forEach(id=>document.getElementById(id).value='');document.getElementById('f-promo-full').value='';document.getElementById('f-10plus').checked=false;document.getElementById('f-saw-live').checked=false;document.getElementById('f-rewatch').checked=false;document.getElementById('f-title-change').checked=false;setFetchStatus('');setEditingId(null);}
+function clearForm(){['f-url','f-name','f-event','f-event-url','f-matchtype','f-champ','f-champion','f-winner','f-rating','f-score','f-value','f-date','f-promo-abbr'].forEach(id=>document.getElementById(id).value='');_selectedPromos=[];renderPromoTags();document.getElementById('f-10plus').checked=false;document.getElementById('f-saw-live').checked=false;document.getElementById('f-rewatch').checked=false;document.getElementById('f-title-change').checked=false;setFetchStatus('');setEditingId(null);}
 function saveMatch(){
   const data=getFormData();
   // Strip quotes from event name on save
