@@ -986,9 +986,9 @@ function renderShows(){
     if(r>eventMap[key].topRating)eventMap[key].topRating=r;
   });
 
-  const events=Object.values(eventMap).sort((b,a)=>{
-    if(a.date&&b.date)return a.date.localeCompare(b.date);
-    return (a.event||'').localeCompare(b.event||'');
+  const events=Object.values(eventMap).sort((a,b)=>{
+    if(b.date&&a.date)return b.date.localeCompare(a.date);
+    return (b.event||'').localeCompare(a.event||'');
   });
 
   const countEl=document.getElementById('shows-count');
