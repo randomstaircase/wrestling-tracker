@@ -1040,7 +1040,7 @@ function renderAll(){
   buildRows(filtered,document.getElementById('all-body'));
 }
 function renderPromos(){
-  const promos=loadPromos();
+  const promos=loadPromos().slice().sort((a,b)=>a[0].localeCompare(b[0]));
   document.getElementById('promo-list').innerHTML=promos.map((p,i)=>`<div class="promo-item"><span class="promo-item-name">${esc(p[0])}</span><span class="promo-item-abbr">${esc(p[1])}</span><button class="promo-item-del" onclick="deletePromo(${i})" title="Delete">&#10005;</button></div>`).join('');
 }
 
