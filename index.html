@@ -273,12 +273,15 @@ textarea{resize:vertical;min-height:70px}
       </div>
       <div class="form-group full"><label>Match / Wrestlers <span class="required">*</span></label><input type="text" id="f-name" placeholder="e.g. Jon Moxley vs. Konosuke Takeshita"/></div>
       <div class="form-group full">
-        <label>Promotions <span class="hint">(click to add, click tag to remove)</span></label>
-        <div id="promo-tag-container" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:36px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:6px 8px;cursor:pointer;" onclick="openPromoDropdown()">
-          <div id="promo-tags" style="display:flex;flex-wrap:wrap;gap:4px;flex:1;"></div>
-          <span style="font-size:.78rem;color:var(--text3);" id="promo-placeholder">Click to select promotions&hellip;</span>
+        <label>Promotions</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px;">
+          <div id="promo-tags" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+          <button type="button" class="btn btn-secondary" onclick="togglePromoPanel()" style="font-size:.72rem;padding:3px 10px;" id="promo-expand-btn">&#43; Select</button>
         </div>
-        <div id="promo-dropdown" style="display:none;position:absolute;z-index:200;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,.3);max-height:220px;overflow-y:auto;min-width:280px;"></div>
+        <div id="promo-panel" style="display:none;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;">
+          <input type="text" id="promo-search-input" placeholder="Filter promotions&hellip;" oninput="renderPromoPanel()" style="width:100%;margin-bottom:8px;font-size:.82rem;background:var(--bg4);border:1px solid var(--border2);color:var(--text);padding:5px 8px;border-radius:4px;outline:none;"/>
+          <div id="promo-pill-grid" style="display:flex;flex-wrap:wrap;gap:5px;max-height:200px;overflow-y:auto;"></div>
+        </div>
         <input type="hidden" id="f-promo-full"/>
         <input type="hidden" id="f-promo-abbr"/>
       </div>
@@ -1052,47 +1055,32 @@ function renderPromos(){
   document.getElementById('promo-list').innerHTML=promos.map((p,i)=>`<div class="promo-item"><span class="promo-item-name">${esc(p[0])}</span><span class="promo-item-abbr">${esc(p[1])}</span><button class="promo-item-del" onclick="deletePromo(${i})" title="Delete">&#10005;</button></div>`).join('');
 }
 
-// ── Multi-promo tag selector ──
+// ── Multi-promo pill selector ──
 let _selectedPromos=[]; // [{full,abbr}]
 
 function populatePromoDropdowns(){renderPromoTags();}
 function onPromoChange(){}
 
-function openPromoDropdown(){
-  const dd=document.getElementById('promo-dropdown');
-  if(dd.style.display!=='none'){dd.style.display='none';return;}
-  const promos=loadPromos().slice().sort((a,b)=>a[0].localeCompare(b[0]));
-  dd.innerHTML=`<input class="promo-dd-search" id="promo-dd-search" placeholder="Search promotions..." oninput="filterPromoDropdown()" autofocus/>`;
-  promos.forEach(p=>{
-    const sel=_selectedPromos.some(s=>s.full===p[0]);
-    const item=document.createElement('div');
-    item.className='promo-dd-item'+(sel?' selected':'');
-    item.innerHTML=`<span>${esc(p[0])}</span><span style="font-size:.72rem;color:var(--text3)">${esc(p[1])}</span>`;
-    item.onclick=function(e){e.stopPropagation();togglePromo(p[0],p[1]);};
-    dd.appendChild(item);
-  });
-  // Position below container
-  const cont=document.getElementById('promo-tag-container');
-  const rect=cont.getBoundingClientRect();
-  dd.style.display='block';
-  dd.style.top=(rect.bottom+window.scrollY+4)+'px';
-  dd.style.left=(rect.left+window.scrollX)+'px';
-  dd.style.width=rect.width+'px';
-  dd.style.position='absolute';
-  document.body.appendChild(dd);
-  setTimeout(()=>{
-    const s=document.getElementById('promo-dd-search');if(s)s.focus();
-    function closeDD(e){if(!dd.contains(e.target)&&e.target.id!=='promo-tag-container'){dd.style.display='none';document.removeEventListener('click',closeDD);}}
-    document.addEventListener('click',closeDD);
-  },10);
+function togglePromoPanel(){
+  const panel=document.getElementById('promo-panel');
+  const open=panel.style.display==='none'||panel.style.display==='';
+  panel.style.display=open?'block':'none';
+  const btn=document.getElementById('promo-expand-btn');
+  if(btn) btn.textContent=open?'&#8722; Close':'&#43; Select';
+  if(open) renderPromoPanel();
 }
 
-function filterPromoDropdown(){
-  const q=(document.getElementById('promo-dd-search').value||'').toLowerCase();
-  const dd=document.getElementById('promo-dropdown');
-  [...dd.querySelectorAll('.promo-dd-item')].forEach(el=>{
-    el.style.display=el.textContent.toLowerCase().includes(q)?'':'none';
-  });
+function renderPromoPanel(){
+  const q=(document.getElementById('promo-search-input')||{value:''}).value.toLowerCase();
+  const grid=document.getElementById('promo-pill-grid');
+  if(!grid) return;
+  const promos=loadPromos().slice().sort((a,b)=>a[0].localeCompare(b[0]));
+  grid.innerHTML=promos
+    .filter(p=>!q||p[0].toLowerCase().includes(q)||p[1].toLowerCase().includes(q))
+    .map(p=>{
+      const sel=_selectedPromos.some(s=>s.full===p[0]);
+      return`<button type="button" class="promo-pill-opt${sel?' selected':''}" onclick="togglePromo('${esc(p[0]).replace(/'/g,"\\'")}','${esc(p[1])}')">${esc(p[1])}</button>`;
+    }).join('');
 }
 
 function togglePromo(full,abbr){
@@ -1100,28 +1088,24 @@ function togglePromo(full,abbr){
   if(idx>=0) _selectedPromos.splice(idx,1);
   else _selectedPromos.push({full,abbr});
   renderPromoTags();
-  // Refresh dropdown
-  const dd=document.getElementById('promo-dropdown');
-  [...dd.querySelectorAll('.promo-dd-item')].forEach(el=>{
-    const isSel=_selectedPromos.some(s=>el.querySelector('span').textContent===s.full);
-    el.classList.toggle('selected',isSel);
-  });
+  renderPromoPanel();
 }
 
 function removePromo(full){
   _selectedPromos=_selectedPromos.filter(s=>s.full!==full);
   renderPromoTags();
+  renderPromoPanel();
 }
 
 function renderPromoTags(){
   const tags=document.getElementById('promo-tags');
-  const ph=document.getElementById('promo-placeholder');
-  if(!tags)return;
-  tags.innerHTML=_selectedPromos.map(p=>
-    `<span class="promo-tag">${esc(p.abbr)}<span class="rm" onclick="event.stopPropagation();removePromo('${esc(p.full).replace(/'/g,"\\'")}')">&#10005;</span></span>`
-  ).join('');
-  if(ph) ph.style.display=_selectedPromos.length?'none':'';
-  // Update hidden fields
+  if(!tags) return;
+  tags.innerHTML=_selectedPromos.map(p=>{
+    const safeFull=p.full.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return`<span class="promo-tag">${esc(p.abbr)}<button class="rm" onclick="event.stopPropagation();removePromo('${safeFull}')" title="Remove">&#10005;</button></span>`;
+  }).join('');
+  const btn=document.getElementById('promo-expand-btn');
+  if(btn) btn.innerHTML=(_selectedPromos.length?'&#43; More':'&#43; Select');
   const fullEl=document.getElementById('f-promo-full');
   const abbrEl=document.getElementById('f-promo-abbr');
   if(fullEl) fullEl.value=_selectedPromos.map(p=>p.full).join(' / ');
@@ -1130,7 +1114,7 @@ function renderPromoTags(){
 
 function setSelectedPromos(fullStr,abbrStr){
   _selectedPromos=[];
-  if(!fullStr)return;
+  if(!fullStr) return;
   const fulls=(fullStr||'').split('/').map(s=>s.trim()).filter(Boolean);
   const abbrs=(abbrStr||'').split('/').map(s=>s.trim()).filter(Boolean);
   const promos=loadPromos();
@@ -1139,6 +1123,9 @@ function setSelectedPromos(fullStr,abbrStr){
     _selectedPromos.push({full:f,abbr});
   });
   renderPromoTags();
+  // Close panel on set
+  const panel=document.getElementById('promo-panel');
+  if(panel) panel.style.display='none';
 }
 function addPromotion(){const name=document.getElementById('new-promo-name').value.trim();const abbr=document.getElementById('new-promo-abbr').value.trim();if(!name||!abbr){toast('Enter both name and abbreviation',true);return;}const promos=loadPromos();if(promos.find(p=>p[0].toLowerCase()===name.toLowerCase())){toast('Promotion already exists',true);return;}promos.push([name,abbr]);promos.sort((a,b)=>a[0].localeCompare(b[0]));savePromos(promos);document.getElementById('new-promo-name').value='';document.getElementById('new-promo-abbr').value='';renderPromos();toast('Promotion added');}
 function deletePromo(idx){const promos=loadPromos();promos.splice(idx,1);savePromos(promos);renderPromos();toast('Promotion removed');}
