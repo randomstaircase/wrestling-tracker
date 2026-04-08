@@ -276,7 +276,7 @@ textarea{resize:vertical;min-height:70px}
         <label>Promotions</label>
         <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px;">
           <div id="promo-tags" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
-          <button type="button" class="btn btn-secondary" onclick="togglePromoPanel()" style="font-size:.72rem;padding:3px 10px;" id="promo-expand-btn">&#43; Select</button>
+          <button type="button" class="btn btn-secondary" onclick="togglePromoPanel()" style="font-size:.72rem;padding:3px 10px;" id="promo-expand-btn">Select</button>
         </div>
         <div id="promo-panel" style="display:none;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;">
           <input type="text" id="promo-search-input" placeholder="Filter promotions&hellip;" oninput="renderPromoPanel()" style="width:100%;margin-bottom:8px;font-size:.82rem;background:var(--bg4);border:1px solid var(--border2);color:var(--text);padding:5px 8px;border-radius:4px;outline:none;"/>
@@ -1062,7 +1062,17 @@ function renderAll(){
 }
 function renderPromos(){
   const promos=loadPromos().slice().sort((a,b)=>a[0].localeCompare(b[0]));
-  document.getElementById('promo-list').innerHTML=promos.map((p,i)=>`<div class="promo-item"><span class="promo-item-name">${esc(p[0])}</span><span class="promo-item-abbr">${esc(p[1])}</span><button class="promo-item-del" onclick="deletePromo(${i})" title="Delete">&#10005;</button></div>`).join('');
+  const el=document.getElementById('promo-list');
+  if(!el)return;
+  el.innerHTML=promos.map(p=>{
+    const safe0=p[0].replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return`<div class="promo-item">
+      <span class="promo-item-name" id="promo-name-${esc(p[1])}">${esc(p[0])}</span>
+      <span class="promo-item-abbr">${esc(p[1])}</span>
+      <button class="promo-item-del" style="color:var(--text3);margin-left:4px;" onclick="editPromo('${safe0}','${esc(p[1])}')" title="Edit">&#9998;</button>
+      <button class="promo-item-del" onclick="deletePromo('${safe0}')" title="Delete">&#10005;</button>
+    </div>`;
+  }).join('');
 }
 
 // ── Multi-promo pill selector ──
@@ -1076,7 +1086,7 @@ function togglePromoPanel(){
   const open=panel.style.display==='none'||panel.style.display==='';
   panel.style.display=open?'block':'none';
   const btn=document.getElementById('promo-expand-btn');
-  if(btn) btn.textContent=open?'Close':'Select';
+  if(btn) btn.textContent=open?'Close':(_selectedPromos.length?'Edit':'Select');
   if(open) renderPromoPanel();
 }
 
@@ -1115,7 +1125,7 @@ function renderPromoTags(){
   // Show selected promos as plain promo-badge pills (same style as match cards)
   tags.innerHTML=_selectedPromos.map(p=>`<span class="promo-badge" style="cursor:default;">${esc(p.abbr)}</span>`).join('');
   const btn=document.getElementById('promo-expand-btn');
-  if(btn) btn.innerHTML=(_selectedPromos.length?'&#9997; Edit':'&#43; Select');
+  if(btn) btn.textContent=(_selectedPromos.length?'Edit':'Select');
   const fullEl=document.getElementById('f-promo-full');
   const abbrEl=document.getElementById('f-promo-abbr');
   if(fullEl) fullEl.value=_selectedPromos.map(p=>p.full).join(' / ');
@@ -1138,7 +1148,30 @@ function setSelectedPromos(fullStr,abbrStr){
   if(panel) panel.style.display='none';
 }
 function addPromotion(){const name=document.getElementById('new-promo-name').value.trim();const abbr=document.getElementById('new-promo-abbr').value.trim();if(!name||!abbr){toast('Enter both name and abbreviation',true);return;}const promos=loadPromos();if(promos.find(p=>p[0].toLowerCase()===name.toLowerCase())){toast('Promotion already exists',true);return;}promos.push([name,abbr]);promos.sort((a,b)=>a[0].localeCompare(b[0]));savePromos(promos);document.getElementById('new-promo-name').value='';document.getElementById('new-promo-abbr').value='';renderPromos();toast('Promotion added');}
-function deletePromo(idx){const promos=loadPromos();promos.splice(idx,1);savePromos(promos);renderPromos();toast('Promotion removed');}
+function deletePromo(name){
+  const promos=loadPromos();
+  const idx=promos.findIndex(p=>p[0]===name);
+  if(idx<0){toast('Promotion not found',true);return;}
+  if(!confirm('Delete '+name+'?'))return;
+  promos.splice(idx,1);
+  savePromos(promos);
+  renderPromos();
+  toast('Promotion removed');
+}
+function editPromo(name,abbr){
+  const newName=prompt('Edit promotion name:',name);
+  if(!newName)return;
+  const newAbbr=prompt('Edit abbreviation:',abbr);
+  if(!newAbbr)return;
+  const promos=loadPromos();
+  const idx=promos.findIndex(p=>p[0]===name);
+  if(idx<0){toast('Promotion not found',true);return;}
+  promos[idx]=[newName.trim(),newAbbr.trim().toUpperCase()];
+  promos.sort((a,b)=>a[0].localeCompare(b[0]));
+  savePromos(promos);
+  renderPromos();
+  toast('Promotion updated');
+}
 
 async function fetchMatchData(){
   const url=document.getElementById('f-url').value.trim();
@@ -1159,19 +1192,8 @@ async function fetchMatchData(){
     if(data.eventUrl)document.getElementById('f-event-url').value=data.eventUrl;
     if(data.score)document.getElementById('f-score').value=data.score;
     if(data.value)document.getElementById('f-value').value=data.value;
-    // Merge auto-filled promos with any already selected
-    if(data.promoFull||data.promoAbbr){
-      const newFulls=(data.promoFull||'').split('/').map(s=>s.trim()).filter(Boolean);
-      const newAbbrs=(data.promoAbbr||'').split('/').map(s=>s.trim()).filter(Boolean);
-      const promos=loadPromos();
-      newFulls.forEach((f,i)=>{
-        if(!_selectedPromos.some(s=>s.full===f)){
-          const abbr=newAbbrs[i]||(promos.find(p=>p[0]===f)||[f,''])[1]||f.slice(0,6).toUpperCase();
-          _selectedPromos.push({full:f,abbr});
-        }
-      });
-      renderPromoTags();
-    }
+    // Replace promos with auto-filled values (user can add more via Select panel)
+    if(data.promoFull||data.promoAbbr) setSelectedPromos(data.promoFull||'',data.promoAbbr||'');
     const filled=[data.name&&'wrestlers',data.promoFull&&'promotion',data.event&&'event',data.date&&'date',data.matchType&&'match type',data.championship&&'championship',data.score&&'score'].filter(Boolean);
     setFetchStatus('\u2713 Auto-filled: '+filled.join(', '),'ok');
   }catch(e){setFetchStatus('\u2717 '+(e.message.includes('No Web App URL')?'Set your Apps Script URL in Export \u2192 Sync first.':'Auto-fill failed: '+e.message),'err');}
