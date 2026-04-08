@@ -1076,7 +1076,7 @@ function togglePromoPanel(){
   const open=panel.style.display==='none'||panel.style.display==='';
   panel.style.display=open?'block':'none';
   const btn=document.getElementById('promo-expand-btn');
-  if(btn) btn.textContent=open?'&#8722; Close':'&#43; Select';
+  if(btn) btn.textContent=open?'Close':'Select';
   if(open) renderPromoPanel();
 }
 
