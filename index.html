@@ -752,9 +752,19 @@ function getMatchTab(m){if(m._sheetName&&!/^\d{4}$/.test(m._sheetName))return m.
 
 function filterMatches(arr,overrides){
   const f=Object.assign({},sharedFilters,overrides||{});
-  const q=(f.search||'').toLowerCase().trim();
+  // Normalize search string — strip punctuation/entities for fuzzy matching
+  const rawQ=(f.search||'').trim();
+  const q=rawQ.replace(/&quot;/g,'').replace(/&amp;/g,'&').replace(/&[a-z]+;/gi,'').replace(/['"\u2018\u2019\u201c\u201d]/g,'').replace(/[^a-z0-9\s]/gi,' ').replace(/\s+/g,' ').toLowerCase().trim();
   return arr.filter(m=>{
-    if(q&&![m.name,m.event,m.championship,m.champion,m.winner,m.matchType,m.promoAbbr,m.promoFull].some(v=>(v||'').toLowerCase().includes(q)))return false;
+    if(q){
+      const fields=[m.name,m.event,m.championship,m.champion,m.winner,m.matchType,m.promoAbbr,m.promoFull];
+      const match=fields.some(v=>{
+        if(!v) return false;
+        const nv=(v||'').replace(/&quot;/g,'').replace(/&amp;/g,'&').replace(/&[a-z]+;/gi,'').replace(/['"\u2018\u2019\u201c\u201d]/g,'').replace(/[^a-z0-9\s]/gi,' ').replace(/\s+/g,' ').toLowerCase().trim();
+        return nv.includes(q);
+      });
+      if(!match) return false;
+    }
     if(f.year&&getMatchTab(m)!==f.year)return false;
     if(f.promo&&m.promoAbbr!==f.promo&&m.promoFull!==f.promo)return false;
     if(f.champ&&!(m.championship||'').toLowerCase().split('/').map(c=>c.trim()).some(c=>c===f.champ.toLowerCase()))return false;
@@ -1079,7 +1089,8 @@ function renderPromoPanel(){
     .filter(p=>!q||p[0].toLowerCase().includes(q)||p[1].toLowerCase().includes(q))
     .map(p=>{
       const sel=_selectedPromos.some(s=>s.full===p[0]);
-      return`<button type="button" class="promo-pill-opt${sel?' selected':''}" onclick="togglePromo('${esc(p[0]).replace(/'/g,"\\'")}','${esc(p[1])}')">${esc(p[1])}</button>`;
+      const safeFull=p[0].replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return`<button type="button" class="rating-pill${sel?' active':''}" onclick="togglePromo('${safeFull}','${esc(p[1])}')" title="${esc(p[0])}">${esc(p[1])}</button>`;
     }).join('');
 }
 
@@ -1094,18 +1105,17 @@ function togglePromo(full,abbr){
 function removePromo(full){
   _selectedPromos=_selectedPromos.filter(s=>s.full!==full);
   renderPromoTags();
-  renderPromoPanel();
+  const panel=document.getElementById('promo-panel');
+  if(panel&&panel.style.display!=='none') renderPromoPanel();
 }
 
 function renderPromoTags(){
   const tags=document.getElementById('promo-tags');
   if(!tags) return;
-  tags.innerHTML=_selectedPromos.map(p=>{
-    const safeFull=p.full.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return`<span class="promo-tag">${esc(p.abbr)}<button class="rm" onclick="event.stopPropagation();removePromo('${safeFull}')" title="Remove">&#10005;</button></span>`;
-  }).join('');
+  // Show selected promos as plain promo-badge pills (same style as match cards)
+  tags.innerHTML=_selectedPromos.map(p=>`<span class="promo-badge" style="cursor:default;">${esc(p.abbr)}</span>`).join('');
   const btn=document.getElementById('promo-expand-btn');
-  if(btn) btn.innerHTML=(_selectedPromos.length?'&#43; More':'&#43; Select');
+  if(btn) btn.innerHTML=(_selectedPromos.length?'&#9997; Edit':'&#43; Select');
   const fullEl=document.getElementById('f-promo-full');
   const abbrEl=document.getElementById('f-promo-abbr');
   if(fullEl) fullEl.value=_selectedPromos.map(p=>p.full).join(' / ');
@@ -1149,7 +1159,19 @@ async function fetchMatchData(){
     if(data.eventUrl)document.getElementById('f-event-url').value=data.eventUrl;
     if(data.score)document.getElementById('f-score').value=data.score;
     if(data.value)document.getElementById('f-value').value=data.value;
-    if(data.promoFull||data.promoAbbr) setSelectedPromos(data.promoFull||'',data.promoAbbr||'');
+    // Merge auto-filled promos with any already selected
+    if(data.promoFull||data.promoAbbr){
+      const newFulls=(data.promoFull||'').split('/').map(s=>s.trim()).filter(Boolean);
+      const newAbbrs=(data.promoAbbr||'').split('/').map(s=>s.trim()).filter(Boolean);
+      const promos=loadPromos();
+      newFulls.forEach((f,i)=>{
+        if(!_selectedPromos.some(s=>s.full===f)){
+          const abbr=newAbbrs[i]||(promos.find(p=>p[0]===f)||[f,''])[1]||f.slice(0,6).toUpperCase();
+          _selectedPromos.push({full:f,abbr});
+        }
+      });
+      renderPromoTags();
+    }
     const filled=[data.name&&'wrestlers',data.promoFull&&'promotion',data.event&&'event',data.date&&'date',data.matchType&&'match type',data.championship&&'championship',data.score&&'score'].filter(Boolean);
     setFetchStatus('\u2713 Auto-filled: '+filled.join(', '),'ok');
   }catch(e){setFetchStatus('\u2717 '+(e.message.includes('No Web App URL')?'Set your Apps Script URL in Export \u2192 Sync first.':'Auto-fill failed: '+e.message),'err');}
