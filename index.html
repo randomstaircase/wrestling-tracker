@@ -766,7 +766,11 @@ function filterMatches(arr,overrides){
       if(!match) return false;
     }
     if(f.year&&getMatchTab(m)!==f.year)return false;
-    if(f.promo&&m.promoAbbr!==f.promo&&m.promoFull!==f.promo)return false;
+    if(f.promo){
+      const abbrs=(m.promoAbbr||'').split('/').map(p=>p.trim());
+      const fulls=(m.promoFull||'').split('/').map(p=>p.trim());
+      if(!abbrs.includes(f.promo)&&!fulls.includes(f.promo)&&!abbrs.some(a=>a===f.promo)&&!(m.promoFull||'').toLowerCase().includes(f.promo.toLowerCase()))return false;
+    }
     if(f.champ&&!(m.championship||'').toLowerCase().split('/').map(c=>c.trim()).some(c=>c===f.champ.toLowerCase()))return false;
     if(f.titleOnly&&!m.championship)return false;
     // rating filter
@@ -917,7 +921,7 @@ function updateFilterHighlights(){['shared-search','shared-year','shared-promo',
 function populateSharedFilterOptions(){
   const matches=loadMatches(),promos=loadPromos();
   const years=[...new Set(matches.map(m=>getMatchTab(m)).filter(Boolean))].sort((a,b)=>(parseInt(b)||0)-(parseInt(a)||0));
-  const promoSet=[...new Set(matches.map(m=>m.promoAbbr).filter(Boolean))].sort();
+  const promoSet=[...new Set(matches.flatMap(m=>(m.promoAbbr||'').split('/').map(p=>p.trim()).filter(Boolean)))].sort();
   const champSet=[...new Set(matches.map(m=>m.championship).filter(Boolean))].sort();
   function fillSelect(id,blank,opts){const sel=document.getElementById(id);if(!sel)return;const cur=sel.value;sel.innerHTML=`<option value="">${blank}</option>`+opts;if(cur&&[...sel.options].some(o=>o.value===cur))sel.value=cur;}
   const yearOpts=years.map(y=>`<option value="${y}">${y}</option>`).join('');
