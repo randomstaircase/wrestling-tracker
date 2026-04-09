@@ -1050,13 +1050,22 @@ function renderShows(){
 }
 
 function filterShowMatches(key){
-  // key is "eventName__date" or just eventName
   const parts=key.split('__');
-  const eventName=parts[0]||key;
-  switchPanel('all');
+  const eventName=decodeEntities(parts[0]||key);
+  // Clear ALL filters then search only by event name
+  sharedFilters.search='';sharedFilters.year='';sharedFilters.promo='';
+  sharedFilters.champ='';sharedFilters.rating='';sharedFilters.ratingSrc='any';
+  sharedFilters.titleOnly=false;
+  document.querySelectorAll('.rating-pill').forEach(p=>p.classList.remove('active'));
+  buildValPills('any');
+  ['shared-year','shared-promo','shared-champ','shared-rating'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
   const se=document.getElementById('shared-search');
-  if(se){se.value=eventName;sharedFilters.search=eventName;}
-  renderAll();updateSharedChips();updateFilterHighlights();
+  if(se){se.value=eventName;}
+  sharedFilters.search=eventName;
+  switchPanel('all');
+  setTimeout(()=>{renderAll();updateSharedChips();updateFilterHighlights();},0);
 }
 
 function renderAll(){
