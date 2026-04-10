@@ -705,7 +705,7 @@ function buildRows(arr,tbody,showActions=true){
     if(m.event){
       const evClean=decodeEntities(m.event);
       const evKey=encodeURIComponent(evClean+'__'+(m.date||''));
-      meta1.push(`<span style="cursor:pointer;color:var(--text2);text-decoration:underline;text-decoration-style:dotted;" onclick="filterShowMatches(decodeURIComponent('${evKey}'))" title="View all matches from this event">${esc(evClean)}</span>`);
+      meta1.push(`<span class="event-link" data-evkey="${evKey}" style="cursor:pointer;color:var(--text2);text-decoration:underline;text-decoration-style:dotted;" title="View all matches from this event">${esc(evClean)}</span>`);
     }
     if(m.date) meta1.push(`<span style="color:var(--text3)">${fmtDate(m.date)}</span>`);
     if(m.matchType) meta1.push(`<span style="color:var(--text3)">${esc(m.matchType)}</span>`);
@@ -755,7 +755,6 @@ function filterMatches(arr,overrides){
   // Normalize search string — strip punctuation/entities for fuzzy matching
   const rawQ=(f.search||'').trim();
   const q=rawQ.replace(/&quot;/g,'').replace(/&amp;/g,'&').replace(/&[a-z]+;/gi,'').replace(/['"\u2018\u2019\u201c\u201d]/g,'').replace(/[^a-z0-9\s]/gi,' ').replace(/\s+/g,' ').toLowerCase().trim();
-  if(q) console.log('[filterMatches] q=',JSON.stringify(q),'arr.length=',arr.length);
   return arr.filter(m=>{
     if(q){
       const fields=[m.name,m.event,m.championship,m.champion,m.winner,m.matchType,m.promoAbbr,m.promoFull];
@@ -879,6 +878,13 @@ function clearSharedFilters(){
   sharedFilters.rating='';sharedFilters.ratingSrc='any';
   document.querySelectorAll('.rating-pill[data-group="src"]').forEach(p=>p.classList.remove('active'));
   buildValPills('any');
+  // Delegated click handler for event name links (avoids apostrophe/quote issues in onclick)
+  document.addEventListener('click', function(e){
+    const el=e.target.closest('.event-link');
+    if(!el) return;
+    const key=el.getAttribute('data-evkey');
+    if(key) filterShowMatches(decodeURIComponent(key));
+  });
   const tog=document.getElementById('title-toggle');if(tog)tog.classList.remove('on');
   renderBest();renderWatch();renderRewatch();renderAll();updateSharedChips();updateFilterHighlights();
 }
@@ -1029,7 +1035,7 @@ function renderShows(){
     const titleChanges=ev.matches.filter(m=>m.titleChange).length;
     const topMatches=ev.matches.filter(m=>m.tenPlus||(parseFloat(m.rating)||0)>=9);
     const showKey=encodeURIComponent((ev.event||'')+'__'+(ev.date||''));
-    return`<div class="match-card" style="cursor:pointer;" onclick="filterShowMatches(decodeURIComponent('${showKey}'))">
+    return`<div class="match-card event-link" data-evkey="${showKey}" style="cursor:pointer;">
       <div class="card-left">
         <div class="card-name">${ev.eventUrl
           ?`<a href="${esc(ev.eventUrl)}" target="_blank" style="color:inherit;text-decoration:none;" title="View event card">${esc(decodeEntities(ev.event||''))}</a>`
@@ -1065,16 +1071,8 @@ function filterShowMatches(key){
   const se=document.getElementById('shared-search');
   if(se){se.value=eventName;}
   sharedFilters.search=eventName;
-  console.log('[filterShowMatches] search set to:', JSON.stringify(eventName));
-  console.log('[filterShowMatches] normalized q will be:', eventName.replace(/&quot;/g,'').replace(/&amp;/g,'&').replace(/&[a-z]+;/gi,'').replace(/['"\u2018\u2019\u201c\u201d]/g,'').replace(/[^a-z0-9\s]/gi,' ').replace(/\s+/g,' ').toLowerCase().trim());
   switchPanel('all');
-  setTimeout(()=>{
-    const all=loadMatches();
-    console.log('[filterShowMatches] total matches:', all.length);
-    const sample=all.slice(0,3).map(m=>({event:m.event,date:m.date}));
-    console.log('[filterShowMatches] sample events:', JSON.stringify(sample));
-    renderAll();updateSharedChips();updateFilterHighlights();
-  },0);
+  setTimeout(()=>{renderAll();updateSharedChips();updateFilterHighlights();},0);
 }
 
 function renderAll(){
