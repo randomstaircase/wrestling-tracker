@@ -755,6 +755,7 @@ function filterMatches(arr,overrides){
   // Normalize search string — strip punctuation/entities for fuzzy matching
   const rawQ=(f.search||'').trim();
   const q=rawQ.replace(/&quot;/g,'').replace(/&amp;/g,'&').replace(/&[a-z]+;/gi,'').replace(/['"\u2018\u2019\u201c\u201d]/g,'').replace(/[^a-z0-9\s]/gi,' ').replace(/\s+/g,' ').toLowerCase().trim();
+  if(q) console.log('[filterMatches] q=',JSON.stringify(q),'arr.length=',arr.length);
   return arr.filter(m=>{
     if(q){
       const fields=[m.name,m.event,m.championship,m.champion,m.winner,m.matchType,m.promoAbbr,m.promoFull];
@@ -1064,8 +1065,16 @@ function filterShowMatches(key){
   const se=document.getElementById('shared-search');
   if(se){se.value=eventName;}
   sharedFilters.search=eventName;
+  console.log('[filterShowMatches] search set to:', JSON.stringify(eventName));
+  console.log('[filterShowMatches] normalized q will be:', eventName.replace(/&quot;/g,'').replace(/&amp;/g,'&').replace(/&[a-z]+;/gi,'').replace(/['"\u2018\u2019\u201c\u201d]/g,'').replace(/[^a-z0-9\s]/gi,' ').replace(/\s+/g,' ').toLowerCase().trim());
   switchPanel('all');
-  setTimeout(()=>{renderAll();updateSharedChips();updateFilterHighlights();},0);
+  setTimeout(()=>{
+    const all=loadMatches();
+    console.log('[filterShowMatches] total matches:', all.length);
+    const sample=all.slice(0,3).map(m=>({event:m.event,date:m.date}));
+    console.log('[filterShowMatches] sample events:', JSON.stringify(sample));
+    renderAll();updateSharedChips();updateFilterHighlights();
+  },0);
 }
 
 function renderAll(){
