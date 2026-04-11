@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-pw="">
+<html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -285,14 +285,7 @@ body.view-mode td .row-actions{display:none!important}
   </div>
 </div>
 <script>
-// Show overlay immediately if password is embedded and session not unlocked
-(function(){
-  var pw=document.documentElement.getAttribute('data-pw');
-  var unlocked=sessionStorage.getItem('wt_unlocked');
-  if(pw && pw.length>0 && unlocked!=='1'){
-    document.getElementById('lock-overlay').classList.add('open');
-  }
-})();
+// Overlay is shown by init() after EMBEDDED_PW is loaded — nothing to do here
 </script>
 <header>
   <div class="header-title">Wrestling <span>Match Tracker</span></div>
@@ -493,21 +486,17 @@ body.view-mode td .row-actions{display:none!important}
       </div>
     </div>
 
-    <div class="export-section edit-only">
+    <div class="export-section">
       <h3>&#128274; Password Protection</h3>
-      <p style="color:var(--text2);font-size:.85rem;margin-bottom:14px;">Set a password to require authentication before editing. The password is saved in the HTML file itself — re-download the file after setting to keep it across devices.</p>
+      <p style="color:var(--text2);font-size:.85rem;margin-bottom:14px;">Generate a password hash, then paste it into the <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;">EMBEDDED_PW</code> constant in the HTML file and push to GitHub.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
         <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px;">
-          <label class="form-label">New Password</label>
-          <input type="password" id="set-pw-input" placeholder="Enter new password (blank to disable)" autocomplete="off"/>
+          <label class="form-label">Password</label>
+          <input type="text" id="set-pw-input" placeholder="Type your desired password" autocomplete="off"/>
         </div>
-        <button class="btn btn-secondary" onclick="setPassword()">Save Password</button>
+        <button class="btn btn-secondary" onclick="setPassword()">Generate Hash</button>
       </div>
       <div id="pw-status" style="font-size:.78rem;color:var(--text3);margin-top:8px;min-height:16px;"></div>
-      <div class="edit-only" id="pw-download-row" style="display:none;margin-top:10px;">
-        <button class="btn btn-primary" onclick="downloadDashboardWithPassword()">&#8595; Download Protected Dashboard</button>
-        <span style="font-size:.75rem;color:var(--text3);margin-left:8px;">Use this file on all your devices.</span>
-      </div>
     </div>
 
     <div class="export-section edit-only">
@@ -1775,6 +1764,15 @@ function applyTheme(){
 /* ── Password / Lock System ── */
 let isViewMode=false;
 
+// ▼▼▼ SET YOUR PASSWORD HASH HERE ▼▼▼
+// Leave empty string '' for no password. To set a password:
+// 1. Open browser console on your dashboard
+// 2. Type: hashPW('yourpassword')  and press Enter
+// 3. Copy the result and paste it below between the quotes
+// 4. Push the updated file to GitHub
+const EMBEDDED_PW='h_7ll8ea_gq33gw';
+// ▲▲▲ END PASSWORD HASH ▲▲▲
+
 function hashPW(pw){
   var hash=0,i,chr;
   var str=pw+'__wt_salt_2026__';
@@ -1792,42 +1790,20 @@ function hashPW(pw){
   return 'h_'+Math.abs(hash).toString(36)+'_'+Math.abs(h2).toString(36);
 }
 
-function getEmbeddedPW(){return document.documentElement.getAttribute('data-pw')||'';}
-function hasPassword(){return getEmbeddedPW().length>0;}
+function hasPassword(){return EMBEDDED_PW.length>0;}
 
 function setPassword(){
   var input=document.getElementById('set-pw-input');
   var status=document.getElementById('pw-status');
-  var dlRow=document.getElementById('pw-download-row');
   var pw=input.value;
   if(!pw){
-    document.documentElement.setAttribute('data-pw','');
-    sessionStorage.removeItem('wt_unlocked');
-    if(status){status.textContent='Password removed. Download the file to keep this change.';status.style.color='var(--green)';}
-    if(dlRow)dlRow.style.display='block';
+    if(status){status.textContent='To remove the password, clear the EMBEDDED_PW value in the HTML file and push to GitHub.';status.style.color='var(--text3)';}
     input.value='';
-    toast('Password protection disabled — download to save');
     return;
   }
   var hash=hashPW(pw);
-  document.documentElement.setAttribute('data-pw',hash);
-  sessionStorage.setItem('wt_unlocked','1');
-  if(status){status.textContent='✓ Password set. Download the file to use on other devices.';status.style.color='var(--green)';}
-  if(dlRow)dlRow.style.display='block';
+  if(status){status.innerHTML='✓ Your hash: <code style="background:var(--bg4);padding:2px 8px;border-radius:3px;font-family:monospace;user-select:all;font-size:.82rem;">'+hash+'</code><br><span style="font-size:.75rem;color:var(--text3);margin-top:4px;display:inline-block;">Copy this hash → open your HTML file → find <code>EMBEDDED_PW</code> → paste between the quotes → push to GitHub.</span>';status.style.color='var(--green)';}
   input.value='';
-  toast('Password saved — download file to keep across devices');
-}
-
-function downloadDashboardWithPassword(){
-  var html=document.documentElement.outerHTML;
-  html='<!DOCTYPE html>\n'+html;
-  var blob=new Blob([html],{type:'text/html'});
-  var a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='wrestling-dashboard.html';
-  a.click();
-  URL.revokeObjectURL(a.href);
-  toast('Dashboard downloaded with password embedded');
 }
 
 function unlockEdit(){
@@ -1835,7 +1811,7 @@ function unlockEdit(){
   var errEl=document.getElementById('lock-error');
   if(!pw){errEl.textContent='Enter your password.';return;}
   var hash=hashPW(pw);
-  if(hash!==getEmbeddedPW()){errEl.textContent='Wrong password.';document.getElementById('lock-pw').value='';return;}
+  if(hash!==EMBEDDED_PW){errEl.textContent='Wrong password.';document.getElementById('lock-pw').value='';return;}
   isViewMode=false;
   document.body.classList.remove('view-mode');
   document.getElementById('lock-overlay').classList.remove('open');
@@ -1860,11 +1836,11 @@ function enterViewMode(){
 
   // Password gate — if already unlocked this session, skip
   if(hasPassword() && sessionStorage.getItem('wt_unlocked')==='1'){
-    // Already unlocked this session, keep overlay closed
+    // Already unlocked this session
   } else if(hasPassword()){
     document.getElementById('lock-overlay').classList.add('open');
   }
-  // Clean up old localStorage password if present
+  // Clean up any old localStorage password data
   localStorage.removeItem('wt_pw_hash');
 
   const savedUrl=localStorage.getItem('sheets_url_2026');
@@ -1893,11 +1869,9 @@ function enterViewMode(){
       }catch(e){setSyncStatus('\u2717 Auto-load failed: '+e.message,'var(--red)');switchPanel('dashboard');}
     },400);
   }
-  // Update password status display
+  // Update password status
   var pwStatus=document.getElementById('pw-status');
-  if(pwStatus)pwStatus.textContent=hasPassword()?'Password is currently set.':'No password set — dashboard is open to all.';
-  var dlRow=document.getElementById('pw-download-row');
-  if(dlRow)dlRow.style.display='none';
+  if(pwStatus)pwStatus.textContent=hasPassword()?'Password is active.':'No password set — EMBEDDED_PW is empty.';
 })();
 </script>
 </body>
