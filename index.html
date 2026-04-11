@@ -270,8 +270,8 @@ body.view-mode .card-actions{display:none!important}
 body.view-mode td .row-actions{display:none!important}
 </style>
 </head>
-<body>
-<div id="lock-overlay">
+<body class="view-mode">
+<div id="lock-overlay" class="open">
   <div class="lock-box">
     <h2>Wrestling Match Tracker</h2>
     <p>Enter password to edit, or view in read-only mode.</p>
@@ -281,41 +281,40 @@ body.view-mode td .row-actions{display:none!important}
       <button class="btn btn-primary" id="btn-unlock">Unlock &amp; Edit</button>
       <button class="btn btn-secondary" id="btn-viewonly">View Only</button>
     </div>
-    <div class="lock-hint">Password is set. Unlock to edit or browse view-only.</div>
+    <div class="lock-hint">Password required to edit. View-only is always available.</div>
   </div>
 </div>
 <script>
-// Attach handlers after elements exist — no onclick attributes needed
-document.getElementById('btn-unlock').addEventListener('click',function(){
-  try{unlockEdit();}catch(e){
-    // Fallback if main script hasn't loaded yet
-    document.getElementById('lock-overlay').classList.remove('open');
-    document.getElementById('lock-overlay').style.display='none';
-  }
-});
-document.getElementById('btn-viewonly').addEventListener('click',function(){
-  try{enterViewMode();}catch(e){
-    document.getElementById('lock-overlay').classList.remove('open');
-    document.getElementById('lock-overlay').style.display='none';
-    document.body.classList.add('view-mode');
-  }
-});
-document.getElementById('lock-pw').addEventListener('keydown',function(e){
-  if(e.key==='Enter'){
-    try{unlockEdit();}catch(ex){
-      document.getElementById('lock-overlay').classList.remove('open');
-      document.getElementById('lock-overlay').style.display='none';
-    }
-  }
-});
-// Show overlay if password exists and session not unlocked
 (function(){
   var pw='h_7ll8ea_gq33gw';
   var unlocked=sessionStorage.getItem('wt_unlocked');
-  if(pw && pw.length>0 && unlocked!=='1'){
-    document.getElementById('lock-overlay').classList.add('open');
+  // No password set — remove overlay and view-mode immediately
+  if(!pw || pw.length===0){
+    document.body.classList.remove('view-mode');
+    document.getElementById('lock-overlay').classList.remove('open');
+    document.getElementById('lock-overlay').style.display='none';
   }
+  // Already unlocked this session — remove overlay and view-mode
+  else if(unlocked==='1'){
+    document.body.classList.remove('view-mode');
+    document.getElementById('lock-overlay').classList.remove('open');
+    document.getElementById('lock-overlay').style.display='none';
+  }
+  // Otherwise: password is set and not unlocked — overlay stays open, body stays view-mode
 })();
+// Button handlers
+document.getElementById('btn-unlock').addEventListener('click',function(){
+  try{unlockEdit();}catch(e){/* main script not loaded yet — do nothing, user can retry */}
+});
+document.getElementById('btn-viewonly').addEventListener('click',function(){
+  try{enterViewMode();}catch(e){
+    var ol=document.getElementById('lock-overlay');
+    ol.classList.remove('open');ol.style.display='none';
+  }
+});
+document.getElementById('lock-pw').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){try{unlockEdit();}catch(ex){}}
+});
 </script>
 <header>
   <div class="header-title">Wrestling <span>Match Tracker</span></div>
@@ -1993,11 +1992,25 @@ function enterViewMode(){
   }
   applyTheme();
 
-  // Password gate — if already unlocked this session, skip
+  // Password gate — sync state with inline script
   if(hasPassword() && sessionStorage.getItem('wt_unlocked')==='1'){
-    // Already unlocked this session
+    // Already unlocked this session — ensure everything is open
+    isViewMode=false;
+    document.body.classList.remove('view-mode');
+    var ol=document.getElementById('lock-overlay');
+    ol.classList.remove('open');ol.style.display='none';
   } else if(hasPassword()){
+    // Password set, not unlocked — ensure locked
+    isViewMode=true;
+    document.body.classList.add('view-mode');
     document.getElementById('lock-overlay').classList.add('open');
+    document.getElementById('lock-overlay').style.display='';
+  } else {
+    // No password — ensure everything is open
+    isViewMode=false;
+    document.body.classList.remove('view-mode');
+    var ol2=document.getElementById('lock-overlay');
+    ol2.classList.remove('open');ol2.style.display='none';
   }
   // Clean up any old localStorage password data
   localStorage.removeItem('wt_pw_hash');
