@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-pw="">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -285,11 +285,11 @@ body.view-mode td .row-actions{display:none!important}
   </div>
 </div>
 <script>
-// Show overlay immediately if password exists and session not unlocked
+// Show overlay immediately if password is embedded and session not unlocked
 (function(){
-  var hasPw=localStorage.getItem('wt_pw_hash');
+  var pw=document.documentElement.getAttribute('data-pw');
   var unlocked=sessionStorage.getItem('wt_unlocked');
-  if(hasPw && unlocked!=='1'){
+  if(pw && pw.length>0 && unlocked!=='1'){
     document.getElementById('lock-overlay').classList.add('open');
   }
 })();
@@ -495,15 +495,19 @@ body.view-mode td .row-actions{display:none!important}
 
     <div class="export-section edit-only">
       <h3>&#128274; Password Protection</h3>
-      <p style="color:var(--text2);font-size:.85rem;margin-bottom:14px;">Set a password to require authentication before editing. Leave blank and save to disable password protection.</p>
+      <p style="color:var(--text2);font-size:.85rem;margin-bottom:14px;">Set a password to require authentication before editing. The password is saved in the HTML file itself — re-download the file after setting to keep it across devices.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
         <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px;">
           <label class="form-label">New Password</label>
-          <input type="password" id="set-pw-input" placeholder="Enter new password (blank to disable)"/>
+          <input type="password" id="set-pw-input" placeholder="Enter new password (blank to disable)" autocomplete="off"/>
         </div>
         <button class="btn btn-secondary" onclick="setPassword()">Save Password</button>
       </div>
       <div id="pw-status" style="font-size:.78rem;color:var(--text3);margin-top:8px;min-height:16px;"></div>
+      <div class="edit-only" id="pw-download-row" style="display:none;margin-top:10px;">
+        <button class="btn btn-primary" onclick="downloadDashboardWithPassword()">&#8595; Download Protected Dashboard</button>
+        <span style="font-size:.75rem;color:var(--text3);margin-left:8px;">Use this file on all your devices.</span>
+      </div>
     </div>
 
     <div class="export-section edit-only">
@@ -1769,10 +1773,8 @@ function applyTheme(){
 }
 
 /* ── Password / Lock System ── */
-const PW_KEY='wt_pw_hash';
 let isViewMode=false;
 
-// Simple hash that works everywhere (file://, http, https)
 function hashPW(pw){
   var hash=0,i,chr;
   var str=pw+'__wt_salt_2026__';
@@ -1781,7 +1783,6 @@ function hashPW(pw){
     hash=((hash<<5)-hash)+chr;
     hash|=0;
   }
-  // Double-hash for slightly better distribution
   var h2=hash;
   for(i=0;i<str.length;i++){
     chr=str.charCodeAt(i);
@@ -1791,34 +1792,50 @@ function hashPW(pw){
   return 'h_'+Math.abs(hash).toString(36)+'_'+Math.abs(h2).toString(36);
 }
 
-function hasPassword(){return !!localStorage.getItem(PW_KEY);}
+function getEmbeddedPW(){return document.documentElement.getAttribute('data-pw')||'';}
+function hasPassword(){return getEmbeddedPW().length>0;}
 
 function setPassword(){
-  const input=document.getElementById('set-pw-input');
-  const status=document.getElementById('pw-status');
-  const pw=input.value;
+  var input=document.getElementById('set-pw-input');
+  var status=document.getElementById('pw-status');
+  var dlRow=document.getElementById('pw-download-row');
+  var pw=input.value;
   if(!pw){
-    localStorage.removeItem(PW_KEY);
+    document.documentElement.setAttribute('data-pw','');
     sessionStorage.removeItem('wt_unlocked');
-    if(status){status.textContent='Password removed — dashboard is now open.';status.style.color='var(--green)';}
+    if(status){status.textContent='Password removed. Download the file to keep this change.';status.style.color='var(--green)';}
+    if(dlRow)dlRow.style.display='block';
     input.value='';
-    toast('Password protection disabled');
+    toast('Password protection disabled — download to save');
     return;
   }
-  const hash=hashPW(pw);
-  localStorage.setItem(PW_KEY,hash);
+  var hash=hashPW(pw);
+  document.documentElement.setAttribute('data-pw',hash);
   sessionStorage.setItem('wt_unlocked','1');
-  if(status){status.textContent='✓ Password set. This session stays unlocked.';status.style.color='var(--green)';}
+  if(status){status.textContent='✓ Password set. Download the file to use on other devices.';status.style.color='var(--green)';}
+  if(dlRow)dlRow.style.display='block';
   input.value='';
-  toast('Password saved');
+  toast('Password saved — download file to keep across devices');
+}
+
+function downloadDashboardWithPassword(){
+  var html=document.documentElement.outerHTML;
+  html='<!DOCTYPE html>\n'+html;
+  var blob=new Blob([html],{type:'text/html'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='wrestling-dashboard.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Dashboard downloaded with password embedded');
 }
 
 function unlockEdit(){
-  const pw=document.getElementById('lock-pw').value;
-  const errEl=document.getElementById('lock-error');
+  var pw=document.getElementById('lock-pw').value;
+  var errEl=document.getElementById('lock-error');
   if(!pw){errEl.textContent='Enter your password.';return;}
-  const hash=hashPW(pw);
-  if(hash!==localStorage.getItem(PW_KEY)){errEl.textContent='Wrong password.';document.getElementById('lock-pw').value='';return;}
+  var hash=hashPW(pw);
+  if(hash!==getEmbeddedPW()){errEl.textContent='Wrong password.';document.getElementById('lock-pw').value='';return;}
   isViewMode=false;
   document.body.classList.remove('view-mode');
   document.getElementById('lock-overlay').classList.remove('open');
@@ -1847,6 +1864,8 @@ function enterViewMode(){
   } else if(hasPassword()){
     document.getElementById('lock-overlay').classList.add('open');
   }
+  // Clean up old localStorage password if present
+  localStorage.removeItem('wt_pw_hash');
 
   const savedUrl=localStorage.getItem('sheets_url_2026');
   if(savedUrl)document.getElementById('sheets-url').value=savedUrl;
@@ -1874,18 +1893,11 @@ function enterViewMode(){
       }catch(e){setSyncStatus('\u2717 Auto-load failed: '+e.message,'var(--red)');switchPanel('dashboard');}
     },400);
   }
-  // Update password status display — clear old-format hashes
-  const storedHash=localStorage.getItem(PW_KEY);
-  if(storedHash && !storedHash.startsWith('h_')){
-    // Old crypto.subtle hash — won't work anymore, clear it
-    localStorage.removeItem(PW_KEY);
-    document.getElementById('lock-overlay').classList.remove('open');
-    const pwStatus=document.getElementById('pw-status');
-    if(pwStatus){pwStatus.textContent='Previous password was reset (format update). Please set a new one.';pwStatus.style.color='var(--red)';}
-  } else {
-    const pwStatus=document.getElementById('pw-status');
-    if(pwStatus)pwStatus.textContent=hasPassword()?'Password is currently set.':'No password set — dashboard is open to all.';
-  }
+  // Update password status display
+  var pwStatus=document.getElementById('pw-status');
+  if(pwStatus)pwStatus.textContent=hasPassword()?'Password is currently set.':'No password set — dashboard is open to all.';
+  var dlRow=document.getElementById('pw-download-row');
+  if(dlRow)dlRow.style.display='none';
 })();
 </script>
 </body>
