@@ -251,14 +251,44 @@ textarea{resize:vertical;min-height:70px}
 /* card layout is responsive by default */
   tbody td.col-meta{display:none!important}
 }
+/* ── Lock Screen ── */
+#lock-screen{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+#lock-screen.hidden{display:none}
+.lock-box{background:var(--bg2);border:1px solid var(--border2);border-top:3px solid var(--accent);border-radius:8px;padding:36px 32px;width:100%;max-width:380px;box-shadow:var(--shadow);text-align:center}
+.lock-box h2{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.4rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.lock-box p{font-size:.85rem;color:var(--text2);margin-bottom:20px}
+.lock-box input[type="password"]{width:100%;margin-bottom:12px}
+.lock-box .lock-actions{display:flex;flex-direction:column;gap:8px}
+.lock-box .lock-actions button{width:100%}
+.lock-box .lock-hint{font-size:.75rem;color:var(--text3);margin-top:12px}
+.lock-box .lock-error{font-size:.78rem;color:var(--red);margin-top:8px;min-height:20px}
+/* ── View-only mode ── */
+body.view-mode .edit-only{display:none!important}
+body.view-mode .rating-cell,body.view-mode .tenplus-cell,body.view-mode .inline-field,body.view-mode .winner-cell,body.view-mode .flags-cell{cursor:default;pointer-events:none}
+body.view-mode .rating-cell:hover,body.view-mode .tenplus-cell:hover,body.view-mode .inline-field:hover,body.view-mode .winner-cell:hover,body.view-mode .flags-cell:hover{border-color:transparent;background:transparent}
+body.view-mode .card-actions{display:none!important}
+body.view-mode td .row-actions{display:none!important}
 </style>
 </head>
 <body>
+<div id="lock-screen" class="hidden">
+  <div class="lock-box">
+    <h2>Wrestling Match Tracker</h2>
+    <p id="lock-subtitle">Enter password to edit, or view in read-only mode.</p>
+    <input type="password" id="lock-pw" placeholder="Password" onkeydown="if(event.key==='Enter')unlockEdit()"/>
+    <div class="lock-error" id="lock-error"></div>
+    <div class="lock-actions">
+      <button class="btn btn-primary" onclick="unlockEdit()">Unlock &amp; Edit</button>
+      <button class="btn btn-secondary" onclick="enterViewMode()">View Only</button>
+    </div>
+    <div class="lock-hint" id="lock-hint"></div>
+  </div>
+</div>
 <header>
   <div class="header-title">Wrestling <span>Match Tracker</span></div>
   <nav>
     <button class="active" onclick="switchPanel('dashboard')">Dashboard</button>
-    <button onclick="switchPanel('add')">+ Add</button>
+    <button class="edit-only" onclick="switchPanel('add')">+ Add</button>
     <button onclick="switchPanel('best')">Favs</button>
     <button onclick="switchPanel('watch')">To Watch</button>
     <button onclick="switchPanel('rewatch')">Rewatch</button>
@@ -306,7 +336,7 @@ textarea{resize:vertical;min-height:70px}
   </div>
 
   <!-- ADD / EDIT -->
-  <div id="panel-add" class="panel">
+  <div id="panel-add" class="panel edit-only">
     <div class="section-header"><div class="section-title" id="form-title">Add New Match</div></div>
     <div class="form-grid" id="match-form">
       <div class="form-group full">
@@ -399,7 +429,7 @@ textarea{resize:vertical;min-height:70px}
   <div id="panel-export" class="panel">
     <div class="section-header"><div class="section-title">&#9881; Settings &amp; Export</div></div>
 
-    <div class="export-section">
+    <div class="export-section edit-only">
       <h3>&#127915; Event Card Import</h3>
       <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste a cagematch event card URL (ending in page=3) to import all matches from a show at once. Requires Apps Script URL below. Auto-detects <strong style="color:var(--text)">TITLE CHANGE !!!</strong></p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;">
@@ -416,7 +446,7 @@ textarea{resize:vertical;min-height:70px}
       <div id="event-import-status" style="display:none;background:var(--bg3);border-radius:4px;padding:10px 14px;font-size:.82rem;line-height:1.8;"></div>
     </div>
 
-    <div class="export-section">
+    <div class="export-section edit-only">
       <h3>&#128279; Individual Match Import</h3>
       <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste one or more cagematch match URLs (one per line) to import them individually. Requires Apps Script URL below.</p>
       <div style="display:flex;flex-direction:column;gap:8px;">
@@ -453,7 +483,20 @@ textarea{resize:vertical;min-height:70px}
       </div>
     </div>
 
-    <div class="export-section">
+    <div class="export-section edit-only">
+      <h3>&#128274; Password Protection</h3>
+      <p style="color:var(--text2);font-size:.85rem;margin-bottom:14px;">Set a password to require authentication before editing. Leave blank and save to disable password protection.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px;">
+          <label class="form-label">New Password</label>
+          <input type="password" id="set-pw-input" placeholder="Enter new password (blank to disable)"/>
+        </div>
+        <button class="btn btn-secondary" onclick="setPassword()">Save Password</button>
+      </div>
+      <div id="pw-status" style="font-size:.78rem;color:var(--text3);margin-top:8px;min-height:16px;"></div>
+    </div>
+
+    <div class="export-section edit-only">
       <h3>&#9889; Auto-Fill (CageMatch)</h3>
       <p style="color:var(--text2);font-size:.88rem;margin-bottom:10px;">Auto-Fill and Event Card Import require a Google Apps Script Web App. Set the URL once — it handles both features. No Sheets sync needed.</p>
       <div class="sheets-url-row">
@@ -468,7 +511,7 @@ textarea{resize:vertical;min-height:70px}
       <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Full backup of all matches including flags and ratings. Use this to save or transfer your data between devices.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
         <button class="btn btn-primary" onclick="exportJSON()">&#8595; Download Backup</button>
-        <div style="display:flex;flex-direction:column;gap:6px;">
+        <div class="edit-only" style="display:flex;flex-direction:column;gap:6px;">
           <input type="file" id="import-json-file" accept=".json" style="color:var(--text2);font-size:.82rem;"/>
           <button class="btn btn-secondary" onclick="importJSON()">&#8593; Restore from Backup</button>
         </div>
@@ -477,17 +520,17 @@ textarea{resize:vertical;min-height:70px}
 
     <div class="export-section">
       <h3>&#128202; CSV</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Export for use in spreadsheet apps.</p>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Export for spreadsheet apps. Import merges — rows with an existing ID update in place, rows without an ID are added as new entries.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
         <button class="btn btn-secondary" onclick="exportCSV()">&#8595; Download CSV</button>
-        <div style="display:flex;flex-direction:column;gap:6px;">
+        <div class="edit-only" style="display:flex;flex-direction:column;gap:6px;">
           <input type="file" id="import-file" accept=".csv" style="color:var(--text2);font-size:.82rem;"/>
           <button class="btn btn-secondary" onclick="importCSV()">&#8593; Import CSV</button>
         </div>
       </div>
     </div>
 
-    <div class="export-section">
+    <div class="export-section edit-only">
       <h3>&#127959; Promotions</h3>
       <div id="promo-list" style="margin-bottom:12px;display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
@@ -503,7 +546,7 @@ textarea{resize:vertical;min-height:70px}
       </div>
     </div>
 
-    <div class="export-section">
+    <div class="export-section edit-only">
       <h3 style="color:var(--red);">&#9888; Danger Zone</h3>
       <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Delete all locally stored match data. Cannot be undone — download a JSON backup first.</p>
       <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
@@ -1295,6 +1338,7 @@ function fillForm(m){document.getElementById('f-url').value=m.matchUrl||'';docum
   document.getElementById('f-champion').value=m.champion||'';document.getElementById('f-winner').value=m.winner||'';document.getElementById('f-title-change').checked=!!m.titleChange;document.getElementById('f-rating').value=m.rating||'';document.getElementById('f-10plus').checked=!!m.tenPlus;document.getElementById('f-saw-live').checked=!!m.sawLive;document.getElementById('f-rewatch').checked=!!m.rewatch;document.getElementById('f-score').value=m.score||'';document.getElementById('f-value').value=m.value||'';setFetchStatus('');}
 function clearForm(){['f-url','f-name','f-event','f-event-url','f-matchtype','f-champ','f-champion','f-winner','f-rating','f-score','f-value','f-date','f-promo-abbr'].forEach(id=>document.getElementById(id).value='');_selectedPromos=[];renderPromoTags();document.getElementById('f-10plus').checked=false;document.getElementById('f-saw-live').checked=false;document.getElementById('f-rewatch').checked=false;document.getElementById('f-title-change').checked=false;setFetchStatus('');setEditingId(null);}
 function saveMatch(){
+  if(isViewMode){toast('View-only mode',true);return;}
   const data=getFormData();
   // Strip quotes from event name on save
   if(data.event){
@@ -1313,6 +1357,7 @@ function saveMatch(){
   switchPanel(wasEditing?prevPanel:'dashboard');
 }
 function editMatch(id){
+  if(isViewMode)return;
   const m=loadMatches().find(m=>m.id===id);if(!m)return;
   // Remember which panel we came from
   const active=document.querySelector('.panel.active');
@@ -1321,7 +1366,7 @@ function editMatch(id){
   setTimeout(()=>{fillForm(m);setEditingId(id);},50);
 }
 function deleteEditing(){if(!editingId)return;if(!confirm('Delete this match?'))return;saveMatches(loadMatches().filter(m=>m.id!==editingId));toast('Match deleted');clearForm();switchPanel('dashboard');}
-function confirmDelete(id){if(!confirm('Delete this match?'))return;saveMatches(loadMatches().filter(m=>m.id!==id));toast('Match deleted');renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();}
+function confirmDelete(id){if(isViewMode)return;if(!confirm('Delete this match?'))return;saveMatches(loadMatches().filter(m=>m.id!==id));toast('Match deleted');renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();}
 
 let modalEditId=null;
 function closeModal(){document.getElementById('edit-modal').classList.remove('open');modalEditId=null;}
@@ -1329,6 +1374,7 @@ function saveModalMatch(){closeModal();}function deleteModalMatch(){closeModal()
 
 /* INLINE EDITING */
 function inlineToggle10plus(e,id){
+  if(isViewMode)return;
   // Legacy — kept for any remaining references
   if(e&&e.stopPropagation)e.stopPropagation();
   const matches=loadMatches();const m=matches.find(x=>x.id===id);if(!m)return;
@@ -1338,6 +1384,7 @@ function inlineToggle10plus(e,id){
 }
 
 function inlineToggleFlagMenu(e,id){
+  if(isViewMode)return;
   if(e&&e.stopPropagation)e.stopPropagation();
   const cell=e.currentTarget||e.target.closest('.flags-cell');
   const matches=loadMatches();const m=matches.find(x=>x.id===id);if(!m)return;
@@ -1374,6 +1421,7 @@ function inlineToggleFlagMenu(e,id){
   },10);
 }
 function inlineEditRating(e,id){
+  if(isViewMode)return;
   e.stopPropagation();
   const cell=e.currentTarget||e.target.closest('.rating-cell');
   const matches=loadMatches();const m=matches.find(x=>x.id===id);if(!m)return;
@@ -1395,6 +1443,7 @@ function inlineEditRating(e,id){
   });
 }
 function inlineEditField(e,id,field){
+  if(isViewMode)return;
   e.stopPropagation();
   const cell=e.currentTarget||e.target.closest('.inline-field,.event-name,.match-name');
   const matches=loadMatches();const m=matches.find(x=>x.id===id);if(!m)return;
@@ -1410,6 +1459,7 @@ function inlineEditField(e,id,field){
   inp.addEventListener('keydown',ev=>{if(ev.key==='Enter')inp.blur();if(ev.key==='Escape'){m[field]=cur;inp.removeEventListener('blur',commit);renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();}});
 }
 function inlineEditWinner(e,id){
+  if(isViewMode)return;
   e.stopPropagation();const cell=e.currentTarget;const matches=loadMatches();const m=matches.find(x=>x.id===id);if(!m)return;
   const cur=m.winner||'',curTc=!!m.titleChange;
   cell.innerHTML=`<input class="winner-inline-input" type="text" value="${esc(cur)}" placeholder="Winner name" id="inline-winner-${id}" style="margin-right:6px;"/>`+
@@ -1530,7 +1580,45 @@ function exportCSV(){
 }
 function importCSV(){
   const file=document.getElementById('import-file').files[0];if(!file){toast('Select a CSV file first',true);return;}
-  const reader=new FileReader();reader.onload=e=>{try{const lines=e.target.result.split('\n').filter(l=>l.trim());const headers=lines[0].split(',').map(h=>h.replace(/"/g,'').trim());const matches=lines.slice(1).map(line=>{const vals=line.match(/(".*?"|[^,]+)(?=,|$)/g)||[];const clean=vals.map(v=>v.replace(/^"|"$/g,'').replace(/""/g,'"'));const obj={};headers.forEach((h,i)=>obj[h]=clean[i]||'');return{id:obj.ID||('m_'+Date.now()+Math.random()),matchUrl:obj.MatchURL||'',name:obj.Name||'',promoFull:obj.PromoFull||'',promoAbbr:obj.PromoAbbr||'',event:(obj.Event||'').replace(/"/g,''),date:obj.Date||'',matchType:obj.MatchType||'',championship:obj.Championship||'',champion:obj.Champion||'',winner:obj.Winner||'',titleChange:obj.TitleChange==='1',rating:obj.Rating||'',tenPlus:obj['10Plus']==='10+',sawLive:obj.SawLive==='1',rewatch:obj.Rewatch==='1',score:obj.Score||'',value:obj.Value||''};});saveMatches(matches);toast(`Imported ${matches.length} matches`);renderDashboard();}catch(err){toast('Import failed — check CSV format',true);}};reader.readAsText(file);
+  const reader=new FileReader();reader.onload=e=>{try{
+    const lines=e.target.result.split('\n').filter(l=>l.trim());
+    const headers=lines[0].split(',').map(h=>h.replace(/"/g,'').trim());
+    const incoming=lines.slice(1).map(line=>{
+      const vals=line.match(/(".*?"|[^,]+)(?=,|$)/g)||[];
+      const clean=vals.map(v=>v.replace(/^"|"$/g,'').replace(/""/g,'"'));
+      const obj={};headers.forEach((h,i)=>obj[h]=clean[i]||'');
+      return{
+        id:obj.ID||'',
+        matchUrl:obj.MatchURL||'',name:obj.Name||'',
+        promoFull:obj.PromoFull||'',promoAbbr:obj.PromoAbbr||'',
+        event:(obj.Event||'').replace(/"/g,''),date:obj.Date||'',
+        matchType:obj.MatchType||'',championship:obj.Championship||'',
+        champion:obj.Champion||'',winner:obj.Winner||'',
+        titleChange:obj.TitleChange==='1',rating:obj.Rating||'',
+        tenPlus:obj['10Plus']==='10+',sawLive:obj.SawLive==='1',
+        rewatch:obj.Rewatch==='1',score:obj.Score||'',value:obj.Value||''
+      };
+    });
+    const existing=loadMatches();
+    const existingMap=new Map(existing.map(m=>[m.id,m]));
+    let added=0,updated=0;
+    for(const row of incoming){
+      if(row.id&&existingMap.has(row.id)){
+        // Update existing entry in place
+        existingMap.set(row.id,{...existingMap.get(row.id),...row});
+        updated++;
+      } else {
+        // New entry — assign an ID if blank
+        if(!row.id) row.id='csv_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+        existingMap.set(row.id,row);
+        added++;
+      }
+    }
+    const merged=Array.from(existingMap.values());
+    saveMatches(merged);
+    toast(`CSV merged: ${added} added, ${updated} updated`);
+    renderDashboard();populateSharedFilterOptions();
+  }catch(err){toast('Import failed — check CSV format',true);}};reader.readAsText(file);
 }
 function saveSheetURL(){
   const url=document.getElementById('sheets-url').value.trim();
@@ -1638,7 +1726,7 @@ async function runBatchURLImport(){
   btn.disabled=false;btn.innerHTML='&#8595; Import URLs';
 }
 
-function clearAllData(){if(!confirm('Delete ALL match data? This cannot be undone.'))return;localStorage.removeItem(STORAGE_KEY);saveMatches([]);renderDashboard();populateSharedFilterOptions();toast('All data cleared');}
+function clearAllData(){if(isViewMode)return;if(!confirm('Delete ALL match data? This cannot be undone.'))return;localStorage.removeItem(STORAGE_KEY);saveMatches([]);renderDashboard();populateSharedFilterOptions();toast('All data cleared');}
 
 let toastTimer;
 function toast(msg,isErr=false){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(isErr?' err':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3000);}
@@ -1670,6 +1758,64 @@ function applyTheme(){
   });
 }
 
+/* ── Password / Lock System ── */
+const PW_KEY='wt_pw_hash';
+let isViewMode=false;
+
+async function hashPW(pw){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function hasPassword(){return !!localStorage.getItem(PW_KEY);}
+
+async function setPassword(){
+  const input=document.getElementById('set-pw-input');
+  const status=document.getElementById('pw-status');
+  const pw=input.value;
+  if(!pw){
+    localStorage.removeItem(PW_KEY);
+    if(status)status.textContent='Password removed — dashboard is now open.';
+    if(status)status.style.color='var(--green)';
+    input.value='';
+    toast('Password protection disabled');
+    return;
+  }
+  const hash=await hashPW(pw);
+  localStorage.setItem(PW_KEY,hash);
+  if(status)status.textContent='✓ Password set.';
+  if(status)status.style.color='var(--green)';
+  input.value='';
+  toast('Password saved');
+}
+
+async function unlockEdit(){
+  const pw=document.getElementById('lock-pw').value;
+  const errEl=document.getElementById('lock-error');
+  if(!pw){errEl.textContent='Enter your password.';return;}
+  const hash=await hashPW(pw);
+  if(hash!==localStorage.getItem(PW_KEY)){errEl.textContent='Wrong password.';document.getElementById('lock-pw').value='';return;}
+  isViewMode=false;
+  document.body.classList.remove('view-mode');
+  document.getElementById('lock-screen').classList.add('hidden');
+}
+
+function enterViewMode(){
+  isViewMode=true;
+  document.body.classList.add('view-mode');
+  document.getElementById('lock-screen').classList.add('hidden');
+}
+
+function showLockScreen(){
+  const ls=document.getElementById('lock-screen');
+  ls.classList.remove('hidden');
+  document.getElementById('lock-pw').value='';
+  document.getElementById('lock-error').textContent='';
+  const hint=document.getElementById('lock-hint');
+  if(hint)hint.textContent='Password is set. Unlock to edit or browse in view-only mode.';
+  setTimeout(()=>{document.getElementById('lock-pw').focus();},100);
+}
+
 (function init(){
   // Migrate old theme setting
   const oldTheme=localStorage.getItem('wt_theme');
@@ -1679,6 +1825,12 @@ function applyTheme(){
     localStorage.removeItem('wt_theme');
   }
   applyTheme();
+
+  // Password gate
+  if(hasPassword()){
+    showLockScreen();
+  }
+
   const savedUrl=localStorage.getItem('sheets_url_2026');
   if(savedUrl)document.getElementById('sheets-url').value=savedUrl;
   populatePromoDropdowns();populateSharedFilterOptions();renderDashboard();
@@ -1705,6 +1857,9 @@ function applyTheme(){
       }catch(e){setSyncStatus('\u2717 Auto-load failed: '+e.message,'var(--red)');switchPanel('dashboard');}
     },400);
   }
+  // Update password status display
+  const pwStatus=document.getElementById('pw-status');
+  if(pwStatus)pwStatus.textContent=hasPassword()?'Password is currently set.':'No password set — dashboard is open to all.';
 })();
 </script>
 </body>
