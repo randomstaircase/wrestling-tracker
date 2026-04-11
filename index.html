@@ -531,12 +531,23 @@ document.getElementById('lock-pw').addEventListener('keydown',function(e){
 
     <div class="export-section edit-only">
       <h3>&#9889; Auto-Fill (CageMatch)</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:10px;">Auto-Fill and Event Card Import require a Google Apps Script Web App. Set the URL once — it handles both features. No Sheets sync needed.</p>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:10px;">Auto-Fill and Event Card Import require a Google Apps Script Web App. Set the URL once — it handles both features.</p>
       <div class="sheets-url-row">
         <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/..."/>
         <button class="btn btn-secondary" onclick="saveSheetURL()">Save URL</button>
       </div>
       <div id="autofill-status" style="font-size:.78rem;color:var(--text3);margin-top:6px;min-height:16px;"></div>
+    </div>
+
+    <div class="export-section">
+      <h3>&#128260; Sync</h3>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Merge local matches with your Google Sheet. Pulls new matches from the Sheet, then pushes any local-only matches back. Uses the same Apps Script URL above.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-primary" id="sync-btn" onclick="runSync()">&#128260; Sync Now</button>
+        <button class="btn btn-secondary" onclick="runPullOnly()">&#8595; Pull Only</button>
+        <button class="btn btn-secondary" onclick="runPushOnly()">&#8593; Push Only</button>
+      </div>
+      <div id="sync-status" style="font-size:.82rem;color:var(--text3);margin-top:10px;min-height:20px;line-height:1.6;"></div>
     </div>
 
     <div class="export-section">
@@ -1667,7 +1678,6 @@ function updateAutoFillUI(){
   if(btn){btn.disabled=!url;btn.style.opacity=url?'1':'0.45';btn.title=url?'':'Set Web App URL in Export tab first';}
   if(el) el.textContent=url?'✓ Web App URL set — Auto-Fill and Event Import enabled.':'No URL set. Auto-Fill disabled.';
 }
-function setSyncStatus(msg,color){const el=document.getElementById('sync-status');el.textContent=msg;el.style.color=color||'var(--text3)';}
 function getSheetURL(){const url=localStorage.getItem('sheets_url_2026');if(!url){toast('Set your Sheets Web App URL first',true);return null;}return url;}
 
 async function testConnection(){
@@ -1695,6 +1705,121 @@ function gasGet(action,extraParams={}){
   });
 }
 async function gasPost(body){const baseUrl=getSheetURL();if(!baseUrl)throw new Error('No Web App URL set');await fetch(baseUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(body),mode:'no-cors',redirect:'follow'});return{status:'sent'};}
+
+/* ── Sync Functions ── */
+function setSyncStatus(msg,color){const el=document.getElementById('sync-status');if(el){el.innerHTML=msg;el.style.color=color||'var(--text3)';}}
+
+function normalizeSheetMatch(m){
+  return{
+    id:m.id||'',matchUrl:m.matchUrl||'',name:m.name||'',
+    promoFull:m.promoFull||'',promoAbbr:m.promoAbbr||'',
+    event:(m.event||'').replace(/"/g,''),eventUrl:m.eventUrl||'',
+    date:m.date||'',matchType:m.matchType||'',
+    championship:m.championship||'',champion:m.champion||'',
+    winner:m.winner||'',titleChange:!!m.titleChange,
+    rating:m.rating||'',tenPlus:!!m.tenPlus,
+    sawLive:!!m.sawLive,rewatch:!!m.rewatch,
+    score:m.score||'',value:m.value||'',
+    _sheetName:m._sheetName||''
+  };
+}
+
+function mergeMatches(local,remote){
+  const map=new Map();
+  // Local first
+  local.forEach(m=>map.set(m.id,m));
+  let pulled=0,updated=0;
+  remote.forEach(m=>{
+    if(!m.id) m.id='sheet_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+    if(map.has(m.id)){
+      // Merge: remote fields fill in blanks, but local rating/flags take priority
+      const loc=map.get(m.id);
+      const merged={...m,...loc};
+      // If local has no rating but remote does, take remote
+      if((!loc.rating&&loc.rating!==0)&&m.rating) merged.rating=m.rating;
+      if(!loc.score&&m.score) merged.score=m.score;
+      if(!loc.value&&m.value) merged.value=m.value;
+      if(!loc.winner&&m.winner) merged.winner=m.winner;
+      map.set(m.id,merged);
+      updated++;
+    } else {
+      map.set(m.id,m);
+      pulled++;
+    }
+  });
+  return{merged:Array.from(map.values()),pulled,updated};
+}
+
+async function runPullOnly(){
+  const btn=document.getElementById('sync-btn');
+  setSyncStatus('Pulling from Sheet…');
+  try{
+    const data=await gasGet('pull');
+    if(!data||!Array.isArray(data.matches)){setSyncStatus('No data returned from Sheet.','var(--red)');return;}
+    const remote=data.matches.map(normalizeSheetMatch);
+    const local=loadMatches();
+    const result=mergeMatches(local,remote);
+    saveMatches(result.merged);
+    renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
+    setSyncStatus(`✓ Pull complete: ${result.pulled} new, ${result.updated} updated. Total: ${result.merged.length}`,'var(--green)');
+    toast(`Pulled: ${result.pulled} new, ${result.updated} updated`);
+  }catch(e){setSyncStatus('✗ Pull failed: '+e.message,'var(--red)');toast('Pull failed',true);}
+}
+
+async function runPushOnly(){
+  setSyncStatus('Pushing to Sheet…');
+  try{
+    const local=loadMatches();
+    if(!local.length){setSyncStatus('No local matches to push.','var(--text3)');return;}
+    // Send in batches of 50 to avoid payload limits
+    const batchSize=50;
+    let sent=0;
+    for(let i=0;i<local.length;i+=batchSize){
+      const batch=local.slice(i,i+batchSize);
+      setSyncStatus(`Pushing ${Math.min(i+batchSize,local.length)}/${local.length}…`);
+      await gasPost({action:'sync',matches:batch});
+      sent+=batch.length;
+      if(i+batchSize<local.length) await new Promise(r=>setTimeout(r,500));
+    }
+    setSyncStatus(`✓ Push complete: ${sent} matches sent to Sheet.`,'var(--green)');
+    toast(`Pushed ${sent} matches to Sheet`);
+  }catch(e){setSyncStatus('✗ Push failed: '+e.message,'var(--red)');toast('Push failed',true);}
+}
+
+async function runSync(){
+  const btn=document.getElementById('sync-btn');
+  btn.disabled=true;btn.textContent='Syncing…';
+  setSyncStatus('Step 1/2: Pulling from Sheet…');
+  try{
+    // Step 1: Pull
+    const data=await gasGet('pull');
+    const remote=(data&&Array.isArray(data.matches))?data.matches.map(normalizeSheetMatch):[];
+    const local=loadMatches();
+    const result=mergeMatches(local,remote);
+    saveMatches(result.merged);
+    renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
+    setSyncStatus(`Step 1/2: Pulled ${result.pulled} new, ${result.updated} updated.<br>Step 2/2: Pushing to Sheet…`);
+
+    // Step 2: Push all merged matches back
+    const all=result.merged;
+    const batchSize=50;
+    let sent=0;
+    for(let i=0;i<all.length;i+=batchSize){
+      const batch=all.slice(i,i+batchSize);
+      setSyncStatus(`Step 2/2: Pushing ${Math.min(i+batchSize,all.length)}/${all.length}…`);
+      await gasPost({action:'sync',matches:batch});
+      sent+=batch.length;
+      if(i+batchSize<all.length) await new Promise(r=>setTimeout(r,500));
+    }
+
+    setSyncStatus(`✓ Sync complete!<br>Pulled: ${result.pulled} new, ${result.updated} updated<br>Pushed: ${sent} matches to Sheet<br>Total: ${result.merged.length} matches`,'var(--green)');
+    toast(`Sync done: ${result.merged.length} total matches`);
+  }catch(e){
+    setSyncStatus('✗ Sync failed: '+e.message,'var(--red)');
+    toast('Sync failed: '+e.message,true);
+  }
+  btn.disabled=false;btn.innerHTML='&#128260; Sync Now';
+}
 
 
 
