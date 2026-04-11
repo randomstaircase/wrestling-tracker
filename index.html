@@ -868,7 +868,15 @@ function applySharedFilters(){
   sharedFilters.year=(document.getElementById('shared-year')||{value:''}).value||'';
   sharedFilters.promo=(document.getElementById('shared-promo')||{value:''}).value||'';
   sharedFilters.champ=(document.getElementById('shared-champ')||{value:''}).value||'';
-  renderBest();renderWatch();renderAll();updateSharedChips();updateFilterHighlights();
+  // Only render the currently active panel for performance
+  const active=document.querySelector('.panel.active');
+  const id=active?active.id.replace('panel-',''):'';
+  if(id==='best')renderBest();
+  else if(id==='watch')renderWatch();
+  else if(id==='rewatch')renderRewatch();
+  else if(id==='all')renderAll();
+  else{renderBest();renderWatch();renderRewatch();renderAll();}
+  updateSharedChips();updateFilterHighlights();
 }
 function toggleTitleOnly(){sharedFilters.titleOnly=!sharedFilters.titleOnly;const tog=document.getElementById('title-toggle');if(tog)tog.classList.toggle('on',sharedFilters.titleOnly);applySharedFilters();}
 function clearSharedFilters(){
@@ -878,13 +886,6 @@ function clearSharedFilters(){
   sharedFilters.rating='';sharedFilters.ratingSrc='any';
   document.querySelectorAll('.rating-pill[data-group="src"]').forEach(p=>p.classList.remove('active'));
   buildValPills('any');
-  // Delegated click handler for event name links (avoids apostrophe/quote issues in onclick)
-  document.addEventListener('click', function(e){
-    const el=e.target.closest('.event-link');
-    if(!el) return;
-    const key=el.getAttribute('data-evkey');
-    if(key) filterShowMatches(decodeURIComponent(key));
-  });
   const tog=document.getElementById('title-toggle');if(tog)tog.classList.remove('on');
   renderBest();renderWatch();renderRewatch();renderAll();updateSharedChips();updateFilterHighlights();
 }
@@ -1599,6 +1600,13 @@ function toggleTheme(){
   if(savedUrl)document.getElementById('sheets-url').value=savedUrl;
   populatePromoDropdowns();populateSharedFilterOptions();renderDashboard();
   buildValPills('any');
+  // Single delegated click handler for event name links
+  document.addEventListener('click',function(e){
+    const el=e.target.closest('.event-link');
+    if(!el)return;
+    const key=el.getAttribute('data-evkey');
+    if(key)filterShowMatches(decodeURIComponent(key));
+  });
   const existing=loadMatches();
   if(savedUrl&&existing.length===0){
     setSyncStatus('No local data \u2014 loading from Sheets\u2026');
