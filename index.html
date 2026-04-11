@@ -252,14 +252,14 @@ textarea{resize:vertical;min-height:70px}
   tbody td.col-meta{display:none!important}
 }
 /* ── Lock Screen ── */
-#lock-screen{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
-#lock-screen.hidden{display:none}
-.lock-box{background:var(--bg2);border:1px solid var(--border2);border-top:3px solid var(--accent);border-radius:8px;padding:36px 32px;width:100%;max-width:380px;box-shadow:var(--shadow);text-align:center}
+#lock-screen{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#lock-screen.hidden{display:none!important}
+.lock-box{background:var(--bg2);border:1px solid var(--border2);border-top:3px solid var(--accent);border-radius:8px;padding:36px 28px;width:100%;max-width:380px;box-shadow:var(--shadow);text-align:center;margin:auto}
 .lock-box h2{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.4rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
 .lock-box p{font-size:.85rem;color:var(--text2);margin-bottom:20px}
-.lock-box input[type="password"]{width:100%;margin-bottom:12px}
+.lock-box input[type="password"]{width:100%;margin-bottom:12px;font-size:16px}
 .lock-box .lock-actions{display:flex;flex-direction:column;gap:8px}
-.lock-box .lock-actions button{width:100%}
+.lock-box .lock-actions button{width:100%;padding:12px 24px;font-size:.95rem}
 .lock-box .lock-hint{font-size:.75rem;color:var(--text3);margin-top:12px}
 .lock-box .lock-error{font-size:.78rem;color:var(--red);margin-top:8px;min-height:20px}
 /* ── View-only mode ── */
@@ -275,7 +275,7 @@ body.view-mode td .row-actions{display:none!important}
   <div class="lock-box">
     <h2>Wrestling Match Tracker</h2>
     <p id="lock-subtitle">Enter password to edit, or view in read-only mode.</p>
-    <input type="password" id="lock-pw" placeholder="Password" onkeydown="if(event.key==='Enter')unlockEdit()"/>
+    <input type="password" id="lock-pw" placeholder="Password" onkeydown="if(event.key==='Enter')unlockEdit()" autocomplete="off"/>
     <div class="lock-error" id="lock-error"></div>
     <div class="lock-actions">
       <button class="btn btn-primary" onclick="unlockEdit()">Unlock &amp; Edit</button>
@@ -284,6 +284,14 @@ body.view-mode td .row-actions{display:none!important}
     <div class="lock-hint" id="lock-hint"></div>
   </div>
 </div>
+<script>
+// Immediately show lock screen if password exists — no race condition
+(function(){
+  if(localStorage.getItem('wt_pw_hash')){
+    document.getElementById('lock-screen').classList.remove('hidden');
+  }
+})();
+</script>
 <header>
   <div class="header-title">Wrestling <span>Match Tracker</span></div>
   <nav>
