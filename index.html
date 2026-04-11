@@ -252,14 +252,14 @@ textarea{resize:vertical;min-height:70px}
   tbody td.col-meta{display:none!important}
 }
 /* ── Lock Overlay ── */
-#lock-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);overflow-y:auto;-webkit-overflow-scrolling:touch}
-#lock-overlay.open{display:block}
-.lock-box{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg2);border:1px solid var(--border2);border-top:3px solid var(--accent);border-radius:8px;padding:36px 28px;width:calc(100% - 40px);max-width:360px;box-shadow:var(--shadow);text-align:center}
+#lock-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:9999;background:rgba(0,0,0,.8);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px;box-sizing:border-box}
+#lock-overlay.open{display:flex;align-items:center;justify-content:center}
+.lock-box{background:var(--bg2);border:1px solid var(--border2);border-top:3px solid var(--accent);border-radius:8px;padding:36px 28px;width:100%;max-width:360px;box-shadow:var(--shadow);text-align:center;position:relative;z-index:10000}
 .lock-box h2{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.4rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
 .lock-box p{font-size:.85rem;color:var(--text2);margin-bottom:20px}
-.lock-box input[type="password"]{width:100%;margin-bottom:12px;font-size:16px;-webkit-appearance:none}
+.lock-box input[type="password"]{width:100%;margin-bottom:12px;font-size:16px;-webkit-appearance:none;box-sizing:border-box}
 .lock-box .lock-actions{display:flex;flex-direction:column;gap:8px}
-.lock-box .lock-actions button{width:100%;padding:12px 24px;font-size:.95rem;-webkit-appearance:none}
+.lock-box .lock-actions button{width:100%;padding:12px 24px;font-size:.95rem;-webkit-appearance:none;cursor:pointer;position:relative;z-index:10001}
 .lock-box .lock-hint{font-size:.75rem;color:var(--text3);margin-top:12px}
 .lock-box .lock-error{font-size:.78rem;color:var(--red);margin-top:8px;min-height:20px}
 /* ── View-only mode ── */
@@ -275,17 +275,47 @@ body.view-mode td .row-actions{display:none!important}
   <div class="lock-box">
     <h2>Wrestling Match Tracker</h2>
     <p>Enter password to edit, or view in read-only mode.</p>
-    <input type="password" id="lock-pw" placeholder="Password" onkeydown="if(event.key==='Enter')unlockEdit()" autocomplete="off"/>
+    <input type="password" id="lock-pw" placeholder="Password" autocomplete="off" style="font-size:16px;"/>
     <div class="lock-error" id="lock-error"></div>
     <div class="lock-actions">
-      <button class="btn btn-primary" onclick="unlockEdit()">Unlock &amp; Edit</button>
-      <button class="btn btn-secondary" onclick="enterViewMode()">View Only</button>
+      <button class="btn btn-primary" id="btn-unlock">Unlock &amp; Edit</button>
+      <button class="btn btn-secondary" id="btn-viewonly">View Only</button>
     </div>
-    <div class="lock-hint" id="lock-hint">Password is set. Unlock to edit or browse view-only.</div>
+    <div class="lock-hint">Password is set. Unlock to edit or browse view-only.</div>
   </div>
 </div>
 <script>
-// Overlay is shown by init() after EMBEDDED_PW is loaded — nothing to do here
+// Attach handlers after elements exist — no onclick attributes needed
+document.getElementById('btn-unlock').addEventListener('click',function(){
+  try{unlockEdit();}catch(e){
+    // Fallback if main script hasn't loaded yet
+    document.getElementById('lock-overlay').classList.remove('open');
+    document.getElementById('lock-overlay').style.display='none';
+  }
+});
+document.getElementById('btn-viewonly').addEventListener('click',function(){
+  try{enterViewMode();}catch(e){
+    document.getElementById('lock-overlay').classList.remove('open');
+    document.getElementById('lock-overlay').style.display='none';
+    document.body.classList.add('view-mode');
+  }
+});
+document.getElementById('lock-pw').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){
+    try{unlockEdit();}catch(ex){
+      document.getElementById('lock-overlay').classList.remove('open');
+      document.getElementById('lock-overlay').style.display='none';
+    }
+  }
+});
+// Show overlay if password exists and session not unlocked
+(function(){
+  var pw='h_7ll8ea_gq33gw';
+  var unlocked=sessionStorage.getItem('wt_unlocked');
+  if(pw && pw.length>0 && unlocked!=='1'){
+    document.getElementById('lock-overlay').classList.add('open');
+  }
+})();
 </script>
 <header>
   <div class="header-title">Wrestling <span>Match Tracker</span></div>
@@ -1814,14 +1844,18 @@ function unlockEdit(){
   if(hash!==EMBEDDED_PW){errEl.textContent='Wrong password.';document.getElementById('lock-pw').value='';return;}
   isViewMode=false;
   document.body.classList.remove('view-mode');
-  document.getElementById('lock-overlay').classList.remove('open');
+  var ol=document.getElementById('lock-overlay');
+  ol.classList.remove('open');
+  ol.style.display='none';
   sessionStorage.setItem('wt_unlocked','1');
 }
 
 function enterViewMode(){
   isViewMode=true;
   document.body.classList.add('view-mode');
-  document.getElementById('lock-overlay').classList.remove('open');
+  var ol=document.getElementById('lock-overlay');
+  ol.classList.remove('open');
+  ol.style.display='none';
 }
 
 (function init(){
