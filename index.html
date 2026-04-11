@@ -1772,14 +1772,28 @@ function applyTheme(){
 const PW_KEY='wt_pw_hash';
 let isViewMode=false;
 
-async function hashPW(pw){
-  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pw));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+// Simple hash that works everywhere (file://, http, https)
+function hashPW(pw){
+  var hash=0,i,chr;
+  var str=pw+'__wt_salt_2026__';
+  for(i=0;i<str.length;i++){
+    chr=str.charCodeAt(i);
+    hash=((hash<<5)-hash)+chr;
+    hash|=0;
+  }
+  // Double-hash for slightly better distribution
+  var h2=hash;
+  for(i=0;i<str.length;i++){
+    chr=str.charCodeAt(i);
+    h2=((h2<<13)^h2)+chr*31;
+    h2|=0;
+  }
+  return 'h_'+Math.abs(hash).toString(36)+'_'+Math.abs(h2).toString(36);
 }
 
 function hasPassword(){return !!localStorage.getItem(PW_KEY);}
 
-async function setPassword(){
+function setPassword(){
   const input=document.getElementById('set-pw-input');
   const status=document.getElementById('pw-status');
   const pw=input.value;
@@ -1791,7 +1805,7 @@ async function setPassword(){
     toast('Password protection disabled');
     return;
   }
-  const hash=await hashPW(pw);
+  const hash=hashPW(pw);
   localStorage.setItem(PW_KEY,hash);
   sessionStorage.setItem('wt_unlocked','1');
   if(status){status.textContent='✓ Password set. This session stays unlocked.';status.style.color='var(--green)';}
@@ -1799,11 +1813,11 @@ async function setPassword(){
   toast('Password saved');
 }
 
-async function unlockEdit(){
+function unlockEdit(){
   const pw=document.getElementById('lock-pw').value;
   const errEl=document.getElementById('lock-error');
   if(!pw){errEl.textContent='Enter your password.';return;}
-  const hash=await hashPW(pw);
+  const hash=hashPW(pw);
   if(hash!==localStorage.getItem(PW_KEY)){errEl.textContent='Wrong password.';document.getElementById('lock-pw').value='';return;}
   isViewMode=false;
   document.body.classList.remove('view-mode');
@@ -1860,9 +1874,18 @@ function enterViewMode(){
       }catch(e){setSyncStatus('\u2717 Auto-load failed: '+e.message,'var(--red)');switchPanel('dashboard');}
     },400);
   }
-  // Update password status display
-  const pwStatus=document.getElementById('pw-status');
-  if(pwStatus)pwStatus.textContent=hasPassword()?'Password is currently set.':'No password set — dashboard is open to all.';
+  // Update password status display — clear old-format hashes
+  const storedHash=localStorage.getItem(PW_KEY);
+  if(storedHash && !storedHash.startsWith('h_')){
+    // Old crypto.subtle hash — won't work anymore, clear it
+    localStorage.removeItem(PW_KEY);
+    document.getElementById('lock-overlay').classList.remove('open');
+    const pwStatus=document.getElementById('pw-status');
+    if(pwStatus){pwStatus.textContent='Previous password was reset (format update). Please set a new one.';pwStatus.style.color='var(--red)';}
+  } else {
+    const pwStatus=document.getElementById('pw-status');
+    if(pwStatus)pwStatus.textContent=hasPassword()?'Password is currently set.':'No password set — dashboard is open to all.';
+  }
 })();
 </script>
 </body>
