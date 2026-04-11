@@ -26,6 +26,46 @@
   --blue-hi:#e8157a;--blue-lo:#fdf0f7;--green:#4ade80;
   --shadow:0 4px 24px rgba(0,0,0,0.6);
 }
+/* ── AEW Light ── */
+[data-theme="aew-light"] {
+  --bg:#F7F5F0;--bg2:#ffffff;--bg3:#EDEBE4;--bg4:#E2DFDA;
+  --border:#d5d0c5;--border2:#bbb5a8;
+  --text:#1a1a1a;--text2:#55524a;--text3:#8c8475;
+  --accent:#C9A227;--accent2:#a88518;--red:#d42b2b;
+  --teal:#C9A227;--teal-text:#C9A227;
+  --blue-hi:#C9A227;--blue-lo:#F7F5F0;--green:#16a34a;
+  --shadow:0 4px 24px rgba(40,30,0,0.12);
+}
+/* ── AEW Dark ── */
+[data-theme="aew-dark"] {
+  --bg:#0E0E0E;--bg2:#161614;--bg3:#1C1B18;--bg4:#24231F;
+  --border:#2a2824;--border2:#3a3830;
+  --text:#E8E4DA;--text2:#9e9a8e;--text3:#706b5f;
+  --accent:#C9A227;--accent2:#a88518;--red:#ff3a5c;
+  --teal:#C9A227;--teal-text:#C9A227;
+  --blue-hi:#C9A227;--blue-lo:#1C1B18;--green:#4ade80;
+  --shadow:0 4px 24px rgba(0,0,0,0.6);
+}
+/* ── CMLL Light ── */
+[data-theme="cmll-light"] {
+  --bg:#FFFBF4;--bg2:#ffffff;--bg3:#FFF2DD;--bg4:#FFE8C4;
+  --border:#E8D8C0;--border2:#D0B890;
+  --text:#2A1000;--text2:#7A5A32;--text3:#9A6A30;
+  --accent:#D42020;--accent2:#B01818;--red:#D42020;
+  --teal:#2550A0;--teal-text:#D42020;
+  --blue-hi:#D42020;--blue-lo:#FFFBF4;--green:#16a34a;
+  --shadow:0 4px 24px rgba(80,20,0,0.12);
+}
+/* ── CMLL Dark ── */
+[data-theme="cmll-dark"] {
+  --bg:#0C1A38;--bg2:#0F2040;--bg3:#112248;--bg4:#183060;
+  --border:#1E3060;--border2:#2A4080;
+  --text:#E8DCC8;--text2:#8A9AC0;--text3:#5A70A0;
+  --accent:#D42020;--accent2:#B01818;--red:#E84848;
+  --teal:#5888E0;--teal-text:#E84848;
+  --blue-hi:#E84848;--blue-lo:#112248;--green:#4ade80;
+  --shadow:0 4px 24px rgba(0,0,20,0.6);
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 header{background:var(--bg2);border-bottom:2px solid var(--accent);padding:0 20px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;gap:12px;height:56px}
@@ -196,6 +236,12 @@ textarea{resize:vertical;min-height:70px}
 .title-toggle.on{border-color:var(--accent);background:rgba(232,200,64,.1);color:var(--accent)}
 .title-toggle .dot{width:8px;height:8px;border-radius:50%;background:var(--border2);transition:background .15s}
 .title-toggle.on .dot{background:var(--accent)}
+.theme-card{display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 14px;cursor:pointer;transition:all .15s;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.88rem;letter-spacing:.06em;text-transform:uppercase;color:var(--text2)}
+.theme-card:hover{border-color:var(--accent);color:var(--accent)}
+.theme-card.active{border-color:var(--accent);background:rgba(232,200,64,.1);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.theme-swatches{display:flex;gap:3px}
+.theme-swatches span{width:16px;height:16px;border-radius:3px;border:1px solid rgba(128,128,128,.25)}
+.theme-name{flex:1}
 .clear-filters-btn{background:none;border:1px solid var(--border2);color:var(--text3);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;padding:6px 12px;border-radius:4px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .clear-filters-btn:hover{border-color:var(--red);color:var(--red)}
 .rating-pill{background:var(--bg4);border:1px solid var(--border2);color:var(--text3);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:3px;cursor:pointer;transition:all .15s;white-space:nowrap}
@@ -355,7 +401,7 @@ textarea{resize:vertical;min-height:70px}
 
     <div class="export-section">
       <h3>&#127915; Event Card Import</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste a cagematch event card URL (ending in page=3) to import all matches from a show at once. Requires Apps Script URL above. Auto-detects <strong style="color:var(--text)">TITLE CHANGE !!!</strong></p>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste a cagematch event card URL (ending in page=3) to import all matches from a show at once. Requires Apps Script URL below. Auto-detects <strong style="color:var(--text)">TITLE CHANGE !!!</strong></p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;">
         <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:6px;">
           <label class="form-label">Event Card URL</label>
@@ -372,7 +418,7 @@ textarea{resize:vertical;min-height:70px}
 
     <div class="export-section">
       <h3>&#128279; Individual Match Import</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste one or more cagematch match URLs (one per line) to import them individually. Requires Apps Script URL above.</p>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste one or more cagematch match URLs (one per line) to import them individually. Requires Apps Script URL below.</p>
       <div style="display:flex;flex-direction:column;gap:8px;">
         <textarea id="batch-urls" rows="5" placeholder="https://www.cagematch.net/?id=111&nr=134917&#10;https://www.cagematch.net/?id=111&nr=69051" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:monospace;font-size:.78rem;padding:8px;border-radius:4px;resize:vertical;outline:none;"></textarea>
         <div style="display:flex;gap:10px;align-items:center;">
@@ -383,7 +429,32 @@ textarea{resize:vertical;min-height:70px}
     </div>
 
     <div class="export-section">
-      <h3>&#9889; Auto-Fill (cagematch)</h3>
+      <h3>&#127775; Theme</h3>
+      <p style="color:var(--text2);font-size:.85rem;margin-bottom:14px;">Choose a promotion theme and light or dark mode.</p>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;" id="theme-grid">
+          <button class="theme-card active" data-theme-base="stardom" onclick="selectTheme('stardom')">
+            <span class="theme-swatches"><span style="background:#e8157a"></span><span style="background:#a855f7"></span><span style="background:#fdf0f7"></span><span style="background:#0d0a0e"></span></span>
+            <span class="theme-name">Stardom</span>
+          </button>
+          <button class="theme-card" data-theme-base="aew" onclick="selectTheme('aew')">
+            <span class="theme-swatches"><span style="background:#C9A227"></span><span style="background:#1a1a1a"></span><span style="background:#F7F5F0"></span><span style="background:#0E0E0E"></span></span>
+            <span class="theme-name">AEW</span>
+          </button>
+          <button class="theme-card" data-theme-base="cmll" onclick="selectTheme('cmll')">
+            <span class="theme-swatches"><span style="background:#D42020"></span><span style="background:#2550A0"></span><span style="background:#FFFBF4"></span><span style="background:#0C1A38"></span></span>
+            <span class="theme-name">CMLL</span>
+          </button>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button id="theme-mode-btn" onclick="toggleThemeMode()" class="btn btn-secondary" style="min-width:130px;">&#9790; Dark Mode</button>
+          <span id="theme-mode-label" style="font-size:.82rem;color:var(--text2);">Light</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="export-section">
+      <h3>&#9889; Auto-Fill (CageMatch)</h3>
       <p style="color:var(--text2);font-size:.88rem;margin-bottom:10px;">Auto-Fill and Event Card Import require a Google Apps Script Web App. Set the URL once — it handles both features. No Sheets sync needed.</p>
       <div class="sheets-url-row">
         <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/..."/>
@@ -413,14 +484,6 @@ textarea{resize:vertical;min-height:70px}
           <input type="file" id="import-file" accept=".csv" style="color:var(--text2);font-size:.82rem;"/>
           <button class="btn btn-secondary" onclick="importCSV()">&#8593; Import CSV</button>
         </div>
-      </div>
-    </div>
-
-    <div class="export-section">
-      <h3>&#127775; Theme</h3>
-      <div style="display:flex;gap:10px;align-items:center;">
-        <button id="theme-btn" onclick="toggleTheme()" class="btn btn-secondary" style="min-width:130px;">&#9790; Dark Mode</button>
-        <span style="font-size:.82rem;color:var(--text2);">Stardom Light / Dark</span>
       </div>
     </div>
 
@@ -1580,22 +1643,42 @@ function clearAllData(){if(!confirm('Delete ALL match data? This cannot be undon
 let toastTimer;
 function toast(msg,isErr=false){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(isErr?' err':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3000);}
 
-function toggleTheme(){
+function selectTheme(base){
+  localStorage.setItem('wt_theme_base',base);
+  applyTheme();
+}
+function toggleThemeMode(){
+  const isDark=localStorage.getItem('wt_theme_mode')==='dark';
+  localStorage.setItem('wt_theme_mode',isDark?'light':'dark');
+  applyTheme();
+}
+function applyTheme(){
+  const base=localStorage.getItem('wt_theme_base')||'stardom';
+  const mode=localStorage.getItem('wt_theme_mode')||'light';
   const html=document.documentElement;
-  const isDark=html.getAttribute('data-theme')==='stardom-dark';
-  const btn=document.getElementById('theme-btn');
-  if(isDark){html.removeAttribute('data-theme');if(btn)btn.innerHTML='☽ Dark Mode';localStorage.setItem('wt_theme','light');}
-  else{html.setAttribute('data-theme','stardom-dark');if(btn)btn.innerHTML='☀ Light Mode';localStorage.setItem('wt_theme','dark');}
+  if(base==='stardom'&&mode==='light'){html.removeAttribute('data-theme');}
+  else if(base==='stardom'&&mode==='dark'){html.setAttribute('data-theme','stardom-dark');}
+  else{html.setAttribute('data-theme',base+'-'+mode);}
+  // Update mode button
+  const modeBtn=document.getElementById('theme-mode-btn');
+  const modeLabel=document.getElementById('theme-mode-label');
+  if(modeBtn)modeBtn.innerHTML=mode==='dark'?'&#9788; Light Mode':'&#9790; Dark Mode';
+  if(modeLabel)modeLabel.textContent=base.toUpperCase()+' — '+(mode==='dark'?'Dark':'Light');
+  // Update active card
+  document.querySelectorAll('.theme-card').forEach(c=>{
+    c.classList.toggle('active',c.getAttribute('data-theme-base')===base);
+  });
 }
 
 (function init(){
-  // Load saved theme (default is light)
-  if(localStorage.getItem('wt_theme')==='dark'){
-    document.documentElement.setAttribute('data-theme','stardom-dark');
-    const tb=document.getElementById('theme-btn');if(tb)tb.innerHTML='☀ Light Mode';
-  } else {
-    const tb=document.getElementById('theme-btn');if(tb)tb.innerHTML='☽ Dark Mode';
+  // Migrate old theme setting
+  const oldTheme=localStorage.getItem('wt_theme');
+  if(oldTheme&&!localStorage.getItem('wt_theme_base')){
+    localStorage.setItem('wt_theme_base','stardom');
+    localStorage.setItem('wt_theme_mode',oldTheme==='dark'?'dark':'light');
+    localStorage.removeItem('wt_theme');
   }
+  applyTheme();
   const savedUrl=localStorage.getItem('sheets_url_2026');
   if(savedUrl)document.getElementById('sheets-url').value=savedUrl;
   populatePromoDropdowns();populateSharedFilterOptions();renderDashboard();
