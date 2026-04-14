@@ -627,6 +627,7 @@ const DEFAULT_PROMOS=[
   ["New Japan Pro Wrestling","NJPW"],["Impact Wrestling","IMPACT"],["Ring of Honor","ROH"],
   ["Game Changer Wrestling","GCW"],["Pro Wrestling Guerrilla","PWG"],["Major League Wrestling","MLW"],
   ["National Wrestling Alliance","NWA"],["Combat Zone Wrestling","CZW"],["House of Glory","HOG"],
+  ["NXT","NXT"],
   ["Beyond Wrestling","Beyond"],["Tokyo Joshi Pro-Wrestling","TJPW"],
   ["Sendai Girls' Pro Wrestling","Sendai Girls"],["SEAdLINNNG","SEAdLINNNG"],["Sareee-ISM","Sareee-ISM"],
   ["Consejo Mundial de Lucha Libre","CMLL"],["Revolution Pro Wrestling","RevPro"],
@@ -657,6 +658,25 @@ function rowColorClass(m){
   if(cls==='best-10plus')return'row-best-10plus';
   if(cls==='watch')return(typeof vK==='number'&&vK>=9.25)?'row-watch-hi':'row-watch-lo';
   return'';
+}
+
+/* Override promotion based on event name — e.g. NXT events filed under WWE should be NXT */
+function applyPromoOverrides(m){
+  if(!m.event)return m;
+  const ev=m.event.toUpperCase();
+  // NXT UK must be checked before NXT (more specific match first)
+  if(/\bNXT\s*UK\b/.test(ev)){
+    m.promoAbbr='NXT UK';
+    m.promoFull='NXT UK';
+  } else if(/\bNXT\b/.test(ev)){
+    m.promoAbbr='NXT';
+    m.promoFull='NXT';
+  }
+  if(/\b205\s*LIVE\b/.test(ev)){
+    m.promoAbbr='205 Live';
+    m.promoFull='205 Live';
+  }
+  return m;
 }
 
 function switchPanel(id){
@@ -1363,6 +1383,8 @@ async function fetchMatchData(){
     if(data.eventUrl)document.getElementById('f-event-url').value=data.eventUrl;
     if(data.score)document.getElementById('f-score').value=data.score;
     if(data.value)document.getElementById('f-value').value=data.value;
+    // Apply promo overrides (e.g. NXT events)
+    applyPromoOverrides(data);
     // Replace promos with auto-filled values (user can add more via Select panel)
     if(data.promoFull||data.promoAbbr) setSelectedPromos(data.promoFull||'',data.promoAbbr||'');
     const filled=[data.name&&'wrestlers',data.promoFull&&'promotion',data.event&&'event',data.date&&'date',data.matchType&&'match type',data.championship&&'championship',data.score&&'score'].filter(Boolean);
@@ -1688,6 +1710,34 @@ function mergeMatches(local,remote){
   return{merged:Array.from(map.values()),pulled,updated};
 }
 
+async function syncPromosFromSheet(){
+  try{
+    const data=await gasGet('pullPromos');
+    if(!data||!Array.isArray(data.promos))return{pulled:0};
+    const local=loadPromos();
+    const localMap=new Map(local.map(p=>[p[0].toLowerCase(),p]));
+    let pulled=0;
+    data.promos.forEach(p=>{
+      const key=p[0].toLowerCase();
+      if(!localMap.has(key)){
+        local.push(p);
+        localMap.set(key,p);
+        pulled++;
+      }
+    });
+    if(pulled){local.sort((a,b)=>a[0].localeCompare(b[0]));savePromos(local);}
+    return{pulled};
+  }catch(e){return{pulled:0,error:e.message};}
+}
+
+async function syncPromosToSheet(){
+  try{
+    const local=loadPromos();
+    await gasPost({action:'syncPromos',promos:local});
+    return{pushed:local.length};
+  }catch(e){return{pushed:0,error:e.message};}
+}
+
 async function runPullOnly(){
   const btn=document.getElementById('sync-btn');
   setSyncStatus('Pulling from Sheet…');
@@ -1698,8 +1748,10 @@ async function runPullOnly(){
     const local=loadMatches();
     const result=mergeMatches(local,remote);
     saveMatches(result.merged);
+    // Also pull promotions
+    const promoResult=await syncPromosFromSheet();
     renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
-    setSyncStatus(`✓ Pull complete: ${result.pulled} new, ${result.updated} updated. Total: ${result.merged.length}`,'var(--green)');
+    setSyncStatus(`✓ Pull complete: ${result.pulled} new, ${result.updated} updated. Total: ${result.merged.length}`+(promoResult.pulled?`<br>Promotions: ${promoResult.pulled} new`:''),'var(--green)');
     toast(`Pulled: ${result.pulled} new, ${result.updated} updated`);
   }catch(e){setSyncStatus('✗ Pull failed: '+e.message,'var(--red)');toast('Pull failed',true);}
 }
@@ -1709,7 +1761,6 @@ async function runPushOnly(){
   try{
     const local=loadMatches();
     if(!local.length){setSyncStatus('No local matches to push.','var(--text3)');return;}
-    // Send in batches of 50 to avoid payload limits
     const batchSize=500;
     let sent=0;
     for(let i=0;i<local.length;i+=batchSize){
@@ -1719,7 +1770,10 @@ async function runPushOnly(){
       sent+=batch.length;
       if(i+batchSize<local.length) await new Promise(r=>setTimeout(r,200));
     }
-    setSyncStatus(`✓ Push complete: ${sent} matches sent to Sheet.`,'var(--green)');
+    // Also push promotions
+    setSyncStatus('Pushing promotions…');
+    await syncPromosToSheet();
+    setSyncStatus(`✓ Push complete: ${sent} matches + promotions sent to Sheet.`,'var(--green)');
     toast(`Pushed ${sent} matches to Sheet`);
   }catch(e){setSyncStatus('✗ Push failed: '+e.message,'var(--red)');toast('Push failed',true);}
 }
@@ -1727,30 +1781,35 @@ async function runPushOnly(){
 async function runSync(){
   const btn=document.getElementById('sync-btn');
   btn.disabled=true;btn.textContent='Syncing…';
-  setSyncStatus('Step 1/2: Pulling from Sheet…');
+  setSyncStatus('Step 1/3: Pulling matches…');
   try{
-    // Step 1: Pull
+    // Step 1: Pull matches
     const data=await gasGet('pull');
     const remote=(data&&Array.isArray(data.matches))?data.matches.map(normalizeSheetMatch):[];
     const local=loadMatches();
     const result=mergeMatches(local,remote);
     saveMatches(result.merged);
     renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
-    setSyncStatus(`Step 1/2: Pulled ${result.pulled} new, ${result.updated} updated.<br>Step 2/2: Pushing to Sheet…`);
 
-    // Step 2: Push all merged matches back
+    // Step 2: Pull + push promotions
+    setSyncStatus(`Step 2/3: Syncing promotions…`);
+    const promoPull=await syncPromosFromSheet();
+    await syncPromosToSheet();
+
+    // Step 3: Push all merged matches back
+    setSyncStatus(`Step 3/3: Pushing matches…`);
     const all=result.merged;
     const batchSize=500;
     let sent=0;
     for(let i=0;i<all.length;i+=batchSize){
       const batch=all.slice(i,i+batchSize);
-      setSyncStatus(`Step 2/2: Pushing ${Math.min(i+batchSize,all.length)}/${all.length}…`);
+      setSyncStatus(`Step 3/3: Pushing ${Math.min(i+batchSize,all.length)}/${all.length}…`);
       await gasPost({action:'sync',matches:batch});
       sent+=batch.length;
       if(i+batchSize<all.length) await new Promise(r=>setTimeout(r,200));
     }
 
-    setSyncStatus(`✓ Sync complete!<br>Pulled: ${result.pulled} new, ${result.updated} updated<br>Pushed: ${sent} matches to Sheet<br>Total: ${result.merged.length} matches`,'var(--green)');
+    setSyncStatus(`✓ Sync complete!<br>Pulled: ${result.pulled} new, ${result.updated} updated<br>Pushed: ${sent} matches to Sheet`+(promoPull.pulled?`<br>Promotions: ${promoPull.pulled} new`:'')+ `<br>Total: ${result.merged.length} matches`,'var(--green)');
     toast(`Sync done: ${result.merged.length} total matches`);
   }catch(e){
     setSyncStatus('✗ Sync failed: '+e.message,'var(--red)');
@@ -1840,7 +1899,7 @@ function confirmEventCardImport(){
   const withIds=_pendingEventMatches.map((m,i)=>{
     const ratingInput=document.getElementById('ev-rating-'+i);
     const userRating=ratingInput?ratingInput.value.trim():'';
-    return{
+    const match={
       id:'ev_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
       matchUrl:   m.matchUrl    ||'',
       name:       m.name        ||'',
@@ -1862,6 +1921,8 @@ function confirmEventCardImport(){
       value:      m.value       ||'',
       _sheetName: getTabName(yr)
     };
+    applyPromoOverrides(match);
+    return match;
   });
 
   saveMatches([...withIds,...existing]);
@@ -1921,7 +1982,7 @@ async function runBatchURLImport(){
       const data=await gasGet('fetchMatch',{url});
       if(!data||!data.name){failed++;continue;}
       const yr=parseInt((data.date||'').split('-')[0])||new Date().getFullYear();
-      newMatches.unshift({
+      const match={
         id:          'batch_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
         matchUrl:    data.matchUrl    ||url,
         name:        data.name        ||'',
@@ -1942,7 +2003,9 @@ async function runBatchURLImport(){
         score:       data.score       ||'',
         value:       data.value       ||'',
         _sheetName:  getTabName(yr)
-      });
+      };
+      applyPromoOverrides(match);
+      newMatches.unshift(match);
       existingUrls.add(url);
       imported++;
     }catch(e){failed++;}
