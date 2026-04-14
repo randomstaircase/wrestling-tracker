@@ -516,32 +516,30 @@ document.getElementById('lock-pw').addEventListener('keydown',function(e){
       </div>
     </div>
 
-    <div class="export-section">
-      <h3>&#128274; Password Protection</h3>
-      <p style="color:var(--text2);font-size:.85rem;margin-bottom:14px;">Generate a password hash, then paste it into the <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;">EMBEDDED_PW</code> constant in the HTML file and push to GitHub.</p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-        <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px;">
-          <label class="form-label">Password</label>
-          <input type="text" id="set-pw-input" placeholder="Type your desired password" autocomplete="off"/>
-        </div>
-        <button class="btn btn-secondary" onclick="setPassword()">Generate Hash</button>
-      </div>
-      <div id="pw-status" style="font-size:.78rem;color:var(--text3);margin-top:8px;min-height:16px;"></div>
-    </div>
-
     <div class="export-section edit-only">
-      <h3>&#9889; Auto-Fill (CageMatch)</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:10px;">Auto-Fill and Event Card Import require a Google Apps Script Web App. Set the URL once — it handles both features.</p>
-      <div class="sheets-url-row">
-        <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/..."/>
-        <button class="btn btn-secondary" onclick="saveSheetURL()">Save URL</button>
+      <h3>&#128259; Refresh from CageMatch</h3>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Re-fetch match data from CageMatch to update fields like match type, championship, winner, scores. Your personal ratings, 10+, saw live, and rewatch flags are preserved.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;">
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label class="form-label">Year</label>
+          <select id="refresh-year" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;min-width:100px;">
+            <option value="">All Years</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label class="form-label">Promotion</label>
+          <select id="refresh-promo" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;min-width:140px;">
+            <option value="">All Promotions</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="refresh-btn" onclick="runCageMatchRefresh()">&#128259; Refresh</button>
       </div>
-      <div id="autofill-status" style="font-size:.78rem;color:var(--text3);margin-top:6px;min-height:16px;"></div>
+      <div id="refresh-status" style="font-size:.82rem;color:var(--text3);margin-top:6px;min-height:20px;line-height:1.6;"></div>
     </div>
 
     <div class="export-section">
       <h3>&#128260; Sync</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Merge local matches with your Google Sheet. Pulls new matches from the Sheet, then pushes any local-only matches back. Uses the same Apps Script URL above.</p>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Merge local matches with your Google Sheet. Pulls new matches from the Sheet, then pushes any local-only matches back. Uses the Apps Script URL below.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
         <button class="btn btn-primary" id="sync-btn" onclick="runSync()">&#128260; Sync Now</button>
         <button class="btn btn-secondary" onclick="runPullOnly()">&#8595; Pull Only</button>
@@ -588,6 +586,29 @@ document.getElementById('lock-pw').addEventListener('keydown',function(e){
         </div>
         <button class="btn btn-secondary" onclick="addPromotion()">+ Add</button>
       </div>
+    </div>
+
+    <div class="export-section">
+      <h3>&#128274; Password Protection</h3>
+      <p style="color:var(--text2);font-size:.85rem;margin-bottom:14px;">Generate a password hash, then paste it into the <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;">EMBEDDED_PW</code> constant in the HTML file and push to GitHub.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px;">
+          <label class="form-label">Password</label>
+          <input type="text" id="set-pw-input" placeholder="Type your desired password" autocomplete="off"/>
+        </div>
+        <button class="btn btn-secondary" onclick="setPassword()">Generate Hash</button>
+      </div>
+      <div id="pw-status" style="font-size:.78rem;color:var(--text3);margin-top:8px;min-height:16px;"></div>
+    </div>
+
+    <div class="export-section edit-only">
+      <h3>&#9889; Auto-Fill (CageMatch)</h3>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:10px;">Auto-Fill, Event Card Import, Refresh, and Sync all require a Google Apps Script Web App URL. Set it once here.</p>
+      <div class="sheets-url-row">
+        <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/..."/>
+        <button class="btn btn-secondary" onclick="saveSheetURL()">Save URL</button>
+      </div>
+      <div id="autofill-status" style="font-size:.78rem;color:var(--text3);margin-top:6px;min-height:16px;"></div>
     </div>
 
     <div class="export-section edit-only">
@@ -693,7 +714,7 @@ function switchPanel(id){
   if(id==='all'){populateSharedFilterOptions();updateFilterHighlights();updateSharedChips();renderAll();}
   if(id==='shows'){populateShowsFilters();renderShows();}
   if(id==='promotions')renderPromos();
-  if(id==='export'){renderPromos();}
+  if(id==='export'){renderPromos();populateRefreshDropdowns();}
   if(id==='add'){populatePromoDropdowns();setEditingId(null);}
 }
 
@@ -1823,6 +1844,104 @@ async function runSync(){
 
 
 
+
+function populateRefreshDropdowns(){
+  const matches=loadMatches();
+  // Years
+  const years=new Set();
+  matches.forEach(m=>{if(m.date){const y=m.date.split('-')[0];if(y)years.add(y);}});
+  const yearSel=document.getElementById('refresh-year');
+  if(yearSel){
+    const cur=yearSel.value;
+    yearSel.innerHTML='<option value="">All Years</option>';
+    Array.from(years).sort().reverse().forEach(y=>{yearSel.innerHTML+=`<option value="${y}">${y}</option>`;});
+    yearSel.value=cur;
+  }
+  // Promotions
+  const promos=new Set();
+  matches.forEach(m=>{
+    if(m.promoAbbr)(m.promoAbbr.split('/').map(p=>p.trim()).filter(Boolean)).forEach(p=>promos.add(p));
+  });
+  const promoSel=document.getElementById('refresh-promo');
+  if(promoSel){
+    const cur=promoSel.value;
+    promoSel.innerHTML='<option value="">All Promotions</option>';
+    Array.from(promos).sort().forEach(p=>{promoSel.innerHTML+=`<option value="${esc(p)}">${esc(p)}</option>`;});
+    promoSel.value=cur;
+  }
+}
+
+async function runCageMatchRefresh(){
+  const yearFilter=document.getElementById('refresh-year').value;
+  const promoFilter=document.getElementById('refresh-promo').value;
+  const gasUrl=getSheetURL();
+  if(!gasUrl){toast('Set your Apps Script URL first',true);return;}
+
+  const btn=document.getElementById('refresh-btn');
+  const statusEl=document.getElementById('refresh-status');
+  btn.disabled=true;btn.textContent='Refreshing…';
+
+  const allMatches=loadMatches();
+  // Filter matches to refresh
+  const toRefresh=allMatches.filter(m=>{
+    if(!m.matchUrl)return false;
+    if(yearFilter&&m.date&&!m.date.startsWith(yearFilter))return false;
+    if(promoFilter&&m.promoAbbr&&!(m.promoAbbr.split('/').map(p=>p.trim())).includes(promoFilter))return false;
+    return true;
+  });
+
+  if(!toRefresh.length){
+    if(statusEl){statusEl.textContent='No matches with URLs found for the selected filters.';statusEl.style.color='var(--text3)';}
+    btn.disabled=false;btn.innerHTML='&#128259; Refresh';
+    return;
+  }
+
+  // Personal fields to preserve
+  const personalFields=['rating','tenPlus','sawLive','rewatch'];
+
+  let refreshed=0,failed=0;
+  const matchMap=new Map(allMatches.map(m=>[m.id,m]));
+
+  for(let i=0;i<toRefresh.length;i++){
+    const m=toRefresh[i];
+    if(statusEl)statusEl.textContent=`Refreshing ${i+1}/${toRefresh.length}… (${esc(m.name||'').substring(0,40)})`;
+    try{
+      const data=await gasGet('fetchMatch',{url:m.matchUrl});
+      if(!data||!data.ok){failed++;continue;}
+      // Overwrite auto-filled fields, preserve personal ones
+      const updated=matchMap.get(m.id);
+      if(updated){
+        updated.name=data.name||updated.name;
+        updated.promoFull=data.promoFull||updated.promoFull;
+        updated.promoAbbr=data.promoAbbr||updated.promoAbbr;
+        updated.event=data.event||updated.event;
+        updated.eventUrl=data.eventUrl||updated.eventUrl;
+        updated.date=data.date||updated.date;
+        updated.matchType=data.matchType||'';
+        updated.championship=data.championship||'';
+        updated.champion=data.champion||updated.champion;
+        updated.winner=data.winner||updated.winner;
+        updated.titleChange=data.titleChange!==undefined?!!data.titleChange:updated.titleChange;
+        updated.score=data.score||updated.score;
+        updated.value=data.value||updated.value;
+        // Apply promo overrides (NXT etc)
+        applyPromoOverrides(updated);
+        refreshed++;
+      }
+    }catch(e){failed++;}
+    if(i<toRefresh.length-1) await new Promise(r=>setTimeout(r,300));
+  }
+
+  saveMatches(Array.from(matchMap.values()));
+  renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
+
+  if(statusEl){
+    statusEl.innerHTML=`✓ Refresh complete: ${refreshed} updated`+(failed?`, ${failed} failed`:'')+`<br><span style="font-size:.75rem;color:var(--text3);">Personal ratings/flags preserved. Sync to push updates to Sheet.</span>`;
+    statusEl.style.color='var(--green)';
+  }
+  toast(`Refreshed ${refreshed} matches`);
+  btn.disabled=false;btn.innerHTML='&#128259; Refresh';
+}
 
 let _pendingEventMatches=[];
 
