@@ -1771,14 +1771,14 @@ async function runPushOnly(){
     const local=loadMatches();
     if(!local.length){setSyncStatus('No local matches to push.','var(--text3)');return;}
     // Send in batches of 50 to avoid payload limits
-    const batchSize=200;
+    const batchSize=500;
     let sent=0;
     for(let i=0;i<local.length;i+=batchSize){
       const batch=local.slice(i,i+batchSize);
       setSyncStatus(`Pushing ${Math.min(i+batchSize,local.length)}/${local.length}…`);
       await gasPost({action:'sync',matches:batch});
       sent+=batch.length;
-      if(i+batchSize<local.length) await new Promise(r=>setTimeout(r,500));
+      if(i+batchSize<local.length) await new Promise(r=>setTimeout(r,200));
     }
     setSyncStatus(`✓ Push complete: ${sent} matches sent to Sheet.`,'var(--green)');
     toast(`Pushed ${sent} matches to Sheet`);
@@ -1801,14 +1801,14 @@ async function runSync(){
 
     // Step 2: Push all merged matches back
     const all=result.merged;
-    const batchSize=200;
+    const batchSize=500;
     let sent=0;
     for(let i=0;i<all.length;i+=batchSize){
       const batch=all.slice(i,i+batchSize);
       setSyncStatus(`Step 2/2: Pushing ${Math.min(i+batchSize,all.length)}/${all.length}…`);
       await gasPost({action:'sync',matches:batch});
       sent+=batch.length;
-      if(i+batchSize<all.length) await new Promise(r=>setTimeout(r,500));
+      if(i+batchSize<all.length) await new Promise(r=>setTimeout(r,200));
     }
 
     setSyncStatus(`✓ Sync complete!<br>Pulled: ${result.pulled} new, ${result.updated} updated<br>Pushed: ${sent} matches to Sheet<br>Total: ${result.merged.length} matches`,'var(--green)');
