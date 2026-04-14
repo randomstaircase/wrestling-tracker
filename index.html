@@ -463,7 +463,7 @@ document.getElementById('lock-pw').addEventListener('keydown',function(e){
 
     <div class="export-section edit-only">
       <h3>&#127915; Event Card Import</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste a cagematch event card URL (ending in page=3) to import all matches from a show at once. Requires Apps Script URL below. Auto-detects <strong style="color:var(--text)">TITLE CHANGE !!!</strong></p>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste a cagematch event card URL (ending in page=3). Fetches all matches for preview — add ratings before importing. Auto-detects <strong style="color:var(--text)">TITLE CHANGE !!!</strong></p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;">
         <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:6px;">
           <label class="form-label">Event Card URL</label>
@@ -473,16 +473,17 @@ document.getElementById('lock-pw').addEventListener('keydown',function(e){
           <label class="form-label">Year</label>
           <input type="text" id="event-card-year" placeholder="2026" maxlength="4" style="width:80px;text-align:center;" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,4)"/>
         </div>
-        <button class="btn btn-primary" id="event-import-btn" onclick="runEventCardImport()">&#127915; Import Event</button>
+        <button class="btn btn-primary" id="event-import-btn" onclick="fetchEventCardPreview()">&#127915; Fetch Event</button>
       </div>
       <div id="event-import-status" style="display:none;background:var(--bg3);border-radius:4px;padding:10px 14px;font-size:.82rem;line-height:1.8;"></div>
+      <div id="event-preview" style="display:none;"></div>
     </div>
 
     <div class="export-section edit-only">
       <h3>&#128279; Individual Match Import</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste one or more cagematch match URLs (one per line) to import them individually. Requires Apps Script URL below.</p>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste one or more cagematch match URLs (one per line). Optionally add a rating after a space. Requires Apps Script URL below.</p>
       <div style="display:flex;flex-direction:column;gap:8px;">
-        <textarea id="batch-urls" rows="5" placeholder="https://www.cagematch.net/?id=111&nr=134917&#10;https://www.cagematch.net/?id=111&nr=69051" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:monospace;font-size:.78rem;padding:8px;border-radius:4px;resize:vertical;outline:none;"></textarea>
+        <textarea id="batch-urls" rows="5" placeholder="https://www.cagematch.net/?id=111&nr=134917 9.5&#10;https://www.cagematch.net/?id=111&nr=69051 8.25&#10;https://www.cagematch.net/?id=111&nr=12345" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:monospace;font-size:.78rem;padding:8px;border-radius:4px;resize:vertical;outline:none;"></textarea>
         <div style="display:flex;gap:10px;align-items:center;">
           <button class="btn btn-primary" id="batch-import-btn" onclick="runBatchURLImport()">&#8595; Import URLs</button>
           <div id="batch-import-status" style="font-size:.78rem;color:var(--text3);"></div>
@@ -1553,68 +1554,6 @@ function getTabName(year){
   if(year>=1990)return'90s';
   return'80s';
 }
-async function runEventCardImport(){
-  const url=(document.getElementById('event-card-url')||{value:''}).value.trim();
-  const year=(document.getElementById('event-card-year')||{value:''}).value.trim();
-  if(!url){toast('Paste an event card URL first',true);return;}
-  if(!year||year.length!==4){toast('Enter a valid year',true);return;}
-  const gasUrl=getSheetURL();
-  if(!gasUrl){toast('Set your Apps Script URL in the Auto-Fill section first',true);return;}
-  const statusEl=document.getElementById('event-import-status');
-  const btn=document.getElementById('event-import-btn');
-  if(statusEl){statusEl.style.display='block';statusEl.style.color='var(--text2)';statusEl.innerHTML='&#127915; Fetching event card&hellip;<br><span style="color:var(--text3);font-size:.78rem;">Parsing all matches. Please wait.</span>';}
-  if(btn){btn.disabled=true;btn.textContent='Importing…';}
-  try{
-    const data=await gasGet('importEvent',{url,year});
-    if(!data.matches||!data.matches.length){
-      if(statusEl){statusEl.style.color='var(--accent)';statusEl.innerHTML='<strong>No matches found.</strong> Make sure URL ends with &amp;page=3.';}
-      return;
-    }
-    const existing=loadMatches();
-    const existingUrls=new Set(existing.map(m=>m.matchUrl).filter(Boolean));
-    const fresh=data.matches.filter(m=>!existingUrls.has(m.matchUrl));
-    const dupes=data.matches.length-fresh.length;
-    const yr=parseInt(year)||new Date().getFullYear();
-    const withIds=fresh.map(m=>({
-      id:'ev_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
-      matchUrl:   m.matchUrl    ||'',
-      name:       m.name        ||'',
-      promoFull:  m.promoFull   ||'',
-      promoAbbr:  m.promoAbbr   ||'',
-      event:      m.event       ||'',
-      eventUrl:   m.eventUrl    ||'',
-      date:       m.date        ||'',
-      matchType:  m.matchType   ||'',
-      championship:m.championship||'',
-      champion:   m.champion    ||'',
-      winner:     m.winner      ||'',
-      titleChange:!!m.titleChange,
-      rating:     m.rating      ||'',
-      tenPlus:    !!m.tenPlus,
-      sawLive:    !!m.sawLive,
-      rewatch:    !!m.rewatch,
-      score:      m.score       ||'',
-      value:      m.value       ||'',
-      _sheetName: getTabName(yr)
-    }));
-    saveMatches([...withIds,...existing]);
-    renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
-    const tc=fresh.filter(m=>m.titleChange).length;
-    if(statusEl){
-      statusEl.style.color='var(--green)';
-      statusEl.innerHTML='<strong style="color:var(--text)">'+esc(data.eventName||'Event')+'</strong><br>'+
-        '✓ '+fresh.length+' match'+(fresh.length!==1?'es':'')+' imported'+
-        (dupes?' &nbsp;&middot;&nbsp; ⦸ '+dupes+' duplicate'+(dupes!==1?'s':'')+' skipped':'')+
-        (tc?' &nbsp;&middot;&nbsp; &#127942; '+tc+' title change'+(tc!==1?'s':''):'')+
-        '<br><span style="color:var(--text3);font-size:.78rem;">Check All Matches to review.</span>';
-    }
-    toast(fresh.length+' matches imported');
-  }catch(e){
-    if(statusEl){statusEl.style.color='var(--red)';statusEl.innerHTML='<strong>✗ Import failed:</strong> '+esc(e.message);}
-    toast('Event import failed: '+e.message,true);
-  }
-  if(btn){btn.disabled=false;btn.innerHTML='&#127915; Import Event';}
-}
 function exportCSV(){
   const matches=loadMatches();if(!matches.length){toast('No matches to export',true);return;}
   const headers=['ID','MatchURL','Name','PromoFull','PromoAbbr','Event','Date','MatchType','Championship','Champion','Winner','TitleChange','Rating','10Plus','SawLive','Rewatch','Score','Value'];
@@ -1826,10 +1765,145 @@ async function runSync(){
 
 
 
+let _pendingEventMatches=[];
+
+async function fetchEventCardPreview(){
+  const url=(document.getElementById('event-card-url')||{value:''}).value.trim();
+  const year=(document.getElementById('event-card-year')||{value:''}).value.trim();
+  if(!url){toast('Paste an event card URL first',true);return;}
+  if(!year||year.length!==4){toast('Enter a valid year',true);return;}
+  const gasUrl=getSheetURL();
+  if(!gasUrl){toast('Set your Apps Script URL in the Auto-Fill section first',true);return;}
+  const statusEl=document.getElementById('event-import-status');
+  const previewEl=document.getElementById('event-preview');
+  const btn=document.getElementById('event-import-btn');
+  if(statusEl){statusEl.style.display='block';statusEl.style.color='var(--text2)';statusEl.innerHTML='&#127915; Fetching event card&hellip;<br><span style="color:var(--text3);font-size:.78rem;">Parsing all matches. Please wait.</span>';}
+  if(previewEl)previewEl.style.display='none';
+  if(btn){btn.disabled=true;btn.textContent='Fetching…';}
+  try{
+    const data=await gasGet('importEvent',{url,year});
+    if(!data.matches||!data.matches.length){
+      if(statusEl){statusEl.style.color='var(--accent)';statusEl.innerHTML='<strong>No matches found.</strong> Make sure URL ends with &amp;page=3.';}
+      if(btn){btn.disabled=false;btn.innerHTML='&#127915; Fetch Event';}
+      return;
+    }
+    const existing=loadMatches();
+    const existingUrls=new Set(existing.map(m=>m.matchUrl).filter(Boolean));
+    const fresh=data.matches.filter(m=>!existingUrls.has(m.matchUrl));
+    const dupes=data.matches.length-fresh.length;
+
+    if(!fresh.length){
+      if(statusEl){statusEl.style.color='var(--text3)';statusEl.innerHTML='All '+data.matches.length+' matches already imported.';}
+      if(btn){btn.disabled=false;btn.innerHTML='&#127915; Fetch Event';}
+      return;
+    }
+
+    _pendingEventMatches=fresh;
+
+    // Build preview table
+    let html='<div style="margin-top:12px;border:1px solid var(--border);border-radius:6px;overflow:hidden;">';
+    html+='<div style="background:var(--bg3);padding:8px 12px;font-family:\'Barlow Condensed\',sans-serif;font-weight:700;font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);display:flex;justify-content:space-between;align-items:center;">';
+    html+='<span>'+esc(data.eventName||'Event')+' — '+fresh.length+' new match'+(fresh.length!==1?'es':'')+(dupes?' ('+dupes+' duplicate'+(dupes!==1?'s':'')+' skipped)':'')+'</span>';
+    html+='<span style="font-size:.75rem;font-weight:400;text-transform:none;color:var(--text3);">Add ratings below, then confirm</span>';
+    html+='</div>';
+
+    fresh.forEach((m,i)=>{
+      const tc=m.titleChange?'<span style="color:var(--accent);font-weight:700;margin-left:4px;">TITLE CHANGE</span>':'';
+      const champ=m.championship?'<span class="champ-badge" style="font-size:.7rem;margin-left:4px;">'+esc(m.championship)+'</span>':'';
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg2);flex-wrap:wrap;">';
+      html+='<span style="flex:1;min-width:0;font-size:.82rem;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;">'+esc(m.name||'')+tc+champ+'</span>';
+      html+='<span style="font-size:.72rem;color:var(--text3);white-space:nowrap;">'+(m.score?'CM:'+m.score:'')+(m.value?' WON:'+m.value:'')+'</span>';
+      html+='<input type="number" id="ev-rating-'+i+'" min="0" max="10" step="0.25" placeholder="—" style="width:60px;text-align:center;background:var(--bg4);border:1px solid var(--border2);color:var(--accent);font-family:\'JetBrains Mono\',monospace;font-weight:700;font-size:.85rem;padding:4px 6px;border-radius:3px;outline:none;"/>';
+      html+='</div>';
+    });
+
+    html+='<div style="padding:10px 12px;background:var(--bg3);display:flex;gap:8px;flex-wrap:wrap;align-items:center;">';
+    html+='<button class="btn btn-primary" onclick="confirmEventCardImport()">✓ Import '+fresh.length+' Match'+(fresh.length!==1?'es':'')+'</button>';
+    html+='<button class="btn btn-secondary" onclick="cancelEventCardPreview()">Cancel</button>';
+    html+='<span style="font-size:.75rem;color:var(--text3);margin-left:auto;">Blank ratings = no rating</span>';
+    html+='</div></div>';
+
+    if(previewEl){previewEl.innerHTML=html;previewEl.style.display='block';}
+    if(statusEl)statusEl.style.display='none';
+  }catch(e){
+    if(statusEl){statusEl.style.color='var(--red)';statusEl.innerHTML='<strong>✗ Fetch failed:</strong> '+esc(e.message);}
+    toast('Event fetch failed: '+e.message,true);
+  }
+  if(btn){btn.disabled=false;btn.innerHTML='&#127915; Fetch Event';}
+}
+
+function confirmEventCardImport(){
+  const year=(document.getElementById('event-card-year')||{value:''}).value.trim();
+  const yr=parseInt(year)||new Date().getFullYear();
+  const existing=loadMatches();
+
+  const withIds=_pendingEventMatches.map((m,i)=>{
+    const ratingInput=document.getElementById('ev-rating-'+i);
+    const userRating=ratingInput?ratingInput.value.trim():'';
+    return{
+      id:'ev_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+      matchUrl:   m.matchUrl    ||'',
+      name:       m.name        ||'',
+      promoFull:  m.promoFull   ||'',
+      promoAbbr:  m.promoAbbr   ||'',
+      event:      m.event       ||'',
+      eventUrl:   m.eventUrl    ||'',
+      date:       m.date        ||'',
+      matchType:  m.matchType   ||'',
+      championship:m.championship||'',
+      champion:   m.champion    ||'',
+      winner:     m.winner      ||'',
+      titleChange:!!m.titleChange,
+      rating:     userRating||'',
+      tenPlus:    !!m.tenPlus,
+      sawLive:    !!m.sawLive,
+      rewatch:    !!m.rewatch,
+      score:      m.score       ||'',
+      value:      m.value       ||'',
+      _sheetName: getTabName(yr)
+    };
+  });
+
+  saveMatches([...withIds,...existing]);
+  renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
+
+  const rated=withIds.filter(m=>m.rating).length;
+  const tc=withIds.filter(m=>m.titleChange).length;
+  const statusEl=document.getElementById('event-import-status');
+  const previewEl=document.getElementById('event-preview');
+  if(previewEl)previewEl.style.display='none';
+  if(statusEl){
+    statusEl.style.display='block';statusEl.style.color='var(--green)';
+    statusEl.innerHTML='✓ '+withIds.length+' match'+(withIds.length!==1?'es':'')+' imported'+
+      (rated?' &middot; '+rated+' rated':'')+
+      (tc?' &middot; &#127942; '+tc+' title change'+(tc!==1?'s':''):'')+
+      '<br><span style="color:var(--text3);font-size:.78rem;">Check Dashboard to review.</span>';
+  }
+  toast(withIds.length+' matches imported'+(rated?' ('+rated+' rated)':''));
+  _pendingEventMatches=[];
+}
+
+function cancelEventCardPreview(){
+  const previewEl=document.getElementById('event-preview');
+  if(previewEl){previewEl.style.display='none';previewEl.innerHTML='';}
+  const statusEl=document.getElementById('event-import-status');
+  if(statusEl)statusEl.style.display='none';
+  _pendingEventMatches=[];
+}
+
 async function runBatchURLImport(){
   const raw=(document.getElementById('batch-urls')||{value:''}).value;
-  const urls=raw.replace(/\r/g,'').split('\n').join(',').split(',').map(u=>u.trim()).filter(u=>u.startsWith('http'));
-  if(!urls.length){toast('Paste at least one match URL',true);return;}
+  // Parse each line: "URL" or "URL RATING"
+  const entries=raw.replace(/\r/g,'').split('\n').map(line=>{
+    const trimmed=line.trim();
+    if(!trimmed)return null;
+    const parts=trimmed.split(/\s+/);
+    const url=parts[0];
+    const rating=parts[1]?parseFloat(parts[1]):NaN;
+    if(!url.startsWith('http'))return null;
+    return{url,rating:isNaN(rating)?'':String(rating)};
+  }).filter(Boolean);
+  if(!entries.length){toast('Paste at least one match URL',true);return;}
   const gasUrl=getSheetURL();
   if(!gasUrl){toast('Set your Apps Script URL in the Auto-Fill section first',true);return;}
   const btn=document.getElementById('batch-import-btn');
@@ -1839,9 +1913,9 @@ async function runBatchURLImport(){
   const existing=loadMatches();
   const existingUrls=new Set(existing.map(m=>m.matchUrl).filter(Boolean));
   const newMatches=[...existing];
-  for(let i=0;i<urls.length;i++){
-    const url=urls[i];
-    if(statusEl) statusEl.textContent=`Fetching ${i+1}/${urls.length}…`;
+  for(let i=0;i<entries.length;i++){
+    const{url,rating:userRating}=entries[i];
+    if(statusEl) statusEl.textContent=`Fetching ${i+1}/${entries.length}…`;
     if(existingUrls.has(url)){skipped++;continue;}
     try{
       const data=await gasGet('fetchMatch',{url});
@@ -1854,14 +1928,14 @@ async function runBatchURLImport(){
         promoFull:   data.promoFull   ||'',
         promoAbbr:   data.promoAbbr   ||'',
         event:       data.event       ||'',
-      eventUrl:    data.eventUrl    ||'',
+        eventUrl:    data.eventUrl    ||'',
         date:        data.date        ||'',
         matchType:   data.matchType   ||'',
         championship:data.championship||'',
         champion:    data.champion    ||'',
         winner:      data.winner      ||'',
         titleChange: !!data.titleChange,
-        rating:      data.rating      ||'',
+        rating:      userRating||data.rating||'',
         tenPlus:     !!data.tenPlus,
         sawLive:     !!data.sawLive,
         rewatch:     !!data.rewatch,
@@ -1871,9 +1945,8 @@ async function runBatchURLImport(){
       });
       existingUrls.add(url);
       imported++;
-    }catch(e){failed++;Logger&&Logger.log&&Logger.log(e);}
-    // Small delay to avoid rate limiting
-    if(i<urls.length-1) await new Promise(r=>setTimeout(r,300));
+    }catch(e){failed++;}
+    if(i<entries.length-1) await new Promise(r=>setTimeout(r,300));
   }
   saveMatches(newMatches);
   renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
