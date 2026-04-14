@@ -1771,7 +1771,7 @@ async function runPushOnly(){
     const local=loadMatches();
     if(!local.length){setSyncStatus('No local matches to push.','var(--text3)');return;}
     // Send in batches of 50 to avoid payload limits
-    const batchSize=50;
+    const batchSize=200;
     let sent=0;
     for(let i=0;i<local.length;i+=batchSize){
       const batch=local.slice(i,i+batchSize);
@@ -1801,7 +1801,7 @@ async function runSync(){
 
     // Step 2: Push all merged matches back
     const all=result.merged;
-    const batchSize=50;
+    const batchSize=200;
     let sent=0;
     for(let i=0;i<all.length;i+=batchSize){
       const batch=all.slice(i,i+batchSize);
