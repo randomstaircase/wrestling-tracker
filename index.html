@@ -463,7 +463,7 @@ document.getElementById('lock-pw').addEventListener('keydown',function(e){
 
     <div class="export-section edit-only">
       <h3>&#127915; Event Card Import</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste a cagematch event card URL (ending in page=3). Fetches all matches for preview — add ratings before importing. Auto-detects <strong style="color:var(--text)">TITLE CHANGE !!!</strong></p>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste a cagematch event card URL (ending in page=3) to import all matches from a show at once. Requires Apps Script URL below. Auto-detects <strong style="color:var(--text)">TITLE CHANGE !!!</strong></p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;">
         <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:6px;">
           <label class="form-label">Event Card URL</label>
@@ -473,17 +473,16 @@ document.getElementById('lock-pw').addEventListener('keydown',function(e){
           <label class="form-label">Year</label>
           <input type="text" id="event-card-year" placeholder="2026" maxlength="4" style="width:80px;text-align:center;" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,4)"/>
         </div>
-        <button class="btn btn-primary" id="event-import-btn" onclick="fetchEventCardPreview()">&#127915; Fetch Event</button>
+        <button class="btn btn-primary" id="event-import-btn" onclick="runEventCardImport()">&#127915; Import Event</button>
       </div>
       <div id="event-import-status" style="display:none;background:var(--bg3);border-radius:4px;padding:10px 14px;font-size:.82rem;line-height:1.8;"></div>
-      <div id="event-preview" style="display:none;"></div>
     </div>
 
     <div class="export-section edit-only">
       <h3>&#128279; Individual Match Import</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste one or more cagematch match URLs (one per line). Optionally add a rating after a space. Requires Apps Script URL below.</p>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Paste one or more cagematch match URLs (one per line). Optionally add a rating and flags after a space:<br><code style="font-size:.78rem;background:var(--bg4);padding:1px 5px;border-radius:3px;">URL 9.5 rewatch</code> &nbsp; <code style="font-size:.78rem;background:var(--bg4);padding:1px 5px;border-radius:3px;">URL 8 saw</code> &nbsp; <code style="font-size:.78rem;background:var(--bg4);padding:1px 5px;border-radius:3px;">URL 10 +</code> &nbsp; <code style="font-size:.78rem;background:var(--bg4);padding:1px 5px;border-radius:3px;">URL saw rewatch</code></p>
       <div style="display:flex;flex-direction:column;gap:8px;">
-        <textarea id="batch-urls" rows="5" placeholder="https://www.cagematch.net/?id=111&nr=134917 9.5&#10;https://www.cagematch.net/?id=111&nr=69051 8.25&#10;https://www.cagematch.net/?id=111&nr=12345" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:monospace;font-size:.78rem;padding:8px;border-radius:4px;resize:vertical;outline:none;"></textarea>
+        <textarea id="batch-urls" rows="5" placeholder="https://www.cagematch.net/?id=111&nr=134917 9.5 rewatch&#10;https://www.cagematch.net/?id=111&nr=69051 saw&#10;https://www.cagematch.net/?id=111&nr=106610" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:monospace;font-size:.78rem;padding:8px;border-radius:4px;resize:vertical;outline:none;"></textarea>
         <div style="display:flex;gap:10px;align-items:center;">
           <button class="btn btn-primary" id="batch-import-btn" onclick="runBatchURLImport()">&#8595; Import URLs</button>
           <div id="batch-import-status" style="font-size:.78rem;color:var(--text3);"></div>
@@ -516,30 +515,32 @@ document.getElementById('lock-pw').addEventListener('keydown',function(e){
       </div>
     </div>
 
-    <div class="export-section edit-only">
-      <h3>&#128259; Refresh from CageMatch</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Re-fetch match data from CageMatch to update fields like match type, championship, winner, scores. Your personal ratings, 10+, saw live, and rewatch flags are preserved.</p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;">
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <label class="form-label">Year</label>
-          <select id="refresh-year" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;min-width:100px;">
-            <option value="">All Years</option>
-          </select>
+    <div class="export-section">
+      <h3>&#128274; Password Protection</h3>
+      <p style="color:var(--text2);font-size:.85rem;margin-bottom:14px;">Generate a password hash, then paste it into the <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;">EMBEDDED_PW</code> constant in the HTML file and push to GitHub.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px;">
+          <label class="form-label">Password</label>
+          <input type="text" id="set-pw-input" placeholder="Type your desired password" autocomplete="off"/>
         </div>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <label class="form-label">Promotion</label>
-          <select id="refresh-promo" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:7px 12px;border-radius:4px;outline:none;min-width:140px;">
-            <option value="">All Promotions</option>
-          </select>
-        </div>
-        <button class="btn btn-primary" id="refresh-btn" onclick="runCageMatchRefresh()">&#128259; Refresh</button>
+        <button class="btn btn-secondary" onclick="setPassword()">Generate Hash</button>
       </div>
-      <div id="refresh-status" style="font-size:.82rem;color:var(--text3);margin-top:6px;min-height:20px;line-height:1.6;"></div>
+      <div id="pw-status" style="font-size:.78rem;color:var(--text3);margin-top:8px;min-height:16px;"></div>
+    </div>
+
+    <div class="export-section edit-only">
+      <h3>&#9889; Auto-Fill (CageMatch)</h3>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:10px;">Auto-Fill and Event Card Import require a Google Apps Script Web App. Set the URL once — it handles both features.</p>
+      <div class="sheets-url-row">
+        <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/..."/>
+        <button class="btn btn-secondary" onclick="saveSheetURL()">Save URL</button>
+      </div>
+      <div id="autofill-status" style="font-size:.78rem;color:var(--text3);margin-top:6px;min-height:16px;"></div>
     </div>
 
     <div class="export-section">
       <h3>&#128260; Sync</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Merge local matches with your Google Sheet. Pulls new matches from the Sheet, then pushes any local-only matches back. Uses the Apps Script URL below.</p>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Merge local matches with your Google Sheet. Pulls new matches from the Sheet, then pushes any local-only matches back. Uses the same Apps Script URL above.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
         <button class="btn btn-primary" id="sync-btn" onclick="runSync()">&#128260; Sync Now</button>
         <button class="btn btn-secondary" onclick="runPullOnly()">&#8595; Pull Only</button>
@@ -588,29 +589,6 @@ document.getElementById('lock-pw').addEventListener('keydown',function(e){
       </div>
     </div>
 
-    <div class="export-section">
-      <h3>&#128274; Password Protection</h3>
-      <p style="color:var(--text2);font-size:.85rem;margin-bottom:14px;">Generate a password hash, then paste it into the <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;">EMBEDDED_PW</code> constant in the HTML file and push to GitHub.</p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-        <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px;">
-          <label class="form-label">Password</label>
-          <input type="text" id="set-pw-input" placeholder="Type your desired password" autocomplete="off"/>
-        </div>
-        <button class="btn btn-secondary" onclick="setPassword()">Generate Hash</button>
-      </div>
-      <div id="pw-status" style="font-size:.78rem;color:var(--text3);margin-top:8px;min-height:16px;"></div>
-    </div>
-
-    <div class="export-section edit-only">
-      <h3>&#9889; Auto-Fill (CageMatch)</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:10px;">Auto-Fill, Event Card Import, Refresh, and Sync all require a Google Apps Script Web App URL. Set it once here.</p>
-      <div class="sheets-url-row">
-        <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/..."/>
-        <button class="btn btn-secondary" onclick="saveSheetURL()">Save URL</button>
-      </div>
-      <div id="autofill-status" style="font-size:.78rem;color:var(--text3);margin-top:6px;min-height:16px;"></div>
-    </div>
-
     <div class="export-section edit-only">
       <h3 style="color:var(--red);">&#9888; Danger Zone</h3>
       <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Delete all locally stored match data. Cannot be undone — download a JSON backup first.</p>
@@ -637,9 +615,9 @@ const STORAGE_KEY='matches_2026',PROMO_KEY='promotions_2026';
 
 function getTabName(year){
   const y=parseInt(year);if(isNaN(y))return String(year);
-  if(y>=2025)return String(y);if(y>=2020)return'2020s';if(y>=2010)return'10s';
-  if(y>=2000)return'00s';if(y>=1990)return'90s';if(y>=1980)return'80s';
-  if(y>=1970)return'70s';if(y>=1960)return'60s';
+  if(y>=2025)return String(y);if(y>=2020)return'2020s';if(y>=2010)return'2010s';
+  if(y>=2000)return'2000s';if(y>=1990)return'1990s';if(y>=1980)return'1980s';
+  if(y>=1970)return'1970s';if(y>=1960)return'1960s';
   return String(Math.floor(y/10)*10)+'s';
 }
 
@@ -648,7 +626,6 @@ const DEFAULT_PROMOS=[
   ["New Japan Pro Wrestling","NJPW"],["Impact Wrestling","IMPACT"],["Ring of Honor","ROH"],
   ["Game Changer Wrestling","GCW"],["Pro Wrestling Guerrilla","PWG"],["Major League Wrestling","MLW"],
   ["National Wrestling Alliance","NWA"],["Combat Zone Wrestling","CZW"],["House of Glory","HOG"],
-  ["NXT","NXT"],
   ["Beyond Wrestling","Beyond"],["Tokyo Joshi Pro-Wrestling","TJPW"],
   ["Sendai Girls' Pro Wrestling","Sendai Girls"],["SEAdLINNNG","SEAdLINNNG"],["Sareee-ISM","Sareee-ISM"],
   ["Consejo Mundial de Lucha Libre","CMLL"],["Revolution Pro Wrestling","RevPro"],
@@ -681,25 +658,6 @@ function rowColorClass(m){
   return'';
 }
 
-/* Override promotion based on event name — e.g. NXT events filed under WWE should be NXT */
-function applyPromoOverrides(m){
-  if(!m.event)return m;
-  const ev=m.event.toUpperCase();
-  // NXT UK must be checked before NXT (more specific match first)
-  if(/\bNXT\s*UK\b/.test(ev)){
-    m.promoAbbr='NXT UK';
-    m.promoFull='NXT UK';
-  } else if(/\bNXT\b/.test(ev)){
-    m.promoAbbr='NXT';
-    m.promoFull='NXT';
-  }
-  if(/\b205\s*LIVE\b/.test(ev)){
-    m.promoAbbr='205 Live';
-    m.promoFull='205 Live';
-  }
-  return m;
-}
-
 function switchPanel(id){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
@@ -714,7 +672,7 @@ function switchPanel(id){
   if(id==='all'){populateSharedFilterOptions();updateFilterHighlights();updateSharedChips();renderAll();}
   if(id==='shows'){populateShowsFilters();renderShows();}
   if(id==='promotions')renderPromos();
-  if(id==='export'){renderPromos();populateRefreshDropdowns();}
+  if(id==='export'){renderPromos();}
   if(id==='add'){populatePromoDropdowns();setEditingId(null);}
 }
 
@@ -939,7 +897,13 @@ function buildRows(arr,tbody,showActions=true){
 
 const sharedFilters={search:'',year:'',promo:'',champ:'',rating:'',ratingSrc:'any',titleOnly:false};
 function getYearFromDate(d){if(!d)return'';if(d.includes('-'))return d.split('-')[0];if(d.includes('/'))return d.split('/')[2]||'';return'';}
-function getMatchTab(m){if(m._sheetName&&!/^\d{4}$/.test(m._sheetName))return m._sheetName;const y=getYearFromDate(m.date);if(!y)return m._sheetName||'';return getTabName(parseInt(y));}
+function getMatchTab(m){
+  // Always derive from date if available — handles migration from old tab names (10s→2010s etc.)
+  const y=getYearFromDate(m.date);
+  if(y) return getTabName(parseInt(y));
+  // Fall back to stored sheet name
+  return m._sheetName||'';
+}
 
 function filterMatches(arr,overrides){
   const f=Object.assign({},sharedFilters,overrides||{});
@@ -1404,8 +1368,6 @@ async function fetchMatchData(){
     if(data.eventUrl)document.getElementById('f-event-url').value=data.eventUrl;
     if(data.score)document.getElementById('f-score').value=data.score;
     if(data.value)document.getElementById('f-value').value=data.value;
-    // Apply promo overrides (e.g. NXT events)
-    applyPromoOverrides(data);
     // Replace promos with auto-filled values (user can add more via Select panel)
     if(data.promoFull||data.promoAbbr) setSelectedPromos(data.promoFull||'',data.promoAbbr||'');
     const filled=[data.name&&'wrestlers',data.promoFull&&'promotion',data.event&&'event',data.date&&'date',data.matchType&&'match type',data.championship&&'championship',data.score&&'score'].filter(Boolean);
@@ -1592,10 +1554,127 @@ function importJSON(){
 function getTabName(year){
   if(year>=2025)return String(year);
   if(year>=2020)return'2020s';
-  if(year>=2010)return'10s';
-  if(year>=2000)return'00s';
-  if(year>=1990)return'90s';
-  return'80s';
+  if(year>=2010)return'2010s';
+  if(year>=2000)return'2000s';
+  if(year>=1990)return'1990s';
+  return'1980s';
+}
+let _pendingEventMatches=null;
+let _pendingEventMeta=null;
+async function runEventCardImport(){
+  const url=(document.getElementById('event-card-url')||{value:''}).value.trim();
+  const year=(document.getElementById('event-card-year')||{value:''}).value.trim();
+  if(!url){toast('Paste an event card URL first',true);return;}
+  if(!year||year.length!==4){toast('Enter a valid year',true);return;}
+  const gasUrl=getSheetURL();
+  if(!gasUrl){toast('Set your Apps Script URL in the Auto-Fill section first',true);return;}
+  const statusEl=document.getElementById('event-import-status');
+  const btn=document.getElementById('event-import-btn');
+  if(statusEl){statusEl.style.display='block';statusEl.style.color='var(--text2)';statusEl.innerHTML='&#127915; Fetching event card&hellip;<br><span style="color:var(--text3);font-size:.78rem;">Parsing all matches. Please wait.</span>';}
+  if(btn){btn.disabled=true;btn.textContent='Importing…';}
+  try{
+    const data=await gasGet('importEvent',{url,year});
+    if(!data.matches||!data.matches.length){
+      if(statusEl){statusEl.style.color='var(--accent)';statusEl.innerHTML='<strong>No matches found.</strong> Make sure URL ends with &amp;page=3.';}
+      if(btn){btn.disabled=false;btn.innerHTML='&#127915; Import Event';}
+      return;
+    }
+    const existing=loadMatches();
+    const existingUrls=new Set(existing.map(m=>m.matchUrl).filter(Boolean));
+    const fresh=data.matches.filter(m=>!existingUrls.has(m.matchUrl));
+    const dupes=data.matches.length-fresh.length;
+    if(!fresh.length){
+      if(statusEl){statusEl.style.color='var(--text3)';statusEl.innerHTML='All '+dupes+' matches already imported.';}
+      if(btn){btn.disabled=false;btn.innerHTML='&#127915; Import Event';}
+      return;
+    }
+    // Store pending data and show preview
+    _pendingEventMatches=fresh;
+    _pendingEventMeta={year,eventName:data.eventName||'Event',dupes};
+    // Build preview UI
+    let previewHtml='<div style="margin-bottom:10px;"><strong style="color:var(--text);">'+esc(data.eventName||'Event')+'</strong>';
+    if(dupes) previewHtml+=' &nbsp;<span style="color:var(--text3);font-size:.78rem;">'+dupes+' duplicate'+(dupes!==1?'s':'')+' skipped</span>';
+    previewHtml+='</div>';
+    previewHtml+='<div style="display:flex;gap:8px;margin-bottom:8px;"><button class="btn btn-secondary" style="font-size:.72rem;padding:3px 10px;" onclick="toggleAllEventMatches(true)">Select All</button><button class="btn btn-secondary" style="font-size:.72rem;padding:3px 10px;" onclick="toggleAllEventMatches(false)">Deselect All</button></div>';
+    previewHtml+='<div style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;">';
+    fresh.forEach((m,i)=>{
+      const tc=m.titleChange?'<span style="color:var(--accent);font-weight:700;font-size:.72rem;margin-left:4px;">TITLE CHANGE</span>':'';
+      const champ=m.championship?'<span class="champ-badge" style="font-size:.68rem;margin-left:4px;">'+esc(m.championship)+'</span>':'';
+      const score=m.score?'<span style="color:var(--text3);font-size:.72rem;margin-left:4px;">CM '+m.score+'</span>':'';
+      const winner=m.winner?'<span style="color:var(--text3);font-size:.72rem;margin-left:4px;">W: '+esc(m.winner)+'</span>':'';
+      previewHtml+='<label style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;font-size:.82rem;color:var(--text);" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'\'">';
+      previewHtml+='<input type="checkbox" checked id="ev-match-'+i+'" style="margin-top:3px;accent-color:var(--accent);flex-shrink:0;width:16px;height:16px;"/>';
+      previewHtml+='<div style="min-width:0;"><div style="font-weight:600;">'+esc(m.name||'—')+'</div>';
+      previewHtml+='<div style="font-size:.72rem;color:var(--text3);display:flex;flex-wrap:wrap;gap:4px;">'+
+        (m.matchType?'<span>'+esc(m.matchType)+'</span>':'')+champ+winner+tc+score+'</div></div></label>';
+    });
+    previewHtml+='</div>';
+    previewHtml+='<div style="display:flex;gap:10px;margin-top:12px;"><button class="btn btn-primary" onclick="confirmEventImport()">&#127915; Import Selected</button><button class="btn btn-secondary" onclick="cancelEventImport()">Cancel</button></div>';
+    if(statusEl){statusEl.style.color='var(--text)';statusEl.innerHTML=previewHtml;}
+  }catch(e){
+    if(statusEl){statusEl.style.color='var(--red)';statusEl.innerHTML='<strong>&#10007; Import failed:</strong> '+esc(e.message);}
+    toast('Event import failed: '+e.message,true);
+  }
+  if(btn){btn.disabled=false;btn.innerHTML='&#127915; Import Event';}
+}
+function toggleAllEventMatches(state){
+  if(!_pendingEventMatches) return;
+  for(let i=0;i<_pendingEventMatches.length;i++){
+    const cb=document.getElementById('ev-match-'+i);
+    if(cb) cb.checked=state;
+  }
+}
+function cancelEventImport(){
+  _pendingEventMatches=null;_pendingEventMeta=null;
+  const statusEl=document.getElementById('event-import-status');
+  if(statusEl){statusEl.style.display='none';statusEl.innerHTML='';}
+}
+function confirmEventImport(){
+  if(!_pendingEventMatches||!_pendingEventMeta) return;
+  const yr=parseInt(_pendingEventMeta.year)||new Date().getFullYear();
+  const selected=[];
+  for(let i=0;i<_pendingEventMatches.length;i++){
+    const cb=document.getElementById('ev-match-'+i);
+    if(cb&&cb.checked) selected.push(_pendingEventMatches[i]);
+  }
+  if(!selected.length){toast('No matches selected',true);return;}
+  const existing=loadMatches();
+  const withIds=selected.map(m=>({
+    id:'ev_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    matchUrl:   m.matchUrl    ||'',
+    name:       m.name        ||'',
+    promoFull:  m.promoFull   ||'',
+    promoAbbr:  m.promoAbbr   ||'',
+    event:      m.event       ||'',
+    eventUrl:   m.eventUrl    ||'',
+    date:       m.date        ||'',
+    matchType:  m.matchType   ||'',
+    championship:m.championship||'',
+    champion:   m.champion    ||'',
+    winner:     m.winner      ||'',
+    titleChange:!!m.titleChange,
+    rating:     m.rating      ||'',
+    tenPlus:    !!m.tenPlus,
+    sawLive:    !!m.sawLive,
+    rewatch:    !!m.rewatch,
+    score:      m.score       ||'',
+    value:      m.value       ||'',
+    _sheetName: getTabName(yr)
+  }));
+  saveMatches([...withIds,...existing]);
+  renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
+  const tc=selected.filter(m=>m.titleChange).length;
+  const statusEl=document.getElementById('event-import-status');
+  if(statusEl){
+    statusEl.style.color='var(--green)';
+    statusEl.innerHTML='<strong style="color:var(--text)">'+esc(_pendingEventMeta.eventName)+'</strong><br>'+
+      '&#10003; '+selected.length+' match'+(selected.length!==1?'es':'')+' imported'+
+      (_pendingEventMeta.dupes?' &nbsp;&middot;&nbsp; &#8856; '+_pendingEventMeta.dupes+' duplicate'+(_pendingEventMeta.dupes!==1?'s':'')+' skipped':'')+
+      (tc?' &nbsp;&middot;&nbsp; &#127942; '+tc+' title change'+(tc!==1?'s':''):'')+
+      '<br><span style="color:var(--text3);font-size:.78rem;">Check All Matches to review.</span>';
+  }
+  toast(selected.length+' matches imported');
+  _pendingEventMatches=null;_pendingEventMeta=null;
 }
 function exportCSV(){
   const matches=loadMatches();if(!matches.length){toast('No matches to export',true);return;}
@@ -1731,34 +1810,6 @@ function mergeMatches(local,remote){
   return{merged:Array.from(map.values()),pulled,updated};
 }
 
-async function syncPromosFromSheet(){
-  try{
-    const data=await gasGet('pullPromos');
-    if(!data||!Array.isArray(data.promos))return{pulled:0};
-    const local=loadPromos();
-    const localMap=new Map(local.map(p=>[p[0].toLowerCase(),p]));
-    let pulled=0;
-    data.promos.forEach(p=>{
-      const key=p[0].toLowerCase();
-      if(!localMap.has(key)){
-        local.push(p);
-        localMap.set(key,p);
-        pulled++;
-      }
-    });
-    if(pulled){local.sort((a,b)=>a[0].localeCompare(b[0]));savePromos(local);}
-    return{pulled};
-  }catch(e){return{pulled:0,error:e.message};}
-}
-
-async function syncPromosToSheet(){
-  try{
-    const local=loadPromos();
-    await gasPost({action:'syncPromos',promos:local});
-    return{pushed:local.length};
-  }catch(e){return{pushed:0,error:e.message};}
-}
-
 async function runPullOnly(){
   const btn=document.getElementById('sync-btn');
   setSyncStatus('Pulling from Sheet…');
@@ -1769,10 +1820,8 @@ async function runPullOnly(){
     const local=loadMatches();
     const result=mergeMatches(local,remote);
     saveMatches(result.merged);
-    // Also pull promotions
-    const promoResult=await syncPromosFromSheet();
     renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
-    setSyncStatus(`✓ Pull complete: ${result.pulled} new, ${result.updated} updated. Total: ${result.merged.length}`+(promoResult.pulled?`<br>Promotions: ${promoResult.pulled} new`:''),'var(--green)');
+    setSyncStatus(`✓ Pull complete: ${result.pulled} new, ${result.updated} updated. Total: ${result.merged.length}`,'var(--green)');
     toast(`Pulled: ${result.pulled} new, ${result.updated} updated`);
   }catch(e){setSyncStatus('✗ Pull failed: '+e.message,'var(--red)');toast('Pull failed',true);}
 }
@@ -1782,19 +1831,17 @@ async function runPushOnly(){
   try{
     const local=loadMatches();
     if(!local.length){setSyncStatus('No local matches to push.','var(--text3)');return;}
-    const batchSize=500;
+    // Send in batches of 50 to avoid payload limits
+    const batchSize=50;
     let sent=0;
     for(let i=0;i<local.length;i+=batchSize){
       const batch=local.slice(i,i+batchSize);
       setSyncStatus(`Pushing ${Math.min(i+batchSize,local.length)}/${local.length}…`);
       await gasPost({action:'sync',matches:batch});
       sent+=batch.length;
-      if(i+batchSize<local.length) await new Promise(r=>setTimeout(r,200));
+      if(i+batchSize<local.length) await new Promise(r=>setTimeout(r,500));
     }
-    // Also push promotions
-    setSyncStatus('Pushing promotions…');
-    await syncPromosToSheet();
-    setSyncStatus(`✓ Push complete: ${sent} matches + promotions sent to Sheet.`,'var(--green)');
+    setSyncStatus(`✓ Push complete: ${sent} matches sent to Sheet.`,'var(--green)');
     toast(`Pushed ${sent} matches to Sheet`);
   }catch(e){setSyncStatus('✗ Push failed: '+e.message,'var(--red)');toast('Push failed',true);}
 }
@@ -1802,35 +1849,30 @@ async function runPushOnly(){
 async function runSync(){
   const btn=document.getElementById('sync-btn');
   btn.disabled=true;btn.textContent='Syncing…';
-  setSyncStatus('Step 1/3: Pulling matches…');
+  setSyncStatus('Step 1/2: Pulling from Sheet…');
   try{
-    // Step 1: Pull matches
+    // Step 1: Pull
     const data=await gasGet('pull');
     const remote=(data&&Array.isArray(data.matches))?data.matches.map(normalizeSheetMatch):[];
     const local=loadMatches();
     const result=mergeMatches(local,remote);
     saveMatches(result.merged);
     renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
+    setSyncStatus(`Step 1/2: Pulled ${result.pulled} new, ${result.updated} updated.<br>Step 2/2: Pushing to Sheet…`);
 
-    // Step 2: Pull + push promotions
-    setSyncStatus(`Step 2/3: Syncing promotions…`);
-    const promoPull=await syncPromosFromSheet();
-    await syncPromosToSheet();
-
-    // Step 3: Push all merged matches back
-    setSyncStatus(`Step 3/3: Pushing matches…`);
+    // Step 2: Push all merged matches back
     const all=result.merged;
-    const batchSize=500;
+    const batchSize=50;
     let sent=0;
     for(let i=0;i<all.length;i+=batchSize){
       const batch=all.slice(i,i+batchSize);
-      setSyncStatus(`Step 3/3: Pushing ${Math.min(i+batchSize,all.length)}/${all.length}…`);
+      setSyncStatus(`Step 2/2: Pushing ${Math.min(i+batchSize,all.length)}/${all.length}…`);
       await gasPost({action:'sync',matches:batch});
       sent+=batch.length;
-      if(i+batchSize<all.length) await new Promise(r=>setTimeout(r,200));
+      if(i+batchSize<all.length) await new Promise(r=>setTimeout(r,500));
     }
 
-    setSyncStatus(`✓ Sync complete!<br>Pulled: ${result.pulled} new, ${result.updated} updated<br>Pushed: ${sent} matches to Sheet`+(promoPull.pulled?`<br>Promotions: ${promoPull.pulled} new`:'')+ `<br>Total: ${result.merged.length} matches`,'var(--green)');
+    setSyncStatus(`✓ Sync complete!<br>Pulled: ${result.pulled} new, ${result.updated} updated<br>Pushed: ${sent} matches to Sheet<br>Total: ${result.merged.length} matches`,'var(--green)');
     toast(`Sync done: ${result.merged.length} total matches`);
   }catch(e){
     setSyncStatus('✗ Sync failed: '+e.message,'var(--red)');
@@ -1845,244 +1887,31 @@ async function runSync(){
 
 
 
-function populateRefreshDropdowns(){
-  const matches=loadMatches();
-  // Years
-  const years=new Set();
-  matches.forEach(m=>{if(m.date){const y=m.date.split('-')[0];if(y)years.add(y);}});
-  const yearSel=document.getElementById('refresh-year');
-  if(yearSel){
-    const cur=yearSel.value;
-    yearSel.innerHTML='<option value="">All Years</option>';
-    Array.from(years).sort().reverse().forEach(y=>{yearSel.innerHTML+=`<option value="${y}">${y}</option>`;});
-    yearSel.value=cur;
-  }
-  // Promotions
-  const promos=new Set();
-  matches.forEach(m=>{
-    if(m.promoAbbr)(m.promoAbbr.split('/').map(p=>p.trim()).filter(Boolean)).forEach(p=>promos.add(p));
-  });
-  const promoSel=document.getElementById('refresh-promo');
-  if(promoSel){
-    const cur=promoSel.value;
-    promoSel.innerHTML='<option value="">All Promotions</option>';
-    Array.from(promos).sort().forEach(p=>{promoSel.innerHTML+=`<option value="${esc(p)}">${esc(p)}</option>`;});
-    promoSel.value=cur;
-  }
-}
-
-async function runCageMatchRefresh(){
-  const yearFilter=document.getElementById('refresh-year').value;
-  const promoFilter=document.getElementById('refresh-promo').value;
-  const gasUrl=getSheetURL();
-  if(!gasUrl){toast('Set your Apps Script URL first',true);return;}
-
-  const btn=document.getElementById('refresh-btn');
-  const statusEl=document.getElementById('refresh-status');
-  btn.disabled=true;btn.textContent='Refreshing…';
-
-  const allMatches=loadMatches();
-  // Filter matches to refresh
-  const toRefresh=allMatches.filter(m=>{
-    if(!m.matchUrl)return false;
-    if(yearFilter&&m.date&&!m.date.startsWith(yearFilter))return false;
-    if(promoFilter&&m.promoAbbr&&!(m.promoAbbr.split('/').map(p=>p.trim())).includes(promoFilter))return false;
-    return true;
-  });
-
-  if(!toRefresh.length){
-    if(statusEl){statusEl.textContent='No matches with URLs found for the selected filters.';statusEl.style.color='var(--text3)';}
-    btn.disabled=false;btn.innerHTML='&#128259; Refresh';
-    return;
-  }
-
-  // Personal fields to preserve
-  const personalFields=['rating','tenPlus','sawLive','rewatch'];
-
-  let refreshed=0,failed=0;
-  const matchMap=new Map(allMatches.map(m=>[m.id,m]));
-
-  for(let i=0;i<toRefresh.length;i++){
-    const m=toRefresh[i];
-    if(statusEl)statusEl.textContent=`Refreshing ${i+1}/${toRefresh.length}… (${esc(m.name||'').substring(0,40)})`;
-    try{
-      const data=await gasGet('fetchMatch',{url:m.matchUrl});
-      if(!data||!data.ok){failed++;continue;}
-      // Overwrite auto-filled fields, preserve personal ones
-      const updated=matchMap.get(m.id);
-      if(updated){
-        updated.name=data.name||updated.name;
-        updated.promoFull=data.promoFull||updated.promoFull;
-        updated.promoAbbr=data.promoAbbr||updated.promoAbbr;
-        updated.event=data.event||updated.event;
-        updated.eventUrl=data.eventUrl||updated.eventUrl;
-        updated.date=data.date||updated.date;
-        updated.matchType=data.matchType||'';
-        updated.championship=data.championship||'';
-        updated.champion=data.champion||updated.champion;
-        updated.winner=data.winner||updated.winner;
-        updated.titleChange=data.titleChange!==undefined?!!data.titleChange:updated.titleChange;
-        updated.score=data.score||updated.score;
-        updated.value=data.value||updated.value;
-        // Apply promo overrides (NXT etc)
-        applyPromoOverrides(updated);
-        refreshed++;
-      }
-    }catch(e){failed++;}
-    if(i<toRefresh.length-1) await new Promise(r=>setTimeout(r,300));
-  }
-
-  saveMatches(Array.from(matchMap.values()));
-  renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
-
-  if(statusEl){
-    statusEl.innerHTML=`✓ Refresh complete: ${refreshed} updated`+(failed?`, ${failed} failed`:'')+`<br><span style="font-size:.75rem;color:var(--text3);">Personal ratings/flags preserved. Sync to push updates to Sheet.</span>`;
-    statusEl.style.color='var(--green)';
-  }
-  toast(`Refreshed ${refreshed} matches`);
-  btn.disabled=false;btn.innerHTML='&#128259; Refresh';
-}
-
-let _pendingEventMatches=[];
-
-async function fetchEventCardPreview(){
-  const url=(document.getElementById('event-card-url')||{value:''}).value.trim();
-  const year=(document.getElementById('event-card-year')||{value:''}).value.trim();
-  if(!url){toast('Paste an event card URL first',true);return;}
-  if(!year||year.length!==4){toast('Enter a valid year',true);return;}
-  const gasUrl=getSheetURL();
-  if(!gasUrl){toast('Set your Apps Script URL in the Auto-Fill section first',true);return;}
-  const statusEl=document.getElementById('event-import-status');
-  const previewEl=document.getElementById('event-preview');
-  const btn=document.getElementById('event-import-btn');
-  if(statusEl){statusEl.style.display='block';statusEl.style.color='var(--text2)';statusEl.innerHTML='&#127915; Fetching event card&hellip;<br><span style="color:var(--text3);font-size:.78rem;">Parsing all matches. Please wait.</span>';}
-  if(previewEl)previewEl.style.display='none';
-  if(btn){btn.disabled=true;btn.textContent='Fetching…';}
-  try{
-    const data=await gasGet('importEvent',{url,year});
-    if(!data.matches||!data.matches.length){
-      if(statusEl){statusEl.style.color='var(--accent)';statusEl.innerHTML='<strong>No matches found.</strong> Make sure URL ends with &amp;page=3.';}
-      if(btn){btn.disabled=false;btn.innerHTML='&#127915; Fetch Event';}
-      return;
-    }
-    const existing=loadMatches();
-    const existingUrls=new Set(existing.map(m=>m.matchUrl).filter(Boolean));
-    const fresh=data.matches.filter(m=>!existingUrls.has(m.matchUrl));
-    const dupes=data.matches.length-fresh.length;
-
-    if(!fresh.length){
-      if(statusEl){statusEl.style.color='var(--text3)';statusEl.innerHTML='All '+data.matches.length+' matches already imported.';}
-      if(btn){btn.disabled=false;btn.innerHTML='&#127915; Fetch Event';}
-      return;
-    }
-
-    _pendingEventMatches=fresh;
-
-    // Build preview table
-    let html='<div style="margin-top:12px;border:1px solid var(--border);border-radius:6px;overflow:hidden;">';
-    html+='<div style="background:var(--bg3);padding:8px 12px;font-family:\'Barlow Condensed\',sans-serif;font-weight:700;font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);display:flex;justify-content:space-between;align-items:center;">';
-    html+='<span>'+esc(data.eventName||'Event')+' — '+fresh.length+' new match'+(fresh.length!==1?'es':'')+(dupes?' ('+dupes+' duplicate'+(dupes!==1?'s':'')+' skipped)':'')+'</span>';
-    html+='<span style="font-size:.75rem;font-weight:400;text-transform:none;color:var(--text3);">Add ratings below, then confirm</span>';
-    html+='</div>';
-
-    fresh.forEach((m,i)=>{
-      const tc=m.titleChange?'<span style="color:var(--accent);font-weight:700;margin-left:4px;">TITLE CHANGE</span>':'';
-      const champ=m.championship?'<span class="champ-badge" style="font-size:.7rem;margin-left:4px;">'+esc(m.championship)+'</span>':'';
-      html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg2);flex-wrap:wrap;">';
-      html+='<span style="flex:1;min-width:0;font-size:.82rem;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;">'+esc(m.name||'')+tc+champ+'</span>';
-      html+='<span style="font-size:.72rem;color:var(--text3);white-space:nowrap;">'+(m.score?'CM:'+m.score:'')+(m.value?' WON:'+m.value:'')+'</span>';
-      html+='<input type="number" id="ev-rating-'+i+'" min="0" max="10" step="0.25" placeholder="—" style="width:60px;text-align:center;background:var(--bg4);border:1px solid var(--border2);color:var(--accent);font-family:\'JetBrains Mono\',monospace;font-weight:700;font-size:.85rem;padding:4px 6px;border-radius:3px;outline:none;"/>';
-      html+='</div>';
-    });
-
-    html+='<div style="padding:10px 12px;background:var(--bg3);display:flex;gap:8px;flex-wrap:wrap;align-items:center;">';
-    html+='<button class="btn btn-primary" onclick="confirmEventCardImport()">✓ Import '+fresh.length+' Match'+(fresh.length!==1?'es':'')+'</button>';
-    html+='<button class="btn btn-secondary" onclick="cancelEventCardPreview()">Cancel</button>';
-    html+='<span style="font-size:.75rem;color:var(--text3);margin-left:auto;">Blank ratings = no rating</span>';
-    html+='</div></div>';
-
-    if(previewEl){previewEl.innerHTML=html;previewEl.style.display='block';}
-    if(statusEl)statusEl.style.display='none';
-  }catch(e){
-    if(statusEl){statusEl.style.color='var(--red)';statusEl.innerHTML='<strong>✗ Fetch failed:</strong> '+esc(e.message);}
-    toast('Event fetch failed: '+e.message,true);
-  }
-  if(btn){btn.disabled=false;btn.innerHTML='&#127915; Fetch Event';}
-}
-
-function confirmEventCardImport(){
-  const year=(document.getElementById('event-card-year')||{value:''}).value.trim();
-  const yr=parseInt(year)||new Date().getFullYear();
-  const existing=loadMatches();
-
-  const withIds=_pendingEventMatches.map((m,i)=>{
-    const ratingInput=document.getElementById('ev-rating-'+i);
-    const userRating=ratingInput?ratingInput.value.trim():'';
-    const match={
-      id:'ev_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
-      matchUrl:   m.matchUrl    ||'',
-      name:       m.name        ||'',
-      promoFull:  m.promoFull   ||'',
-      promoAbbr:  m.promoAbbr   ||'',
-      event:      m.event       ||'',
-      eventUrl:   m.eventUrl    ||'',
-      date:       m.date        ||'',
-      matchType:  m.matchType   ||'',
-      championship:m.championship||'',
-      champion:   m.champion    ||'',
-      winner:     m.winner      ||'',
-      titleChange:!!m.titleChange,
-      rating:     userRating||'',
-      tenPlus:    !!m.tenPlus,
-      sawLive:    !!m.sawLive,
-      rewatch:    !!m.rewatch,
-      score:      m.score       ||'',
-      value:      m.value       ||'',
-      _sheetName: getTabName(yr)
-    };
-    applyPromoOverrides(match);
-    return match;
-  });
-
-  saveMatches([...withIds,...existing]);
-  renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
-
-  const rated=withIds.filter(m=>m.rating).length;
-  const tc=withIds.filter(m=>m.titleChange).length;
-  const statusEl=document.getElementById('event-import-status');
-  const previewEl=document.getElementById('event-preview');
-  if(previewEl)previewEl.style.display='none';
-  if(statusEl){
-    statusEl.style.display='block';statusEl.style.color='var(--green)';
-    statusEl.innerHTML='✓ '+withIds.length+' match'+(withIds.length!==1?'es':'')+' imported'+
-      (rated?' &middot; '+rated+' rated':'')+
-      (tc?' &middot; &#127942; '+tc+' title change'+(tc!==1?'s':''):'')+
-      '<br><span style="color:var(--text3);font-size:.78rem;">Check Dashboard to review.</span>';
-  }
-  toast(withIds.length+' matches imported'+(rated?' ('+rated+' rated)':''));
-  _pendingEventMatches=[];
-}
-
-function cancelEventCardPreview(){
-  const previewEl=document.getElementById('event-preview');
-  if(previewEl){previewEl.style.display='none';previewEl.innerHTML='';}
-  const statusEl=document.getElementById('event-import-status');
-  if(statusEl)statusEl.style.display='none';
-  _pendingEventMatches=[];
-}
-
 async function runBatchURLImport(){
   const raw=(document.getElementById('batch-urls')||{value:''}).value;
-  // Parse each line: "URL" or "URL RATING"
-  const entries=raw.replace(/\r/g,'').split('\n').map(line=>{
-    const trimmed=line.trim();
-    if(!trimmed)return null;
-    const parts=trimmed.split(/\s+/);
-    const url=parts[0];
-    const rating=parts[1]?parseFloat(parts[1]):NaN;
-    if(!url.startsWith('http'))return null;
-    return{url,rating:isNaN(rating)?'':String(rating)};
-  }).filter(Boolean);
+  // Parse each line: URL [rating] [rewatch] [saw]
+  const lines=raw.replace(/\r/g,'').split('\n').map(l=>l.trim()).filter(Boolean);
+  const entries=[];
+  for(const line of lines){
+    const parts=line.split(/\s+/);
+    const url=parts.find(p=>p.startsWith('http'));
+    if(!url) continue;
+    let rating='';
+    let rewatch=false;
+    let sawLive=false;
+    let tenPlus=false;
+    for(const p of parts){
+      if(p===url) continue;
+      const lower=p.toLowerCase();
+      if(lower==='rewatch'||lower==='rw') rewatch=true;
+      else if(lower==='saw'||lower==='live'||lower==='sawlive') sawLive=true;
+      else if(lower==='+'||lower==='10+'||lower==='10plus'||lower==='plus') tenPlus=true;
+      else if(!isNaN(parseFloat(p))&&parseFloat(p)>=0&&parseFloat(p)<=10) rating=p;
+    }
+    // Rating of 10 or higher also sets 10+
+    if(rating&&parseFloat(rating)>=10) tenPlus=true;
+    entries.push({url,rating,rewatch,sawLive,tenPlus});
+  }
   if(!entries.length){toast('Paste at least one match URL',true);return;}
   const gasUrl=getSheetURL();
   if(!gasUrl){toast('Set your Apps Script URL in the Auto-Fill section first',true);return;}
@@ -2094,14 +1923,14 @@ async function runBatchURLImport(){
   const existingUrls=new Set(existing.map(m=>m.matchUrl).filter(Boolean));
   const newMatches=[...existing];
   for(let i=0;i<entries.length;i++){
-    const{url,rating:userRating}=entries[i];
+    const {url,rating,rewatch,sawLive,tenPlus}=entries[i];
     if(statusEl) statusEl.textContent=`Fetching ${i+1}/${entries.length}…`;
     if(existingUrls.has(url)){skipped++;continue;}
     try{
       const data=await gasGet('fetchMatch',{url});
       if(!data||!data.name){failed++;continue;}
       const yr=parseInt((data.date||'').split('-')[0])||new Date().getFullYear();
-      const match={
+      newMatches.unshift({
         id:          'batch_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
         matchUrl:    data.matchUrl    ||url,
         name:        data.name        ||'',
@@ -2115,19 +1944,17 @@ async function runBatchURLImport(){
         champion:    data.champion    ||'',
         winner:      data.winner      ||'',
         titleChange: !!data.titleChange,
-        rating:      userRating||data.rating||'',
-        tenPlus:     !!data.tenPlus,
-        sawLive:     !!data.sawLive,
-        rewatch:     !!data.rewatch,
+        rating:      rating||'',
+        tenPlus:     tenPlus,
+        sawLive:     sawLive,
+        rewatch:     rewatch,
         score:       data.score       ||'',
         value:       data.value       ||'',
         _sheetName:  getTabName(yr)
-      };
-      applyPromoOverrides(match);
-      newMatches.unshift(match);
+      });
       existingUrls.add(url);
       imported++;
-    }catch(e){failed++;}
+    }catch(e){failed++;console.error(e);}
     if(i<entries.length-1) await new Promise(r=>setTimeout(r,300));
   }
   saveMatches(newMatches);
