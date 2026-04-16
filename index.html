@@ -925,7 +925,16 @@ function buildRows(arr,tbody,showActions=true){
 
 const sharedFilters={search:'',year:'',promo:'',champ:'',rating:'',ratingSrc:'any',titleOnly:false};
 function getYearFromDate(d){if(!d)return'';if(d.includes('-'))return d.split('-')[0];if(d.includes('/'))return d.split('/')[2]||'';return'';}
-function getMatchTab(m){if(m._sheetName&&!/^\d{4}$/.test(m._sheetName))return m._sheetName;const y=getYearFromDate(m.date);if(!y)return m._sheetName||'';return getTabName(parseInt(y));}
+function getMatchTab(m){
+  // Normalize old _sheetName values (2010s→10s, 2000s→00s, etc.)
+  var sn=m._sheetName||'';
+  if(sn&&!/^\d{4}$/.test(sn)){
+    const normMap={'2010s':'10s','2000s':'00s','1990s':'90s','1980s':'80s','1970s':'70s','1960s':'60s'};
+    sn=normMap[sn]||sn;
+    return sn;
+  }
+  const y=getYearFromDate(m.date);if(!y)return sn;return getTabName(parseInt(y));
+}
 
 function filterMatches(arr,overrides){
   const f=Object.assign({},sharedFilters,overrides||{});
@@ -1573,14 +1582,6 @@ function importJSON(){
   };
   reader.readAsText(file);
 }
-function getTabName(year){
-  if(year>=2025)return String(year);
-  if(year>=2020)return'2020s';
-  if(year>=2010)return'10s';
-  if(year>=2000)return'00s';
-  if(year>=1990)return'90s';
-  return'80s';
-}
 let _pendingEventMatches=null;
 let _pendingEventMeta=null;
 async function runEventCardImport(){
@@ -1853,17 +1854,25 @@ async function runPushOnly(){
   try{
     const local=loadMatches();
     if(!local.length){setSyncStatus('No local matches to push.','var(--text3)');return;}
-    // Send in batches of 50 to avoid payload limits
-    const batchSize=50;
+    // Group matches by year tab — each tab must be sent as one complete batch
+    // because handlePush clears the tab before writing
+    const groups={};
+    local.forEach(m=>{
+      const tab=getMatchTab(m)||'2026';
+      if(!groups[tab]) groups[tab]=[];
+      groups[tab].push(m);
+    });
+    const tabs=Object.keys(groups);
     let sent=0;
-    for(let i=0;i<local.length;i+=batchSize){
-      const batch=local.slice(i,i+batchSize);
-      setSyncStatus(`Pushing ${Math.min(i+batchSize,local.length)}/${local.length}…`);
-      await gasPost({action:'push',matches:batch});
-      sent+=batch.length;
-      if(i+batchSize<local.length) await new Promise(r=>setTimeout(r,500));
+    for(let t=0;t<tabs.length;t++){
+      const tab=tabs[t];
+      const tabMatches=groups[tab];
+      setSyncStatus(`Pushing ${getTabDisplayName(tab)} (${tabMatches.length} matches)… [${t+1}/${tabs.length}]`);
+      await gasPost({action:'push',matches:tabMatches});
+      sent+=tabMatches.length;
+      if(t<tabs.length-1) await new Promise(r=>setTimeout(r,500));
     }
-    setSyncStatus(`✓ Push complete: ${sent} matches sent to Sheet.`,'var(--green)');
+    setSyncStatus(`✓ Push complete: ${sent} matches sent across ${tabs.length} tab${tabs.length!==1?'s':''}.`,'var(--green)');
     toast(`Pushed ${sent} matches to Sheet`);
   }catch(e){setSyncStatus('✗ Push failed: '+e.message,'var(--red)');toast('Push failed',true);}
 }
@@ -1949,16 +1958,23 @@ async function runSync(){
     renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
     setSyncStatus(`Step 1/2: Pulled ${result.pulled} new, ${result.updated} updated.<br>Step 2/2: Pushing to Sheet…`);
 
-    // Step 2: Push all merged matches back
+    // Step 2: Push all merged matches back — grouped by year tab
     const all=result.merged;
-    const batchSize=50;
+    const groups={};
+    all.forEach(m=>{
+      const tab=getMatchTab(m)||'2026';
+      if(!groups[tab]) groups[tab]=[];
+      groups[tab].push(m);
+    });
+    const tabs=Object.keys(groups);
     let sent=0;
-    for(let i=0;i<all.length;i+=batchSize){
-      const batch=all.slice(i,i+batchSize);
-      setSyncStatus(`Step 2/2: Pushing ${Math.min(i+batchSize,all.length)}/${all.length}…`);
-      await gasPost({action:'push',matches:batch});
-      sent+=batch.length;
-      if(i+batchSize<all.length) await new Promise(r=>setTimeout(r,500));
+    for(let t=0;t<tabs.length;t++){
+      const tab=tabs[t];
+      const tabMatches=groups[tab];
+      setSyncStatus(`Step 2/2: Pushing ${getTabDisplayName(tab)} (${tabMatches.length} matches)… [${t+1}/${tabs.length}]`);
+      await gasPost({action:'push',matches:tabMatches});
+      sent+=tabMatches.length;
+      if(t<tabs.length-1) await new Promise(r=>setTimeout(r,500));
     }
 
     setSyncStatus(`✓ Sync complete!<br>Pulled: ${result.pulled} new, ${result.updated} updated<br>Pushed: ${sent} matches to Sheet<br>Total: ${result.merged.length} matches`,'var(--green)');
