@@ -844,6 +844,15 @@ function fmtWON(v){
 }
 function fmtDate(d){if(!d)return'&mdash;';const p=d.split('-');return p.length===3?`${p[1]}/${p[2]}/${p[0]}`:d;}
 
+function cleanEventName(s){
+  if(!s) return '';
+  return s
+    .replace(/&quot;/g,'').replace(/"/g,'').replace(/\u201c/g,'').replace(/\u201d/g,'')
+    .replace(/-\s*Tag\s+(\d+)\b/gi,'- Night $1')
+    .replace(/\s{2,}/g,' ')
+    .trim();
+}
+
 function buildHead(trEl){
   trEl.innerHTML=COLS.map(c=>{let cls='';if(c.key===sortKey)cls=sortDir===1?' sort-asc':' sort-desc';return`<th onclick="sortBy('${c.key}')" id="th-${c.key}" class="${cls}">${c.label}</th>`;}).join('')+'<th>Actions</th>';
 }
@@ -1453,13 +1462,8 @@ function clearForm(){['f-url','f-name','f-event','f-event-url','f-matchtype','f-
 function saveMatch(){
   if(isViewMode){toast('View-only mode',true);return;}
   const data=getFormData();
-  // Strip quotes from event name on save
-  if(data.event){
-    data.event=data.event
-      .replace(/&quot;/g,'').replace(/"/g,'').replace(/“/g,'').replace(/”/g,'')
-      .replace(/-\s*Tag\s+(\d+)\b/gi,'- Night $1')
-      .replace(/\s{2,}/g,' ').trim();
-  }
+  // Clean event name on save
+  if(data.event) data.event=cleanEventName(data.event);
   if(!data.name){toast('Match name is required',true);return;}
   if(data.date){const y=data.date.split('-')[0];if(y)data._sheetName=getTabName(parseInt(y));}
   const matches=loadMatches();const idx=matches.findIndex(m=>m.id===editingId);
@@ -1660,9 +1664,11 @@ async function runEventCardImport(){
       const winner=m.winner?'<span style="color:var(--text3);font-size:.72rem;margin-left:4px;">W: '+esc(m.winner)+'</span>':'';
       previewHtml+='<label style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;font-size:.82rem;color:var(--text);" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'\'">';
       previewHtml+='<input type="checkbox" checked id="ev-match-'+i+'" style="margin-top:3px;accent-color:var(--accent);flex-shrink:0;width:16px;height:16px;"/>';
-      previewHtml+='<div style="min-width:0;"><div style="font-weight:600;">'+esc(m.name||'—')+'</div>';
+      previewHtml+='<div style="min-width:0;flex:1;"><div style="font-weight:600;">'+esc(m.name||'—')+'</div>';
       previewHtml+='<div style="font-size:.72rem;color:var(--text3);display:flex;flex-wrap:wrap;gap:4px;">'+
-        (m.matchType?'<span>'+esc(m.matchType)+'</span>':'')+champ+winner+tc+score+'</div></div></label>';
+        (m.matchType?'<span>'+esc(m.matchType)+'</span>':'')+champ+winner+tc+score+'</div></div>';
+      previewHtml+='<input type="number" id="ev-rating-'+i+'" min="0" max="10" step="0.25" placeholder="—" title="Rating" style="width:52px;background:var(--bg4);border:1px solid var(--border2);color:var(--accent);font-family:\'JetBrains Mono\',monospace;font-weight:700;font-size:.82rem;padding:3px 4px;border-radius:3px;text-align:center;flex-shrink:0;margin-top:1px;" onclick="event.stopPropagation()"/>';
+      previewHtml+='</label>';
     });
     previewHtml+='</div>';
     previewHtml+='<div style="display:flex;gap:10px;margin-top:12px;"><button class="btn btn-primary" onclick="confirmEventImport()">&#127915; Import Selected</button><button class="btn btn-secondary" onclick="cancelEventImport()">Cancel</button></div>';
@@ -1695,13 +1701,17 @@ function confirmEventImport(){
   }
   if(!selected.length){toast('No matches selected',true);return;}
   const existing=loadMatches();
-  const withIds=selected.map(m=>({
+  const withIds=selected.map((m,i)=>{
+    const ratingInput=document.getElementById('ev-rating-'+_pendingEventMatches.indexOf(m));
+    const ratingVal=ratingInput?ratingInput.value.trim():'';
+    const tenPlus=ratingVal&&parseFloat(ratingVal)>=10;
+    return {
     id:'ev_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
     matchUrl:   m.matchUrl    ||'',
     name:       m.name        ||'',
     promoFull:  m.promoFull   ||'',
     promoAbbr:  m.promoAbbr   ||'',
-    event:      m.event       ||'',
+    event:      cleanEventName(m.event),
     eventUrl:   m.eventUrl    ||'',
     date:       m.date        ||'',
     matchType:  m.matchType   ||'',
@@ -1709,14 +1719,14 @@ function confirmEventImport(){
     champion:   m.champion    ||'',
     winner:     m.winner      ||'',
     titleChange:!!m.titleChange,
-    rating:     m.rating      ||'',
-    tenPlus:    !!m.tenPlus,
+    rating:     ratingVal,
+    tenPlus:    tenPlus,
     sawLive:    !!m.sawLive,
     rewatch:    !!m.rewatch,
     score:      m.score       ||'',
     value:      m.value       ||'',
     _sheetName: getTabName(yr)
-  }));
+  }});
   saveMatches([...withIds,...existing]);
   renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
   const tc=selected.filter(m=>m.titleChange).length;
@@ -1829,7 +1839,7 @@ function normalizeSheetMatch(m){
   return{
     id:m.id||'',matchUrl:m.matchUrl||'',name:m.name||'',
     promoFull:m.promoFull||'',promoAbbr:m.promoAbbr||'',
-    event:(m.event||'').replace(/"/g,''),eventUrl:m.eventUrl||'',
+    event:cleanEventName(m.event),eventUrl:m.eventUrl||'',
     date:m.date||'',matchType:m.matchType||'',
     championship:m.championship||'',champion:m.champion||'',
     winner:m.winner||'',titleChange:!!m.titleChange,
@@ -1949,7 +1959,7 @@ async function runRefresh(){
         if(data.name) m.name=data.name;
         if(data.promoFull) m.promoFull=data.promoFull;
         if(data.promoAbbr) m.promoAbbr=data.promoAbbr;
-        if(data.event) m.event=data.event;
+        if(data.event) m.event=cleanEventName(data.event);
         if(data.eventUrl) m.eventUrl=data.eventUrl;
         if(data.date) m.date=data.date;
         if(data.matchType) m.matchType=data.matchType;
@@ -2074,7 +2084,7 @@ async function runBatchURLImport(){
         name:        data.name        ||'',
         promoFull:   data.promoFull   ||'',
         promoAbbr:   data.promoAbbr   ||'',
-        event:       data.event       ||'',
+        event:       cleanEventName(data.event),
         eventUrl:    data.eventUrl    ||'',
         date:        data.date        ||'',
         matchType:   data.matchType   ||'',
