@@ -1880,9 +1880,40 @@ async function runPullOnly(){
   const btn=document.getElementById('sync-btn');
   setSyncStatus('Pulling from Sheet…');
   try{
-    const data=await gasGet('pull');
-    if(!data||!Array.isArray(data.matches)){setSyncStatus('No data returned from Sheet.','var(--red)');return;}
-    const remote=data.matches.map(normalizeSheetMatch);
+    // First get stats to discover which tabs exist
+    // Then pull each tab individually to avoid timeout on large datasets
+    const stats=await gasGet('stats');
+    // Try pulling all at once first
+    setSyncStatus('Pulling all matches…');
+    let allRemote=[];
+    try{
+      const data=await gasGet('pull');
+      if(data&&Array.isArray(data.matches)) allRemote=data.matches;
+    }catch(pullErr){
+      // Full pull timed out — fall back to pulling tab by tab
+      setSyncStatus('Full pull timed out. Pulling by year tab…');
+      const local=loadMatches();
+      const tabs=[...new Set(local.map(m=>getMatchTab(m)).filter(Boolean))];
+      // Also try common years that might only exist on the sheet
+      const currentYear=new Date().getFullYear();
+      for(let y=currentYear;y>=currentYear-2;y--){
+        const tn=String(y);
+        if(!tabs.includes(tn)) tabs.unshift(tn);
+      }
+      for(let t=0;t<tabs.length;t++){
+        const tab=tabs[t];
+        setSyncStatus(`Pulling ${getTabDisplayName(tab)}… [${t+1}/${tabs.length}]`);
+        try{
+          const tabData=await gasGet('pull',{sheet:tab});
+          if(tabData&&Array.isArray(tabData.matches)) allRemote.push(...tabData.matches);
+        }catch(tabErr){
+          // Individual tab may not exist on sheet — skip
+          console.log('Pull skipped tab:',tab,tabErr.message);
+        }
+      }
+    }
+    if(!allRemote.length){setSyncStatus('No data returned from Sheet.','var(--red)');return;}
+    const remote=allRemote.map(normalizeSheetMatch);
     const local=loadMatches();
     const result=mergeMatches(local,remote);
     saveMatches(result.merged);
@@ -1992,9 +2023,30 @@ async function runSync(){
   btn.disabled=true;btn.textContent='Syncing…';
   setSyncStatus('Step 1/2: Pulling from Sheet…');
   try{
-    // Step 1: Pull
-    const data=await gasGet('pull');
-    const remote=(data&&Array.isArray(data.matches))?data.matches.map(normalizeSheetMatch):[];
+    // Step 1: Pull — try all at once, fall back to tab-by-tab
+    let allRemote=[];
+    try{
+      const data=await gasGet('pull');
+      if(data&&Array.isArray(data.matches)) allRemote=data.matches;
+    }catch(pullErr){
+      setSyncStatus('Step 1/2: Full pull timed out. Pulling by year tab…');
+      const local=loadMatches();
+      const tabs=[...new Set(local.map(m=>getMatchTab(m)).filter(Boolean))];
+      const currentYear=new Date().getFullYear();
+      for(let y=currentYear;y>=currentYear-2;y--){
+        const tn=String(y);
+        if(!tabs.includes(tn)) tabs.unshift(tn);
+      }
+      for(let t=0;t<tabs.length;t++){
+        const tab=tabs[t];
+        setSyncStatus(`Step 1/2: Pulling ${getTabDisplayName(tab)}… [${t+1}/${tabs.length}]`);
+        try{
+          const tabData=await gasGet('pull',{sheet:tab});
+          if(tabData&&Array.isArray(tabData.matches)) allRemote.push(...tabData.matches);
+        }catch(tabErr){console.log('Sync pull skipped tab:',tab);}
+      }
+    }
+    const remote=allRemote.map(normalizeSheetMatch);
     const local=loadMatches();
     const result=mergeMatches(local,remote);
     saveMatches(result.merged);
