@@ -643,12 +643,13 @@ const STORAGE_KEY='matches_2026',PROMO_KEY='promotions_2026';
 
 function getTabName(year){
   const y=parseInt(year);if(isNaN(y))return String(year);
-  if(y>=2025)return String(y);if(y>=2020)return'2020s';if(y>=2010)return'10s';
-  if(y>=2000)return'00s';if(y>=1990)return'90s';if(y>=1980)return'80s';
-  if(y>=1970)return'70s';if(y>=1960)return'60s';
+  if(y>=2025)return String(y);if(y>=2020)return'2020s';if(y>=2010)return'2010s';
+  if(y>=2000)return'2000s';if(y>=1990)return'1990s';if(y>=1980)return'1980s';
+  if(y>=1970)return'1970s';if(y>=1960)return'1960s';
   return String(Math.floor(y/10)*10)+'s';
 }
 function getTabDisplayName(tab){
+  // Names are now full already; this handles any legacy short names
   const map={'10s':'2010s','00s':'2000s','90s':'1990s','80s':'1980s','70s':'1970s','60s':'1960s'};
   return map[tab]||tab;
 }
@@ -939,10 +940,10 @@ function buildRows(arr,tbody,showActions=true){
 const sharedFilters={search:'',year:'',promo:'',champ:'',rating:'',ratingSrc:'any',titleOnly:false};
 function getYearFromDate(d){if(!d)return'';if(d.includes('-'))return d.split('-')[0];if(d.includes('/'))return d.split('/')[2]||'';return'';}
 function getMatchTab(m){
-  // Normalize old _sheetName values (2010s→10s, 2000s→00s, etc.)
+  // Normalize old _sheetName values (10s→2010s, 00s→2000s, etc.)
   var sn=m._sheetName||'';
   if(sn&&!/^\d{4}$/.test(sn)){
-    const normMap={'2010s':'10s','2000s':'00s','1990s':'90s','1980s':'80s','1970s':'70s','1960s':'60s'};
+    const normMap={'10s':'2010s','00s':'2000s','90s':'1990s','80s':'1980s','70s':'1970s','60s':'1960s'};
     sn=normMap[sn]||sn;
     return sn;
   }
@@ -1927,27 +1928,13 @@ async function runPushOnly(){
   setSyncStatus('Pushing to Sheet…');
   try{
     const local=loadMatches();
-    if(!local.length){setSyncStatus('No local matches to push.','var(--text3)');return;}
-    // Group matches by year tab — each tab must be sent as one complete batch
-    // because handlePush clears the tab before writing
-    const groups={};
-    local.forEach(m=>{
-      const tab=getMatchTab(m)||'2026';
-      if(!groups[tab]) groups[tab]=[];
-      groups[tab].push(m);
-    });
-    const tabs=Object.keys(groups);
-    let sent=0;
-    for(let t=0;t<tabs.length;t++){
-      const tab=tabs[t];
-      const tabMatches=groups[tab];
-      setSyncStatus(`Pushing ${getTabDisplayName(tab)} (${tabMatches.length} matches)… [${t+1}/${tabs.length}]`);
-      await gasPost({action:'push',matches:tabMatches});
-      sent+=tabMatches.length;
-      if(t<tabs.length-1) await new Promise(r=>setTimeout(r,500));
-    }
-    setSyncStatus(`✓ Push complete: ${sent} matches sent across ${tabs.length} tab${tabs.length!==1?'s':''}.`,'var(--green)');
-    toast(`Pushed ${sent} matches to Sheet`);
+    const promos=loadPromos();
+    if(!local.length&&!promos.length){setSyncStatus('No data to push.','var(--text3)');return;}
+    // Send all matches in one request — Apps Script groups by year tab and writes Matches tab
+    setSyncStatus(`Pushing ${local.length} matches and ${promos.length} promotions…`);
+    await gasPost({action:'push',matches:local,promotions:promos});
+    setSyncStatus(`✓ Push complete: ${local.length} matches and ${promos.length} promotions sent.`,'var(--green)');
+    toast(`Pushed ${local.length} matches to Sheet`);
   }catch(e){setSyncStatus('✗ Push failed: '+e.message,'var(--red)');toast('Push failed',true);}
 }
 
@@ -2053,26 +2040,13 @@ async function runSync(){
     renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
     setSyncStatus(`Step 1/2: Pulled ${result.pulled} new, ${result.updated} updated.<br>Step 2/2: Pushing to Sheet…`);
 
-    // Step 2: Push all merged matches back — grouped by year tab
+    // Step 2: Push all merged matches + promotions back
     const all=result.merged;
-    const groups={};
-    all.forEach(m=>{
-      const tab=getMatchTab(m)||'2026';
-      if(!groups[tab]) groups[tab]=[];
-      groups[tab].push(m);
-    });
-    const tabs=Object.keys(groups);
-    let sent=0;
-    for(let t=0;t<tabs.length;t++){
-      const tab=tabs[t];
-      const tabMatches=groups[tab];
-      setSyncStatus(`Step 2/2: Pushing ${getTabDisplayName(tab)} (${tabMatches.length} matches)… [${t+1}/${tabs.length}]`);
-      await gasPost({action:'push',matches:tabMatches});
-      sent+=tabMatches.length;
-      if(t<tabs.length-1) await new Promise(r=>setTimeout(r,500));
-    }
+    const promos=loadPromos();
+    setSyncStatus(`Step 2/2: Pushing ${all.length} matches and ${promos.length} promotions…`);
+    await gasPost({action:'push',matches:all,promotions:promos});
 
-    setSyncStatus(`✓ Sync complete!<br>Pulled: ${result.pulled} new, ${result.updated} updated<br>Pushed: ${sent} matches to Sheet<br>Total: ${result.merged.length} matches`,'var(--green)');
+    setSyncStatus(`✓ Sync complete!<br>Pulled: ${result.pulled} new, ${result.updated} updated<br>Pushed: ${all.length} matches + ${promos.length} promotions<br>Total: ${result.merged.length} matches`,'var(--green)');
     toast(`Sync done: ${result.merged.length} total matches`);
   }catch(e){
     setSyncStatus('✗ Sync failed: '+e.message,'var(--red)');
