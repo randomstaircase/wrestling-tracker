@@ -1332,7 +1332,7 @@ function filterShowMatches(key){
 
 /* ── Virtual scrolling for All Matches ── */
 let _allFiltered=[];
-const VS_ITEM_HEIGHT=90; // approx height of one match card in px
+const VS_ITEM_HEIGHT=100; // approx height of one match card in px
 const VS_BUFFER=10; // extra items above/below viewport
 
 function renderAll(){
@@ -2052,6 +2052,11 @@ async function runPushOnly(){
     const local=loadMatches();
     const promos=loadPromos();
     if(!local.length&&!promos.length){setSyncStatus('No data to push.','var(--text3)');return;}
+    // Ensure all matches have a lastModified timestamp
+    const now=Date.now();
+    let stamped=0;
+    local.forEach(m=>{if(!m.lastModified){m.lastModified=now;stamped++;}});
+    if(stamped){saveMatches(local);console.log('Stamped lastModified on '+stamped+' matches');}
     // Group by tab for progress display
     const groups={};
     local.forEach(m=>{
@@ -2184,6 +2189,10 @@ async function runSync(){
 
     // Step 2: Push all merged matches + promotions back
     const all=result.merged;
+    // Ensure all matches have a lastModified timestamp
+    const now=Date.now();
+    all.forEach(m=>{if(!m.lastModified) m.lastModified=now;});
+    saveMatches(all);
     const promos=loadPromos();
     const groups={};
     all.forEach(m=>{const tab=getMatchTab(m)||'2026';if(!groups[tab])groups[tab]=[];groups[tab].push(m);});
