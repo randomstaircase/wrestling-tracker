@@ -654,6 +654,9 @@ function saveMatches(arr){
 function loadPromos(){try{return JSON.parse(localStorage.getItem(PROMO_KEY))||DEFAULT_PROMOS;}catch{return DEFAULT_PROMOS;}}
 function savePromos(arr){localStorage.setItem(PROMO_KEY,JSON.stringify(arr));}
 
+/* ── Stamp lastModified on a match object ── */
+function touchMatch(m){m.lastModified=Date.now();return m;}
+
 /* ── Normalize text for search matching ── */
 function normalizeSearchText(s){
   return(s||'').replace(/&quot;/g,'').replace(/&amp;/g,'&').replace(/&[a-z]+;/gi,'').replace(/['\u201c\u201d\u2018\u2019"]/g,'').replace(/[^a-z0-9\s]/gi,' ').replace(/\s+/g,' ').toLowerCase().trim();
@@ -704,7 +707,7 @@ function classifyMatch(m){
   const vI=parseFloat(m.rating);
   const hasRating=!isNaN(vI)&&m.rating!==''&&m.rating!==null&&m.rating!==undefined;
   const vK=parseFloat(m.score)||'',vL=parseFloat(m.value)||'';
-  const best=(hasRating&&vI>=9)||m.tenPlus;
+  const best=(hasRating&&vI>=9.5)||m.tenPlus;
   // To Watch: no rating entered (rewatch can also appear in To Watch)
   const watch=!hasRating;
   if(best&&m.tenPlus)return'best-10plus';if(best)return'best';if(watch)return'watch';return'none';
@@ -1329,7 +1332,7 @@ function filterShowMatches(key){
 
 /* ── Virtual scrolling for All Matches ── */
 let _allFiltered=[];
-const VS_ITEM_HEIGHT=72; // approx height of one match card in px
+const VS_ITEM_HEIGHT=82; // approx height of one match card in px
 const VS_BUFFER=10; // extra items above/below viewport
 
 function renderAll(){
@@ -1567,6 +1570,7 @@ function saveMatch(){
   if(data.date){const y=data.date.split('-')[0];if(y)data._sheetName=getTabName(parseInt(y));}
   const matches=loadMatches();const idx=matches.findIndex(m=>m.id===editingId);
   if(idx>=0)matches[idx]=data;else matches.unshift(data);
+  touchMatch(data);
   const wasEditing=!!editingId;
   saveMatches(matches);toast(wasEditing?'Match updated':'Match saved');
   clearForm();
@@ -1595,7 +1599,7 @@ function inlineToggle10plus(e,id){
   // Legacy — kept for any remaining references
   if(e&&e.stopPropagation)e.stopPropagation();
   const matches=loadMatches();const m=matches.find(x=>x.id===id);if(!m)return;
-  m.tenPlus=!m.tenPlus;saveMatches(matches);
+  m.tenPlus=!m.tenPlus;touchMatch(m);saveMatches(matches);
   renderActivePanel();
   toast(m.tenPlus?'10+ set':'10+ removed');
 }
@@ -1617,7 +1621,7 @@ function inlineToggleFlagMenu(e,id){
     const btn=document.createElement('button');
     btn.textContent=label;
     btn.style.cssText=`font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:3px;cursor:pointer;border:none;background:${active?color:'var(--bg4)'};color:${active?'#000':'var(--text3)'};border:1px solid ${active?color:'var(--border2)'};transition:all .15s;`;
-    btn.addEventListener('click',ev=>{ev.stopPropagation();onToggle();popup.remove();saveMatches(matches);renderActivePanel();});
+    btn.addEventListener('click',ev=>{ev.stopPropagation();onToggle();touchMatch(m);popup.remove();saveMatches(matches);renderActivePanel();});
     return btn;
   }
 
@@ -1650,6 +1654,7 @@ function inlineEditRating(e,id){
   function commit(){
     const v=inp.value.trim();
     m.rating=v;
+    touchMatch(m);
     saveMatches(matches);
     renderActivePanel();
   }
@@ -1671,7 +1676,7 @@ function inlineEditField(e,id,field){
   inp.className=isNum?'rating-inline-input':'inline-text-input';
   if(isDate)inp.style.cssText='background:var(--bg4);border:1px solid var(--text2);color:var(--text);padding:3px 6px;border-radius:3px;outline:none;font-size:.82rem;';
   cell.innerHTML='';cell.appendChild(inp);inp.focus();if(inp.select)inp.select();
-  function commit(){m[field]=inp.value.trim();saveMatches(matches);renderActivePanel();}
+  function commit(){m[field]=inp.value.trim();touchMatch(m);saveMatches(matches);renderActivePanel();}
   inp.addEventListener('blur',commit);
   inp.addEventListener('keydown',ev=>{if(ev.key==='Enter')inp.blur();if(ev.key==='Escape'){m[field]=cur;inp.removeEventListener('blur',commit);renderActivePanel();}});
 }
@@ -1690,7 +1695,7 @@ function inlineEditWinner(e,id){
 function commitWinner(id){
   const inp=document.getElementById('inline-winner-'+id);const tcBox=document.getElementById('inline-tc-'+id);if(!inp)return;
   const matches=loadMatches();const m=matches.find(x=>x.id===id);
-  if(m){m.winner=inp.value.trim();m.titleChange=tcBox?tcBox.checked:false;saveMatches(matches);}
+  if(m){m.winner=inp.value.trim();m.titleChange=tcBox?tcBox.checked:false;touchMatch(m);saveMatches(matches);}
   renderActivePanel();
 }
 
@@ -1946,24 +1951,33 @@ function normalizeSheetMatch(m){
     rating:m.rating||'',tenPlus:!!m.tenPlus,
     sawLive:!!m.sawLive,rewatch:!!m.rewatch,
     score:m.score||'',value:m.value||'',
+    lastModified:m.lastModified||0,
     _sheetName:m._sheetName||''
   };
 }
 
 function mergeMatches(local,remote){
   const map=new Map();
-  // Local first
   local.forEach(m=>map.set(m.id,m));
   let pulled=0,updated=0;
+  const userFields=['rating','tenPlus','sawLive','rewatch','winner','titleChange','score','value','championship','champion','matchType','name','event','promoAbbr','promoFull'];
   remote.forEach(m=>{
     if(!m.id) m.id='sheet_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
     if(map.has(m.id)){
       const loc=map.get(m.id);
-      const merged={...m,...loc};
-      if((!loc.rating&&loc.rating!==0)&&m.rating) merged.rating=m.rating;
-      if(!loc.score&&m.score) merged.score=m.score;
-      if(!loc.value&&m.value) merged.value=m.value;
-      if(!loc.winner&&m.winner) merged.winner=m.winner;
+      const locTime=loc.lastModified||0;
+      const remTime=m.lastModified||0;
+      // Newer side wins, fill blanks from the other
+      let merged=locTime>=remTime?{...m,...loc}:{...loc,...m};
+      userFields.forEach(f=>{
+        const mv=merged[f];
+        if(mv===''||mv===null||mv===undefined||mv===false){
+          const lv=loc[f],rv=m[f];
+          if(lv!==''&&lv!==null&&lv!==undefined&&lv!==false) merged[f]=lv;
+          else if(rv!==''&&rv!==null&&rv!==undefined&&rv!==false) merged[f]=rv;
+        }
+      });
+      merged.lastModified=Math.max(locTime,remTime);
       map.set(m.id,merged);
       updated++;
     } else {
@@ -1971,12 +1985,12 @@ function mergeMatches(local,remote){
       pulled++;
     }
   });
-  // Dedup by matchUrl — keep first (most complete) occurrence
+  // Dedup by matchUrl
   const all=Array.from(map.values());
   const seen=new Set();
   let dupes=0;
   const deduped=all.filter(m=>{
-    if(!m.matchUrl) return true; // no URL = can't dedup, keep it
+    if(!m.matchUrl) return true;
     const key=m.matchUrl.toLowerCase().replace(/&s=\d+/g,'').replace(/[?&]page=\d+/g,'').trim();
     if(seen.has(key)){dupes++;return false;}
     seen.add(key);
@@ -2012,12 +2026,11 @@ async function runPullOnly(){
       }
       for(let t=0;t<tabs.length;t++){
         const tab=tabs[t];
-        setSyncStatus(`Pulling ${getTabDisplayName(tab)}… [${t+1}/${tabs.length}]`);
+        setSyncStatus(`Pulling ${getTabDisplayName(tab)}… [${t+1}/${tabs.length}] (${allRemote.length} matches so far)`);
         try{
           const tabData=await gasGet('pull',{sheet:tab});
           if(tabData&&Array.isArray(tabData.matches)) allRemote.push(...tabData.matches);
         }catch(tabErr){
-          // Individual tab may not exist on sheet — skip
           console.log('Pull skipped tab:',tab,tabErr.message);
         }
       }
@@ -2039,10 +2052,27 @@ async function runPushOnly(){
     const local=loadMatches();
     const promos=loadPromos();
     if(!local.length&&!promos.length){setSyncStatus('No data to push.','var(--text3)');return;}
-    // Send all matches in one request — Apps Script groups by year tab and writes Matches tab
-    setSyncStatus(`Pushing ${local.length} matches and ${promos.length} promotions…`);
+    // Group by tab for progress display
+    const groups={};
+    local.forEach(m=>{
+      const tab=getMatchTab(m)||'2026';
+      if(!groups[tab]) groups[tab]=[];
+      groups[tab].push(m);
+    });
+    const tabs=Object.keys(groups).sort((a,b)=>(parseInt(b)||0)-(parseInt(a)||0));
+    const tabSummary=tabs.map(t=>`${getTabDisplayName(t)}: ${groups[t].length}`).join(', ');
+    setSyncStatus(`Pushing ${local.length} matches (${tabSummary}) + ${promos.length} promotions…`);
     await gasPost({action:'push',matches:local,promotions:promos});
-    setSyncStatus(`✓ Push complete: ${local.length} matches and ${promos.length} promotions sent.`,'var(--green)');
+    // Verify with stats
+    setSyncStatus('Verifying push…');
+    try{
+      const stats=await gasGet('stats');
+      const sheetTotal=stats.total||0;
+      const match=sheetTotal===local.length;
+      setSyncStatus(`✓ Push complete: ${local.length} matches + ${promos.length} promotions sent.<br>Sheet reports: ${sheetTotal} matches.${match?'':' <span style="color:var(--accent);">Count mismatch — try pushing again.</span>'}`,'var(--green)');
+    }catch(e){
+      setSyncStatus(`✓ Push sent: ${local.length} matches + ${promos.length} promotions.<br><span style="color:var(--text3);">Could not verify — stats check timed out.</span>`,'var(--green)');
+    }
     toast(`Pushed ${local.length} matches to Sheet`);
   }catch(e){setSyncStatus('✗ Push failed: '+e.message,'var(--red)');toast('Push failed',true);}
 }
@@ -2123,7 +2153,10 @@ async function runSync(){
     let allRemote=[];
     try{
       const data=await gasGet('pull');
-      if(data&&Array.isArray(data.matches)) allRemote=data.matches;
+      if(data&&Array.isArray(data.matches)){
+        allRemote=data.matches;
+        setSyncStatus(`Step 1/2: Pulled ${allRemote.length} matches from Sheet.`);
+      }
     }catch(pullErr){
       setSyncStatus('Step 1/2: Full pull timed out. Pulling by year tab…');
       const local=loadMatches();
@@ -2135,7 +2168,7 @@ async function runSync(){
       }
       for(let t=0;t<tabs.length;t++){
         const tab=tabs[t];
-        setSyncStatus(`Step 1/2: Pulling ${getTabDisplayName(tab)}… [${t+1}/${tabs.length}]`);
+        setSyncStatus(`Step 1/2: Pulling ${getTabDisplayName(tab)}… [${t+1}/${tabs.length}] (${allRemote.length} so far)`);
         try{
           const tabData=await gasGet('pull',{sheet:tab});
           if(tabData&&Array.isArray(tabData.matches)) allRemote.push(...tabData.matches);
@@ -2147,21 +2180,34 @@ async function runSync(){
     const result=mergeMatches(local,remote);
     saveMatches(result.merged);
     renderActivePanel();populateSharedFilterOptions();
-    setSyncStatus(`Step 1/2: Pulled ${result.pulled} new, ${result.updated} updated.<br>Step 2/2: Pushing to Sheet…`);
+    setSyncStatus(`Step 1/2: Pulled ${result.pulled} new, ${result.updated} updated${result.dupes?' · '+result.dupes+' dupes removed':''}.<br>Step 2/2: Pushing to Sheet…`);
 
     // Step 2: Push all merged matches + promotions back
     const all=result.merged;
     const promos=loadPromos();
-    setSyncStatus(`Step 2/2: Pushing ${all.length} matches and ${promos.length} promotions…`);
+    const groups={};
+    all.forEach(m=>{const tab=getMatchTab(m)||'2026';if(!groups[tab])groups[tab]=[];groups[tab].push(m);});
+    const tabList=Object.keys(groups).sort((a,b)=>(parseInt(b)||0)-(parseInt(a)||0));
+    const tabSummary=tabList.map(t=>`${getTabDisplayName(t)}: ${groups[t].length}`).join(', ');
+    setSyncStatus(`Step 1/2 done.<br>Step 2/2: Pushing ${all.length} matches (${tabSummary}) + ${promos.length} promotions…`);
     await gasPost({action:'push',matches:all,promotions:promos});
 
-    setSyncStatus(`✓ Sync complete!<br>Pulled: ${result.pulled} new, ${result.updated} updated${result.dupes?' · '+result.dupes+' dupes removed':''}<br>Pushed: ${all.length} matches + ${promos.length} promotions<br>Total: ${result.merged.length} matches`,'var(--green)');
+    // Verify
+    setSyncStatus('Verifying…');
+    let verifyMsg='';
+    try{
+      const stats=await gasGet('stats');
+      const match=stats.total===all.length;
+      verifyMsg=`Sheet reports: ${stats.total} matches.${match?'':' <span style="color:var(--accent);">Count mismatch.</span>'}`;
+    }catch(e){verifyMsg='Could not verify — stats timed out.';}
+
+    setSyncStatus(`✓ Sync complete!<br>Pulled: ${result.pulled} new, ${result.updated} updated${result.dupes?' · '+result.dupes+' dupes removed':''}<br>Pushed: ${all.length} matches + ${promos.length} promotions<br>${verifyMsg}<br>Total: ${result.merged.length} matches`,'var(--green)');
     toast(`Sync done: ${result.merged.length} total matches`);
   }catch(e){
     setSyncStatus('✗ Sync failed: '+e.message,'var(--red)');
     toast('Sync failed: '+e.message,true);
   }
-  btn.disabled=false;btn.innerHTML='&#128260; Sync Now';
+  btn.disabled=false;btn.innerHTML='&#128259; Sync Now';
 }
 
 
