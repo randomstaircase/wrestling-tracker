@@ -1859,10 +1859,8 @@ function mergeMatches(local,remote){
   remote.forEach(m=>{
     if(!m.id) m.id='sheet_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
     if(map.has(m.id)){
-      // Merge: remote fields fill in blanks, but local rating/flags take priority
       const loc=map.get(m.id);
       const merged={...m,...loc};
-      // If local has no rating but remote does, take remote
       if((!loc.rating&&loc.rating!==0)&&m.rating) merged.rating=m.rating;
       if(!loc.score&&m.score) merged.score=m.score;
       if(!loc.value&&m.value) merged.value=m.value;
@@ -1874,7 +1872,19 @@ function mergeMatches(local,remote){
       pulled++;
     }
   });
-  return{merged:Array.from(map.values()),pulled,updated};
+  // Dedup by matchUrl — keep first (most complete) occurrence
+  const all=Array.from(map.values());
+  const seen=new Set();
+  let dupes=0;
+  const deduped=all.filter(m=>{
+    if(!m.matchUrl) return true; // no URL = can't dedup, keep it
+    const key=m.matchUrl.toLowerCase().replace(/&s=\d+/g,'').replace(/[?&]page=\d+/g,'').trim();
+    if(seen.has(key)){dupes++;return false;}
+    seen.add(key);
+    return true;
+  });
+  if(dupes) console.log('Dedup removed '+dupes+' duplicate(s) by matchUrl');
+  return{merged:deduped,pulled,updated,dupes};
 }
 
 async function runPullOnly(){
@@ -1919,8 +1929,8 @@ async function runPullOnly(){
     const result=mergeMatches(local,remote);
     saveMatches(result.merged);
     renderDashboard();renderBest();renderWatch();renderRewatch();renderAll();populateSharedFilterOptions();
-    setSyncStatus(`✓ Pull complete: ${result.pulled} new, ${result.updated} updated. Total: ${result.merged.length}`,'var(--green)');
-    toast(`Pulled: ${result.pulled} new, ${result.updated} updated`);
+    setSyncStatus(`✓ Pull complete: ${result.pulled} new, ${result.updated} updated${result.dupes?' · '+result.dupes+' duplicate'+(result.dupes!==1?'s':'')+' removed':''}. Total: ${result.merged.length}`,'var(--green)');
+    toast(`Pulled: ${result.pulled} new, ${result.updated} updated${result.dupes?' · '+result.dupes+' dupes removed':''}`);
   }catch(e){setSyncStatus('✗ Pull failed: '+e.message,'var(--red)');toast('Pull failed',true);}
 }
 
@@ -2046,7 +2056,7 @@ async function runSync(){
     setSyncStatus(`Step 2/2: Pushing ${all.length} matches and ${promos.length} promotions…`);
     await gasPost({action:'push',matches:all,promotions:promos});
 
-    setSyncStatus(`✓ Sync complete!<br>Pulled: ${result.pulled} new, ${result.updated} updated<br>Pushed: ${all.length} matches + ${promos.length} promotions<br>Total: ${result.merged.length} matches`,'var(--green)');
+    setSyncStatus(`✓ Sync complete!<br>Pulled: ${result.pulled} new, ${result.updated} updated${result.dupes?' · '+result.dupes+' dupes removed':''}<br>Pushed: ${all.length} matches + ${promos.length} promotions<br>Total: ${result.merged.length} matches`,'var(--green)');
     toast(`Sync done: ${result.merged.length} total matches`);
   }catch(e){
     setSyncStatus('✗ Sync failed: '+e.message,'var(--red)');
