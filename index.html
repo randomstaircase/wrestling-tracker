@@ -1332,7 +1332,7 @@ function filterShowMatches(key){
 
 /* ── Virtual scrolling for All Matches ── */
 let _allFiltered=[];
-const VS_ITEM_HEIGHT=100; // approx height of one match card in px
+const VS_ITEM_HEIGHT=82; // approx height of one match card in px
 const VS_BUFFER=10; // extra items above/below viewport
 
 function renderAll(){
@@ -1985,18 +1985,30 @@ function mergeMatches(local,remote){
       pulled++;
     }
   });
-  // Dedup by matchUrl
+  // Dedup by matchUrl, then by name+date+event for URL-less matches
   const all=Array.from(map.values());
-  const seen=new Set();
+  const seenUrl=new Set();
+  const seenKey=new Set();
   let dupes=0;
   const deduped=all.filter(m=>{
-    if(!m.matchUrl) return true;
-    const key=m.matchUrl.toLowerCase().replace(/&s=\d+/g,'').replace(/[?&]page=\d+/g,'').trim();
-    if(seen.has(key)){dupes++;return false;}
-    seen.add(key);
+    // First pass: dedup by URL
+    if(m.matchUrl){
+      const urlKey=m.matchUrl.toLowerCase().replace(/&s=\d+/g,'').replace(/[?&]page=\d+/g,'').trim();
+      if(seenUrl.has(urlKey)){dupes++;return false;}
+      seenUrl.add(urlKey);
+      // Also register the name+date key so URL-less dupes of this match get caught
+      const ndk=(m.name||'').toLowerCase().trim()+'|'+(m.date||'')+'|'+(m.event||'').toLowerCase().trim();
+      if(ndk.length>3) seenKey.add(ndk);
+      return true;
+    }
+    // No URL: dedup by name+date+event
+    const ndk=(m.name||'').toLowerCase().trim()+'|'+(m.date||'')+'|'+(m.event||'').toLowerCase().trim();
+    if(ndk.length<=3) return true; // keep matches with no identifying info
+    if(seenUrl.has(ndk)||seenKey.has(ndk)){dupes++;return false;}
+    seenKey.add(ndk);
     return true;
   });
-  if(dupes) console.log('Dedup removed '+dupes+' duplicate(s) by matchUrl');
+  if(dupes) console.log('Dedup removed '+dupes+' duplicate(s)');
   return{merged:deduped,pulled,updated,dupes};
 }
 
