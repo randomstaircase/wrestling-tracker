@@ -532,11 +532,10 @@ document.getElementById('lock-pw').addEventListener('keydown',function(e){
     <!-- 5. Sync -->
     <div class="export-section">
       <h3>&#128259; Sync</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;">Merge local matches with your Google Sheet. Pulls new matches from the Sheet, then pushes any local-only matches back. Uses the same Apps Script URL above.</p>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;"><strong style="color:var(--text);">Pull</strong> = download Sheet → replaces local data.<br><strong style="color:var(--text);">Push</strong> = upload local data → replaces Sheet.<br>Workflow: <em>Pull</em> on the device you're about to use, edit, then <em>Push</em> when done.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-        <button class="btn btn-primary" id="sync-btn" onclick="runSync()">&#128259; Sync Now</button>
-        <button class="btn btn-secondary" onclick="runPullOnly()">&#8595; Pull Only</button>
-        <button class="btn btn-secondary" onclick="runPushOnly()">&#8593; Push Only</button>
+        <button class="btn btn-primary" onclick="runPullOnly()">&#8595; Pull from Sheet</button>
+        <button class="btn btn-primary" onclick="runPushOnly()">&#8593; Push to Sheet</button>
       </div>
       <div id="sync-status" style="font-size:.82rem;color:var(--text3);margin-top:10px;min-height:20px;line-height:1.6;"></div>
     </div>
@@ -1956,106 +1955,41 @@ function normalizeSheetMatch(m){
   };
 }
 
-function mergeMatches(local,remote){
-  const map=new Map();
-  local.forEach(m=>map.set(m.id,m));
-  let pulled=0,updated=0;
-  const userFields=['rating','tenPlus','sawLive','rewatch','winner','titleChange','score','value','championship','champion','matchType','name','event','promoAbbr','promoFull'];
-  remote.forEach(m=>{
-    if(!m.id) m.id='sheet_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
-    if(map.has(m.id)){
-      const loc=map.get(m.id);
-      const locTime=loc.lastModified||0;
-      const remTime=m.lastModified||0;
-      // Newer side wins, fill blanks from the other
-      let merged=locTime>=remTime?{...m,...loc}:{...loc,...m};
-      userFields.forEach(f=>{
-        const mv=merged[f];
-        if(mv===''||mv===null||mv===undefined||mv===false){
-          const lv=loc[f],rv=m[f];
-          if(lv!==''&&lv!==null&&lv!==undefined&&lv!==false) merged[f]=lv;
-          else if(rv!==''&&rv!==null&&rv!==undefined&&rv!==false) merged[f]=rv;
-        }
-      });
-      merged.lastModified=Math.max(locTime,remTime);
-      map.set(m.id,merged);
-      updated++;
-    } else {
-      map.set(m.id,m);
-      pulled++;
-    }
-  });
-  // Dedup by matchUrl, then by name+date+event for URL-less matches
-  const all=Array.from(map.values());
-  const seenUrl=new Set();
-  const seenKey=new Set();
-  let dupes=0;
-  const deduped=all.filter(m=>{
-    // First pass: dedup by URL
-    if(m.matchUrl){
-      const urlKey=m.matchUrl.toLowerCase().replace(/&s=\d+/g,'').replace(/[?&]page=\d+/g,'').trim();
-      if(seenUrl.has(urlKey)){dupes++;return false;}
-      seenUrl.add(urlKey);
-      // Also register the name+date key so URL-less dupes of this match get caught
-      const ndk=(m.name||'').toLowerCase().trim()+'|'+(m.date||'')+'|'+(m.event||'').toLowerCase().trim();
-      if(ndk.length>3) seenKey.add(ndk);
-      return true;
-    }
-    // No URL: dedup by name+date+event
-    const ndk=(m.name||'').toLowerCase().trim()+'|'+(m.date||'')+'|'+(m.event||'').toLowerCase().trim();
-    if(ndk.length<=3) return true; // keep matches with no identifying info
-    if(seenUrl.has(ndk)||seenKey.has(ndk)){dupes++;return false;}
-    seenKey.add(ndk);
-    return true;
-  });
-  if(dupes) console.log('Dedup removed '+dupes+' duplicate(s)');
-  return{merged:deduped,pulled,updated,dupes};
-}
-
 async function runPullOnly(){
-  const btn=document.getElementById('sync-btn');
   setSyncStatus('Pulling from Sheet…');
   try{
-    // First get stats to discover which tabs exist
-    // Then pull each tab individually to avoid timeout on large datasets
-    const stats=await gasGet('stats');
-    // Try pulling all at once first
-    setSyncStatus('Pulling all matches…');
     let allRemote=[];
+    // Try full pull first
     try{
+      setSyncStatus('Pulling all matches…');
       const data=await gasGet('pull');
       if(data&&Array.isArray(data.matches)) allRemote=data.matches;
     }catch(pullErr){
-      // Full pull timed out — fall back to pulling tab by tab
+      // Fall back to tab-by-tab
       setSyncStatus('Full pull timed out. Pulling by year tab…');
+      // Get tab list from stats
+      const knownTabs=['2026','2025','2020s','2010s','2000s','1990s','1980s'];
       const local=loadMatches();
-      const tabs=[...new Set(local.map(m=>getMatchTab(m)).filter(Boolean))];
-      // Also try common years that might only exist on the sheet
-      const currentYear=new Date().getFullYear();
-      for(let y=currentYear;y>=currentYear-2;y--){
-        const tn=String(y);
-        if(!tabs.includes(tn)) tabs.unshift(tn);
-      }
+      const localTabs=[...new Set(local.map(m=>getMatchTab(m)).filter(Boolean))];
+      const tabs=[...new Set([...knownTabs,...localTabs])];
       for(let t=0;t<tabs.length;t++){
         const tab=tabs[t];
         setSyncStatus(`Pulling ${getTabDisplayName(tab)}… [${t+1}/${tabs.length}] (${allRemote.length} matches so far)`);
         try{
           const tabData=await gasGet('pull',{sheet:tab});
           if(tabData&&Array.isArray(tabData.matches)) allRemote.push(...tabData.matches);
-        }catch(tabErr){
-          console.log('Pull skipped tab:',tab,tabErr.message);
-        }
+        }catch(tabErr){console.log('Pull skipped tab:',tab);}
       }
     }
-    if(!allRemote.length){setSyncStatus('No data returned from Sheet.','var(--red)');return;}
+    if(!allRemote.length){setSyncStatus('No data returned from Sheet. Your local data is unchanged.','var(--red)');return;}
+    // Replace local data entirely with sheet data
     const remote=allRemote.map(normalizeSheetMatch);
-    const local=loadMatches();
-    const result=mergeMatches(local,remote);
-    saveMatches(result.merged);
+    const oldCount=loadMatches().length;
+    saveMatches(remote);
     renderActivePanel();populateSharedFilterOptions();
-    setSyncStatus(`✓ Pull complete: ${result.pulled} new, ${result.updated} updated${result.dupes?' · '+result.dupes+' duplicate'+(result.dupes!==1?'s':'')+' removed':''}. Total: ${result.merged.length}`,'var(--green)');
-    toast(`Pulled: ${result.pulled} new, ${result.updated} updated${result.dupes?' · '+result.dupes+' dupes removed':''}`);
-  }catch(e){setSyncStatus('✗ Pull failed: '+e.message,'var(--red)');toast('Pull failed',true);}
+    setSyncStatus(`✓ Pull complete: ${remote.length} matches loaded from Sheet (was ${oldCount} local).`,'var(--green)');
+    toast(`Pulled ${remote.length} matches from Sheet`);
+  }catch(e){setSyncStatus('✗ Pull failed: '+e.message+' — local data unchanged.','var(--red)');toast('Pull failed',true);}
 }
 
 async function runPushOnly(){
@@ -2064,31 +1998,26 @@ async function runPushOnly(){
     const local=loadMatches();
     const promos=loadPromos();
     if(!local.length&&!promos.length){setSyncStatus('No data to push.','var(--text3)');return;}
-    // Ensure all matches have a lastModified timestamp
+    // Stamp lastModified on any unstamped matches
     const now=Date.now();
-    let stamped=0;
-    local.forEach(m=>{if(!m.lastModified){m.lastModified=now;stamped++;}});
-    if(stamped){saveMatches(local);console.log('Stamped lastModified on '+stamped+' matches');}
-    // Group by tab for progress display
+    local.forEach(m=>{if(!m.lastModified) m.lastModified=now;});
+    saveMatches(local);
+    // Show tab breakdown
     const groups={};
-    local.forEach(m=>{
-      const tab=getMatchTab(m)||'2026';
-      if(!groups[tab]) groups[tab]=[];
-      groups[tab].push(m);
-    });
+    local.forEach(m=>{const tab=getMatchTab(m)||'2026';if(!groups[tab])groups[tab]=[];groups[tab].push(m);});
     const tabs=Object.keys(groups).sort((a,b)=>(parseInt(b)||0)-(parseInt(a)||0));
     const tabSummary=tabs.map(t=>`${getTabDisplayName(t)}: ${groups[t].length}`).join(', ');
     setSyncStatus(`Pushing ${local.length} matches (${tabSummary}) + ${promos.length} promotions…`);
     await gasPost({action:'push',matches:local,promotions:promos});
-    // Verify with stats
-    setSyncStatus('Verifying push…');
+    // Verify
+    setSyncStatus('Verifying…');
     try{
       const stats=await gasGet('stats');
       const sheetTotal=stats.total||0;
-      const match=sheetTotal===local.length;
-      setSyncStatus(`✓ Push complete: ${local.length} matches + ${promos.length} promotions sent.<br>Sheet reports: ${sheetTotal} matches.${match?'':' <span style="color:var(--accent);">Count mismatch — try pushing again.</span>'}`,'var(--green)');
+      const ok=sheetTotal===local.length;
+      setSyncStatus(`✓ Push complete: ${local.length} matches + ${promos.length} promotions → Sheet.<br>Sheet reports: ${sheetTotal} matches.${ok?'':' <span style="color:var(--accent);">Count mismatch — try again.</span>'}`,'var(--green)');
     }catch(e){
-      setSyncStatus(`✓ Push sent: ${local.length} matches + ${promos.length} promotions.<br><span style="color:var(--text3);">Could not verify — stats check timed out.</span>`,'var(--green)');
+      setSyncStatus(`✓ Push sent: ${local.length} matches + ${promos.length} promotions.<br><span style="color:var(--text3);">Could not verify.</span>`,'var(--green)');
     }
     toast(`Pushed ${local.length} matches to Sheet`);
   }catch(e){setSyncStatus('✗ Push failed: '+e.message,'var(--red)');toast('Push failed',true);}
@@ -2160,82 +2089,6 @@ async function runRefresh(){
   }
   btn.disabled=false;btn.innerHTML='&#128260; Refresh';
 }
-
-async function runSync(){
-  const btn=document.getElementById('sync-btn');
-  btn.disabled=true;btn.textContent='Syncing…';
-  setSyncStatus('Step 1/2: Pulling from Sheet…');
-  try{
-    // Step 1: Pull — try all at once, fall back to tab-by-tab
-    let allRemote=[];
-    try{
-      const data=await gasGet('pull');
-      if(data&&Array.isArray(data.matches)){
-        allRemote=data.matches;
-        setSyncStatus(`Step 1/2: Pulled ${allRemote.length} matches from Sheet.`);
-      }
-    }catch(pullErr){
-      setSyncStatus('Step 1/2: Full pull timed out. Pulling by year tab…');
-      const local=loadMatches();
-      const tabs=[...new Set(local.map(m=>getMatchTab(m)).filter(Boolean))];
-      const currentYear=new Date().getFullYear();
-      for(let y=currentYear;y>=currentYear-2;y--){
-        const tn=String(y);
-        if(!tabs.includes(tn)) tabs.unshift(tn);
-      }
-      for(let t=0;t<tabs.length;t++){
-        const tab=tabs[t];
-        setSyncStatus(`Step 1/2: Pulling ${getTabDisplayName(tab)}… [${t+1}/${tabs.length}] (${allRemote.length} so far)`);
-        try{
-          const tabData=await gasGet('pull',{sheet:tab});
-          if(tabData&&Array.isArray(tabData.matches)) allRemote.push(...tabData.matches);
-        }catch(tabErr){console.log('Sync pull skipped tab:',tab);}
-      }
-    }
-    const remote=allRemote.map(normalizeSheetMatch);
-    const local=loadMatches();
-    const result=mergeMatches(local,remote);
-    saveMatches(result.merged);
-    renderActivePanel();populateSharedFilterOptions();
-    setSyncStatus(`Step 1/2: Pulled ${result.pulled} new, ${result.updated} updated${result.dupes?' · '+result.dupes+' dupes removed':''}.<br>Step 2/2: Pushing to Sheet…`);
-
-    // Step 2: Push all merged matches + promotions back
-    const all=result.merged;
-    // Ensure all matches have a lastModified timestamp
-    const now=Date.now();
-    all.forEach(m=>{if(!m.lastModified) m.lastModified=now;});
-    saveMatches(all);
-    const promos=loadPromos();
-    const groups={};
-    all.forEach(m=>{const tab=getMatchTab(m)||'2026';if(!groups[tab])groups[tab]=[];groups[tab].push(m);});
-    const tabList=Object.keys(groups).sort((a,b)=>(parseInt(b)||0)-(parseInt(a)||0));
-    const tabSummary=tabList.map(t=>`${getTabDisplayName(t)}: ${groups[t].length}`).join(', ');
-    setSyncStatus(`Step 1/2 done.<br>Step 2/2: Pushing ${all.length} matches (${tabSummary}) + ${promos.length} promotions…`);
-    await gasPost({action:'push',matches:all,promotions:promos});
-
-    // Verify
-    setSyncStatus('Verifying…');
-    let verifyMsg='';
-    try{
-      const stats=await gasGet('stats');
-      const match=stats.total===all.length;
-      verifyMsg=`Sheet reports: ${stats.total} matches.${match?'':' <span style="color:var(--accent);">Count mismatch.</span>'}`;
-    }catch(e){verifyMsg='Could not verify — stats timed out.';}
-
-    setSyncStatus(`✓ Sync complete!<br>Pulled: ${result.pulled} new, ${result.updated} updated${result.dupes?' · '+result.dupes+' dupes removed':''}<br>Pushed: ${all.length} matches + ${promos.length} promotions<br>${verifyMsg}<br>Total: ${result.merged.length} matches`,'var(--green)');
-    toast(`Sync done: ${result.merged.length} total matches`);
-  }catch(e){
-    setSyncStatus('✗ Sync failed: '+e.message,'var(--red)');
-    toast('Sync failed: '+e.message,true);
-  }
-  btn.disabled=false;btn.innerHTML='&#128259; Sync Now';
-}
-
-
-
-
-
-
 
 async function runBatchURLImport(){
   const raw=(document.getElementById('batch-urls')||{value:''}).value;
