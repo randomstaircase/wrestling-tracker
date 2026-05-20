@@ -532,7 +532,7 @@ document.getElementById('lock-pw').addEventListener('keydown',function(e){
     <!-- 5. Sync -->
     <div class="export-section">
       <h3>&#128259; Sync</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;"><strong style="color:var(--text);">Pull</strong> = download Sheet → replaces local data.<br><strong style="color:var(--text);">Push</strong> = upload local data → replaces Sheet.<br>Workflow: <em>Pull</em> on the device you're about to use, edit, then <em>Push</em> when done.</p>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;"><strong style="color:var(--text);">Pull</strong> = download from Drive JSON (fast) → replaces local data. Falls back to Sheet.<br><strong style="color:var(--text);">Push</strong> = upload local → Drive JSON + Sheet.<br>Workflow: <em>Pull</em> on the device you're about to use, edit, then <em>Push</em> when done.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
         <button class="btn btn-primary" onclick="runPullOnly()">&#8595; Pull from Sheet</button>
         <button class="btn btn-primary" onclick="runPushOnly()">&#8593; Push to Sheet</button>
@@ -1331,7 +1331,7 @@ function filterShowMatches(key){
 
 /* ── Virtual scrolling for All Matches ── */
 let _allFiltered=[];
-const VS_ITEM_HEIGHT=100; // approx height of one match card in px
+const VS_ITEM_HEIGHT=82; // approx height of one match card in px
 const VS_BUFFER=10; // extra items above/below viewport
 
 function renderAll(){
@@ -1956,44 +1956,65 @@ function normalizeSheetMatch(m){
 }
 
 async function runPullOnly(){
-  setSyncStatus('Pulling from Sheet…');
+  setSyncStatus('Pulling…');
   try{
+    const oldCount=loadMatches().length;
     let allRemote=[];
-    // Try full pull first
+    let source='';
+
+    // Try Drive JSON first (fast)
     try{
-      setSyncStatus('Pulling all matches…');
-      const data=await gasGet('pull');
-      if(data&&Array.isArray(data.matches)) allRemote=data.matches;
-    }catch(pullErr){
-      // Fall back to tab-by-tab
-      setSyncStatus('Full pull timed out. Pulling by year tab…');
-      // Get tab list from stats
-      const knownTabs=['2026','2025','2020s','2010s','2000s','1990s','1980s'];
-      const local=loadMatches();
-      const localTabs=[...new Set(local.map(m=>getMatchTab(m)).filter(Boolean))];
-      const tabs=[...new Set([...knownTabs,...localTabs])];
-      for(let t=0;t<tabs.length;t++){
-        const tab=tabs[t];
-        setSyncStatus(`Pulling ${getTabDisplayName(tab)}… [${t+1}/${tabs.length}] (${allRemote.length} matches so far)`);
-        try{
-          const tabData=await gasGet('pull',{sheet:tab});
-          if(tabData&&Array.isArray(tabData.matches)) allRemote.push(...tabData.matches);
-        }catch(tabErr){console.log('Pull skipped tab:',tab);}
+      setSyncStatus('Pulling from Drive JSON…');
+      const jsonData=await gasGet('pullJSON');
+      if(jsonData&&!jsonData.error&&Array.isArray(jsonData.matches)&&jsonData.matches.length){
+        allRemote=jsonData.matches;
+        source='Drive JSON';
+        // Also restore promotions if present
+        if(Array.isArray(jsonData.promotions)&&jsonData.promotions.length){
+          savePromos(jsonData.promotions);
+        }
+        const age=jsonData.pushedAt?Math.round((Date.now()-jsonData.pushedAt)/60000):0;
+        setSyncStatus(`Found ${allRemote.length} matches in Drive JSON (${age} min ago). Loading…`);
+      }
+    }catch(e){console.log('Drive JSON pull failed, falling back to sheet:',e.message);}
+
+    // Fall back to sheet if no JSON data
+    if(!allRemote.length){
+      try{
+        setSyncStatus('Drive JSON unavailable. Pulling from Sheet…');
+        const data=await gasGet('pull');
+        if(data&&Array.isArray(data.matches)) allRemote=data.matches;
+        source='Sheet';
+      }catch(pullErr){
+        // Fall back to tab-by-tab
+        setSyncStatus('Full pull timed out. Pulling by year tab…');
+        const knownTabs=['2026','2025','2020s','2010s','2000s','1990s','1980s'];
+        const local=loadMatches();
+        const localTabs=[...new Set(local.map(m=>getMatchTab(m)).filter(Boolean))];
+        const tabs=[...new Set([...knownTabs,...localTabs])];
+        for(let t=0;t<tabs.length;t++){
+          const tab=tabs[t];
+          setSyncStatus(`Pulling ${getTabDisplayName(tab)}… [${t+1}/${tabs.length}] (${allRemote.length} so far)`);
+          try{
+            const tabData=await gasGet('pull',{sheet:tab});
+            if(tabData&&Array.isArray(tabData.matches)) allRemote.push(...tabData.matches);
+          }catch(tabErr){console.log('Pull skipped tab:',tab);}
+        }
+        source='Sheet (tab-by-tab)';
       }
     }
-    if(!allRemote.length){setSyncStatus('No data returned from Sheet. Your local data is unchanged.','var(--red)');return;}
-    // Replace local data entirely with sheet data
-    const remote=allRemote.map(normalizeSheetMatch);
-    const oldCount=loadMatches().length;
+
+    if(!allRemote.length){setSyncStatus('No data returned. Local data unchanged.','var(--red)');return;}
+    const remote=source.startsWith('Drive')?allRemote:allRemote.map(normalizeSheetMatch);
     saveMatches(remote);
     renderActivePanel();populateSharedFilterOptions();
-    setSyncStatus(`✓ Pull complete: ${remote.length} matches loaded from Sheet (was ${oldCount} local).`,'var(--green)');
-    toast(`Pulled ${remote.length} matches from Sheet`);
+    setSyncStatus(`✓ Pull complete: ${remote.length} matches from ${source} (was ${oldCount} local).`,'var(--green)');
+    toast(`Pulled ${remote.length} matches`);
   }catch(e){setSyncStatus('✗ Pull failed: '+e.message+' — local data unchanged.','var(--red)');toast('Pull failed',true);}
 }
 
 async function runPushOnly(){
-  setSyncStatus('Pushing to Sheet…');
+  setSyncStatus('Pushing…');
   try{
     const local=loadMatches();
     const promos=loadPromos();
@@ -2002,24 +2023,36 @@ async function runPushOnly(){
     const now=Date.now();
     local.forEach(m=>{if(!m.lastModified) m.lastModified=now;});
     saveMatches(local);
-    // Show tab breakdown
+
     const groups={};
     local.forEach(m=>{const tab=getMatchTab(m)||'2026';if(!groups[tab])groups[tab]=[];groups[tab].push(m);});
     const tabs=Object.keys(groups).sort((a,b)=>(parseInt(b)||0)-(parseInt(a)||0));
     const tabSummary=tabs.map(t=>`${getTabDisplayName(t)}: ${groups[t].length}`).join(', ');
-    setSyncStatus(`Pushing ${local.length} matches (${tabSummary}) + ${promos.length} promotions…`);
+
+    // Step 1: Push to Drive JSON (fast, primary)
+    let jsonOk=false;
+    try{
+      setSyncStatus(`Step 1/2: Saving to Drive JSON (${local.length} matches)…`);
+      await gasPost({action:'pushJSON',matches:local,promotions:promos});
+      jsonOk=true;
+    }catch(e){console.log('Drive JSON push failed:',e.message);}
+
+    // Step 2: Push to Sheet (backup)
+    setSyncStatus(`Step 2/2: Pushing to Sheet (${tabSummary})…`);
     await gasPost({action:'push',matches:local,promotions:promos});
+
     // Verify
     setSyncStatus('Verifying…');
+    let verifyMsg='';
     try{
       const stats=await gasGet('stats');
       const sheetTotal=stats.total||0;
       const ok=sheetTotal===local.length;
-      setSyncStatus(`✓ Push complete: ${local.length} matches + ${promos.length} promotions → Sheet.<br>Sheet reports: ${sheetTotal} matches.${ok?'':' <span style="color:var(--accent);">Count mismatch — try again.</span>'}`,'var(--green)');
-    }catch(e){
-      setSyncStatus(`✓ Push sent: ${local.length} matches + ${promos.length} promotions.<br><span style="color:var(--text3);">Could not verify.</span>`,'var(--green)');
-    }
-    toast(`Pushed ${local.length} matches to Sheet`);
+      verifyMsg=`Sheet: ${sheetTotal} matches.${ok?'':' <span style="color:var(--accent);">Count mismatch.</span>'}`;
+    }catch(e){verifyMsg='Sheet verification timed out.';}
+
+    setSyncStatus(`✓ Push complete: ${local.length} matches + ${promos.length} promotions.<br>${jsonOk?'Drive JSON: ✓':'Drive JSON: ✗ (not configured?)'}<br>${verifyMsg}`,'var(--green)');
+    toast(`Pushed ${local.length} matches`);
   }catch(e){setSyncStatus('✗ Push failed: '+e.message,'var(--red)');toast('Push failed',true);}
 }
 
