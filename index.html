@@ -532,10 +532,11 @@ document.getElementById('lock-pw').addEventListener('keydown',function(e){
     <!-- 5. Sync -->
     <div class="export-section">
       <h3>&#128259; Sync</h3>
-      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;"><strong style="color:var(--text);">Pull</strong> = download from Drive JSON (fast) → replaces local data. Falls back to Sheet.<br><strong style="color:var(--text);">Push</strong> = upload local → Drive JSON + Sheet.<br>Workflow: <em>Pull</em> on the device you're about to use, edit, then <em>Push</em> when done.</p>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:14px;"><strong style="color:var(--text);">Push</strong> = local data → Sheet + Drive JSON backup.<br><strong style="color:var(--text);">Pull</strong> = Sheet → replaces local data.<br><strong style="color:var(--text);">Pull from Drive</strong> = Drive JSON → overwrites Sheet, then loads into local. Use if the Sheet got out of sync with your last Drive backup.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-        <button class="btn btn-primary" onclick="runPullOnly()">&#8595; Pull from Sheet</button>
         <button class="btn btn-primary" onclick="runPushOnly()">&#8593; Push to Sheet</button>
+        <button class="btn btn-primary" onclick="runPullOnly()">&#8595; Pull from Sheet</button>
+        <button class="btn btn-secondary" onclick="runPullFromDrive()">&#9729; Pull from Drive</button>
       </div>
       <div id="sync-status" style="font-size:.82rem;color:var(--text3);margin-top:10px;min-height:20px;line-height:1.6;"></div>
     </div>
@@ -2013,6 +2014,31 @@ async function runPullOnly(){
   }catch(e){setSyncStatus('✗ Pull failed: '+e.message+' — local data unchanged.','var(--red)');toast('Pull failed',true);}
 }
 
+async function runPullFromDrive(){
+  setSyncStatus('Pulling from Drive JSON and overwriting Sheet…');
+  try{
+    const result=await gasGet('pullDriveToSheet');
+    if(result&&result.error){
+      setSyncStatus('✗ '+result.error,'var(--red)');
+      toast('Pull from Drive failed',true);
+      return;
+    }
+    setSyncStatus(`Sheet updated from Drive JSON (${result.written} matches). Loading into local…`);
+    // Now load the same Drive JSON into local storage
+    const jsonData=await gasGet('pullJSON');
+    if(jsonData&&!jsonData.error&&Array.isArray(jsonData.matches)){
+      saveMatches(jsonData.matches);
+      if(Array.isArray(jsonData.promotions)&&jsonData.promotions.length) savePromos(jsonData.promotions);
+      renderActivePanel();populateSharedFilterOptions();
+      const age=jsonData.pushedAt?Math.round((Date.now()-jsonData.pushedAt)/60000):0;
+      setSyncStatus(`✓ Pulled from Drive: ${jsonData.matches.length} matches (backed up ${age} min ago).<br>Sheet and local both updated.`,'var(--green)');
+      toast(`Pulled ${jsonData.matches.length} matches from Drive`);
+    } else {
+      setSyncStatus(`✓ Sheet updated from Drive (${result.written} matches). Could not refresh local — try Pull from Sheet.`,'var(--green)');
+    }
+  }catch(e){setSyncStatus('✗ Pull from Drive failed: '+e.message,'var(--red)');toast('Pull from Drive failed',true);}
+}
+
 async function runPushOnly(){
   setSyncStatus('Pushing…');
   try{
@@ -2029,16 +2055,8 @@ async function runPushOnly(){
     const tabs=Object.keys(groups).sort((a,b)=>(parseInt(b)||0)-(parseInt(a)||0));
     const tabSummary=tabs.map(t=>`${getTabDisplayName(t)}: ${groups[t].length}`).join(', ');
 
-    // Step 1: Push to Drive JSON (fast, primary)
-    let jsonOk=false;
-    try{
-      setSyncStatus(`Step 1/2: Saving to Drive JSON (${local.length} matches)…`);
-      await gasPost({action:'pushJSON',matches:local,promotions:promos});
-      jsonOk=true;
-    }catch(e){console.log('Drive JSON push failed:',e.message);}
-
-    // Step 2: Push to Sheet (backup)
-    setSyncStatus(`Step 2/2: Pushing to Sheet (${tabSummary})…`);
+    // Single push — Apps Script writes to Sheet AND saves Drive JSON
+    setSyncStatus(`Pushing ${local.length} matches (${tabSummary}) + ${promos.length} promotions…`);
     await gasPost({action:'push',matches:local,promotions:promos});
 
     // Verify
@@ -2051,7 +2069,7 @@ async function runPushOnly(){
       verifyMsg=`Sheet: ${sheetTotal} matches.${ok?'':' <span style="color:var(--accent);">Count mismatch.</span>'}`;
     }catch(e){verifyMsg='Sheet verification timed out.';}
 
-    setSyncStatus(`✓ Push complete: ${local.length} matches + ${promos.length} promotions.<br>${jsonOk?'Drive JSON: ✓':'Drive JSON: ✗ (not configured?)'}<br>${verifyMsg}`,'var(--green)');
+    setSyncStatus(`✓ Push complete: ${local.length} matches + ${promos.length} promotions.<br>Sheet + Drive JSON updated.<br>${verifyMsg}`,'var(--green)');
     toast(`Pushed ${local.length} matches`);
   }catch(e){setSyncStatus('✗ Push failed: '+e.message,'var(--red)');toast('Push failed',true);}
 }
