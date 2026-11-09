@@ -227,7 +227,7 @@ textarea{resize:vertical;min-height:70px}
 .filter-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:0}
 .title-toggle{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:6px 12px;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);user-select:none}
 .title-toggle:hover{border-color:var(--accent);color:var(--accent)}
-.title-toggle.on{border-color:var(--accent);background:rgba(232,200,64,.1);color:var(--accent)}
+.title-toggle.on{border-color:var(--accent);background: var(--bg4);color:var(--accent)}
 .title-toggle .dot{width:8px;height:8px;border-radius:50%;background:var(--border2);transition:background .15s}
 .title-toggle.on .dot{background:var(--accent)}
 .theme-card{display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 14px;cursor:pointer;transition:all .15s;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.88rem;letter-spacing:.06em;text-transform:uppercase;color:var(--text2)}
@@ -241,9 +241,25 @@ textarea{resize:vertical;min-height:70px}
 .rating-pill{background:var(--bg4);border:1px solid var(--border2);color:var(--text3);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:3px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .rating-pill:hover{border-color:var(--accent);color:var(--accent)}
 .rating-pill.active{background:var(--accent);border-color:var(--accent);color:#000}
-@media(max-width:640px){header{flex-wrap:wrap;height:auto;padding:10px 14px;gap:8px}.header-title{font-size:1.2rem}nav button{font-size:.75rem;padding:5px 10px}main{padding:12px}.form-grid{padding:16px;gap:12px}td,th{padding:7px 8px}.modal{padding:18px}.match-card{padding:8px 10px;}.card-name{font-size:.82rem;}.card-meta,.card-meta2{font-size:.68rem;}}
-/* card layout is responsive by default */
-  tbody td.col-meta{display:none!important}
+@media(max-width:640px) {
+  header {
+    flex-wrap:wrap;
+    height:auto;
+    padding:10px 14px;
+    gap:8px;
+  }
+  .header-title {font-size:1.2rem}
+  nav button {font-size:.75rem;padding:5px 10px}
+  main {padding:12px}
+  .form-grid {padding:16px;gap:12px}
+  td,th {padding:7px 8px}
+  .modal {padding:18px}
+  .match-card {padding:8px 10px}
+  .card-name {font-size:.82rem}
+  .card-meta,.card-meta2 {font-size:.68rem}
+
+  /* Hide metadata columns on mobile only */
+  tbody td.col-meta {display:none!important}
 }
 /* ── Lock Overlay ── */
 #lock-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:9999;background:rgba(0,0,0,.8);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px;box-sizing:border-box}
