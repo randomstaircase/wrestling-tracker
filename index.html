@@ -6,6 +6,7 @@
 <title>Wrestling Match Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,900;1,700&family=Barlow:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>"><style>"/>
 /* ── Stardom Light ── */
+:root,
 [data-theme="stardom-light"] {
   --bg:#fdf0f7;
   --bg2:#ffffff;
@@ -2247,14 +2248,20 @@ function applyTheme(){
   const base=localStorage.getItem('wt_theme_base')||'stardom';
   const mode=localStorage.getItem('wt_theme_mode')||'light';
   const html=document.documentElement;
-  if(base==='stardom'&&mode==='light'){html.removeAttribute('data-theme');}
-  else if(base==='stardom'&&mode==='dark'){html.setAttribute('data-theme','stardom-dark');}
-  else{html.setAttribute('data-theme',base+'-'+mode);}
+
+  // Always apply an explicit theme name
+  html.setAttribute('data-theme',base+'-'+mode);
+
   // Update mode button
   const modeBtn=document.getElementById('theme-mode-btn');
   const modeLabel=document.getElementById('theme-mode-label');
-  if(modeBtn)modeBtn.innerHTML=mode==='dark'?'&#9788; Light Mode':'&#9790; Dark Mode';
-  if(modeLabel)modeLabel.textContent=base.toUpperCase()+' — '+(mode==='dark'?'Dark':'Light');
+
+  if(modeBtn)
+    modeBtn.innerHTML=mode==='dark'?'&#9788; Light Mode':'&#9790; Dark Mode';
+
+  if(modeLabel)
+    modeLabel.textContent=base.toUpperCase()+' — '+(mode==='dark'?'Dark':'Light');
+
   // Update active card
   document.querySelectorAll('.theme-card').forEach(c=>{
     c.classList.toggle('active',c.getAttribute('data-theme-base')===base);
